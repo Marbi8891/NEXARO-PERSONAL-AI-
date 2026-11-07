@@ -3,7 +3,7 @@ import os
 import sqlite3
 import uuid
 
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
 
 import httpx
@@ -29,10 +29,17 @@ DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
 FRONTEND_PATH = Path("/app/frontend")
 
 
+@contextmanager
 def get_connection():
     connection = sqlite3.connect(DATABASE_PATH)
     connection.row_factory = sqlite3.Row
-    return connection
+    connection.execute("PRAGMA foreign_keys = ON")
+
+    try:
+        with connection:
+            yield connection
+    finally:
+        connection.close()
 
 
 def init_database():
