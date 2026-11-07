@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXARO Personal AI</title>
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #101319;
+  --panel: #181e28;
+  --border: #2a3443;
+  --text: #edf2f7;
+  --muted: #98a5b5;
+  --accent: #70a5ff;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.app {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  min-height: 100vh;
+}
+.sidebar {
+  background: #141922;
+  border-right: 1px solid var(--border);
+  padding: 24px 18px;
+}
+
+.history-panel { margin-top: 28px; }
+.history-heading {
+  margin: 0 0 10px; color: var(--muted); font-size: 11px;
+  font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
+}
+.conversation-list {
+  display: flex; flex-direction: column; gap: 6px;
+  max-height: calc(100vh - 245px); overflow-y: auto;
+}
+.history-item {
+  width: 100%; padding: 10px; border: 1px solid transparent;
+  border-radius: 8px; background: transparent; color: var(--text);
+  text-align: left; cursor: pointer;
+}
+.history-item:hover { background: #202735; }
+.history-item.active { background: #202c3e; border-color: #3b5274; }
+.history-title {
+  display: block; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; font-size: 13px;
+}
+.history-meta {
+  display: block; margin-top: 5px; color: var(--muted); font-size: 11px;
+}
+.history-empty { color: var(--muted); font-size: 12px; padding: 8px 2px; }
+.brand {
+  font-size: 22px;
+  font-weight: 750;
+  letter-spacing: 2px;
+}
+.subtitle {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 5px;
+}
+.new-chat {
+  width: 100%;
+  margin-top: 35px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+}
+.status {
+  margin-top: 25px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d69b42;
+  margin-right: 7px;
+}
+.dot.online { background: #49c58b; }
+.dot.offline { background: #e15c5c; }
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100vh;
+}
+.header {
+  padding: 20px 28px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 30px max(20px, calc((100% - 850px) / 2));
+}
+.welcome {
+  margin: 15vh auto 0;
+  max-width: 550px;
+  text-align: center;
+}
+.welcome h1 { font-size: 30px; }
+.welcome p { color: var(--muted); line-height: 1.6; }
+.message {
+  max-width: 850px;
+  margin: 0 auto 22px;
+  padding: 15px 18px;
+  border-radius: 12px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.message.user {
+  background: #202c3e;
+}
+.message.assistant {
+  background: var(--panel);
+  border: 1px solid var(--border);
+}
+.composer-wrap {
+  padding: 18px 20px 24px;
+  border-top: 1px solid var(--border);
+}
+.composer {
+  display: flex;
+  gap: 10px;
+  max-width: 850px;
+  margin: auto;
+}
+textarea {
+  flex: 1;
+  resize: vertical;
+  min-height: 54px;
+  max-height: 180px;
+  padding: 15px;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font: inherit;
+}
+button {
+  font: inherit;
+}
+.send {
+  padding: 0 22px;
+  border: 0;
+  border-radius: 10px;
+  color: #101319;
+  background: var(--accent);
+  font-weight: 650;
+  cursor: pointer;
+}
+button:disabled { opacity: .5; cursor: wait; }
+.hint {
+  max-width: 850px;
+  margin: 9px auto 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+@media(max-width: 650px) {
+  .app { grid-template-columns: 1fr; }
+  .sidebar {
+    padding: 14px 18px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .history-panel { flex: 1 0 100%; margin-top: 0; }
+  .history-heading { margin-bottom: 6px; }
+  .conversation-list { max-height: 120px; }
+  .new-chat { width: auto; margin: 0; }
+  .status { display: none; }
+  .main { height: calc(100vh - 65px); }
+  .header { padding: 15px 18px; }
+  .messages { padding: 20px 14px; }
+  .welcome { margin-top: 10vh; }
+  .composer-wrap { padding: 12px; }
+  .send { padding: 0 15px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div>
+      <div class="brand">NEXARO</div>
+      <div class="subtitle">PERSONAL AI</div>
+      <div class="status">
+        <span id="status-dot" class="dot"></span>
+        <span id="status-text">Comprobando conexión...</span>
+      </div>
+    </div>
+    <section class="history-panel" aria-label="Historial de conversaciones">
+      <h2 class="history-heading">Historial</h2>
+      <div class="conversation-list" id="conversation-list">
+        <div class="history-empty">Cargando conversaciones...</div>
+      </div>
+    </section>
+    <button class="new-chat" id="new-chat">+ Nueva conversación</button>
+  </aside>
+
+  <main class="main">
+    <header class="header">Asistente personal</header>
+
+    <section class="messages" id="messages">
+      <div class="welcome" id="welcome">
+        <h1>¿En qué puedo ayudarte?</h1>
+        <p>Tu asistente personal con inteligencia artificial local.</p>
+      </div>
+    </section>
+
+    <div class="composer-wrap">
+      <form class="composer" id="chat-form">
+        <textarea id="message-input"
+          placeholder="Escribe tu mensaje..."
+          aria-label="Mensaje"
+          required></textarea>
+        <button class="send" id="send-button" type="submit">Enviar</button>
+      </form>
+      <div class="hint">NEXARO utiliza el modelo local configurado en Ollama.</div>
+    </div>
+  </main>
+</div>
+
+<script>
+const messagesElement = document.getElementById("messages");
+const form = document.getElementById("chat-form");
+const input = document.getElementById("message-input");
+const sendButton = document.getElementById("send-button");
+const welcome = document.getElementById("welcome");
+const conversationListElement = document.getElementById("conversation-list");
+
+let conversationId = localStorage.getItem("nexaro_conversation_id");
+
+function addMessage(role, content) {
+  welcome?.remove();
+
+  const element = document.createElement("div");
+  element.className = `message ${role}`;
+  element.textContent = content;
+
+  messagesElement.appendChild(element);
+  messagesElement.scrollTop = messagesElement.scrollHeight;
+}
+
+
+async function loadConversations() {
+  try {
+    const response = await fetch("/api/conversations");
+    if (!response.ok) throw new Error("No se pudo cargar el historial");
+
+    const data = await response.json();
+    const conversations = Array.isArray(data.conversations)
+      ? data.conversations : [];
+
+    conversationListElement.replaceChildren();
+
+    if (conversations.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "history-empty";
+      empty.textContent = "Todavía no hay conversaciones";
+      conversationListElement.appendChild(empty);
+      return;
+    }
+
+    conversations.forEach((conversation) => {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "history-item";
+      item.classList.toggle("active", conversation.id === conversationId);
+
+      const title = document.createElement("span");
+      title.className = "history-title";
+      title.textContent = conversation.title || conversation.preview || "Nueva conversación";
+
+      const meta = document.createElement("span");
+      meta.className = "history-meta";
+      meta.textContent =
+        `${conversation.message_count ?? 0} mensajes · ${conversation.last_activity || conversation.created_at || ""}`;
+
+      item.append(title, meta);
+      item.addEventListener("click", () => selectConversation(conversation.id));
+      conversationListElement.appendChild(item);
+    });
+  } catch (error) {
+    console.error("Error cargando el historial:", error);
+    conversationListElement.replaceChildren();
+
+    const errorElement = document.createElement("div");
+    errorElement.className = "history-empty";
+    errorElement.textContent = "No se pudo cargar el historial";
+    conversationListElement.appendChild(errorElement);
+  }
+}
+
+async function selectConversation(id) {
+  if (!id) return;
+
+  sendButton.disabled = true;
+
+  try {
+    const response = await fetch(
+      `/api/conversations/${encodeURIComponent(id)}`
+    );
+    if (!response.ok) throw new Error("No se pudo abrir la conversación");
+
+    const data = await response.json();
+    if (!Array.isArray(data.messages)) {
+      throw new Error("Formato de conversación no válido");
+    }
+
+    conversationId = id;
+    localStorage.setItem("nexaro_conversation_id", id);
+    messagesElement.replaceChildren();
+
+    if (data.messages.length === 0) {
+      const emptyWelcome = document.createElement("div");
+      emptyWelcome.className = "welcome";
+      emptyWelcome.innerHTML =
+        "<h1>¿En qué puedo ayudarte?</h1><p>Tu asistente personal con inteligencia artificial local.</p>";
+      messagesElement.appendChild(emptyWelcome);
+    } else {
+      data.messages.forEach((message) => {
+        if (message.role === "user" || message.role === "assistant") {
+          addMessage(message.role, message.content);
+        }
+      });
+    }
+
+    await loadConversations();
+  } catch (error) {
+    console.error("Error abriendo la conversación:", error);
+  } finally {
+    sendButton.disabled = false;
+  }
+}
+
+async function checkHealth() {
+  const dot = document.getElementById("status-dot");
+  const label = document.getElementById("status-text");
+
+  try {
+    const response = await fetch("/api/health");
+    if (!response.ok) throw new Error("Backend no disponible");
+
+    const data = await response.json();
+    dot.className = "dot online";
+    label.textContent = `Conectado · ${data.configured_model}`;
+  } catch {
+    dot.className = "dot offline";
+    label.textContent = "Sin conexión";
+  }
+}
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const message = input.value.trim();
+  if (!message || sendButton.disabled) return;
+
+  addMessage("user", message);
+  input.value = "";
+  sendButton.disabled = true;
+  sendButton.textContent = "Pensando...";
+
+  const loading = document.createElement("div");
+  loading.className = "message assistant";
+  loading.textContent = "NEXARO está preparando una respuesta...";
+  messagesElement.appendChild(loading);
+  messagesElement.scrollTop = messagesElement.scrollHeight;
+
+  try {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message,
+        conversation_id: conversationId
+      })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.detail || "Error al consultar el asistente");
+    }
+
+    conversationId = data.conversation_id;
+    localStorage.setItem("nexaro_conversation_id", conversationId);
+
+    loading.textContent = data.answer;
+    await loadConversations();
+  } catch (error) {
+    loading.textContent = `Error: ${error.message}`;
+  } finally {
+    sendButton.disabled = false;
+    sendButton.textContent = "Enviar";
+    input.focus();
+    checkHealth();
+  }
+});
+
+document.getElementById("new-chat").addEventListener("click", () => {
+  conversationId = null;
+  localStorage.removeItem("nexaro_conversation_id");
+  messagesElement.replaceChildren();
+
+  const welcomeElement = document.createElement("div");
+  welcomeElement.className = "welcome";
+  welcomeElement.innerHTML =
+    "<h1>¿En qué puedo ayudarte?</h1><p>Tu asistente personal con inteligencia artificial local.</p>";
+
+  messagesElement.appendChild(welcomeElement);
+  loadConversations();
+  input.focus();
+});
+
+input.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    form.requestSubmit();
+  }
+});
+
+async function restoreConversation() {
+  if (!conversationId) return;
+
+  sendButton.disabled = true;
+
+  try {
+    const response = await fetch(
+      `/api/conversations/${encodeURIComponent(conversationId)}`
+    );
+
+    if (response.status === 404) {
+      conversationId = null;
+      localStorage.removeItem("nexaro_conversation_id");
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error("No se pudo recuperar la conversación");
+    }
+
+    const data = await response.json();
+
+    if (!Array.isArray(data.messages)) {
+      throw new Error("Formato de historial no válido");
+    }
+
+    if (data.messages.length > 0) {
+      messagesElement.replaceChildren();
+
+      data.messages.forEach((message) => {
+        if (message.role === "user" || message.role === "assistant") {
+          addMessage(message.role, message.content);
+        }
+      });
+    }
+  } catch (error) {
+    console.error("Error recuperando el historial:", error);
+  } finally {
+    sendButton.disabled = false;
+  }
+}
+
+checkHealth();
+loadConversations().then(() => restoreConversation());
+</script>
+</body>
+</html>

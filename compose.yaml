@@ -1,0 +1,25 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: nexaro-backend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8001:8000"
+    environment:
+      OLLAMA_BASE_URL: "http://ollama:11434"
+      OLLAMA_MODEL: "qwen2.5:3b"
+      DATABASE_PATH: "/data/nexaro.db"
+    volumes:
+      - nexaro_data:/data
+      - ./frontend:/app/frontend:ro
+    networks:
+      - ollama_net
+
+volumes:
+  nexaro_data:
+
+networks:
+  ollama_net:
+    external: true
+    name: ollama-local_default
