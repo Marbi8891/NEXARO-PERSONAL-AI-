@@ -1,4 +1,5 @@
 import { api } from "../api.js";
+import { brand } from "../components/brand.js";
 import { clear, h } from "../dom.js";
 
 export function registerView({ container }) {
@@ -15,7 +16,7 @@ export function registerView({ container }) {
     try {
       await api.register(email.value.trim(), password.value);
       clear(card).append(
-        h("div", { class: "brand" }, "NEXARO"),
+        brand(),
         h("h1", {}, "Solicitud enviada"),
         h("p", { class: "form-ok", role: "status" }, "Un administrador debe aprobar tu cuenta antes de que puedas entrar."),
         h("a", { href: "#/login" }, "Volver al acceso"),
@@ -28,7 +29,7 @@ export function registerView({ container }) {
 
   card.addEventListener("submit", onSubmit);
   card.append(
-    h("div", { class: "brand" }, "NEXARO"),
+    brand(),
     h("h1", {}, "Solicitar acceso"),
     h("div", { class: "field" }, h("label", { for: "email" }, "Correo electrónico"), email),
     h("div", { class: "field" }, h("label", { for: "password" }, "Contraseña (mínimo 12 caracteres)"), password),

@@ -14,4 +14,7 @@ for _ in $(seq 1 50); do
   curl -fs http://127.0.0.1:8765/api/health/live >/dev/null && break
   sleep 0.2
 done
+# Navegador real (descarga ~70 MB la primera vez): BROWSER=1 tests/frontend/run.sh
+# Va primero: las capturas de docs/design deben salir del estado inicial, antes de que el E2E lo modifique.
+if [ "${BROWSER:-0}" = "1" ]; then node browser.mjs; fi
 node e2e.mjs

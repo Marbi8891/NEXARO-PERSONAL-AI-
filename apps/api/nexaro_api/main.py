@@ -19,6 +19,7 @@ from products.personal_ai.service import PersonalAIService
 logger = logging.getLogger("nexaro")
 
 mimetypes.add_type("application/manifest+json", ".webmanifest")
+mimetypes.add_type("font/woff2", ".woff2")
 
 SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",

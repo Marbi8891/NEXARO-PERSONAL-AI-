@@ -1,4 +1,5 @@
 import { api } from "../api.js";
+import { brand } from "../components/brand.js";
 import { h } from "../dom.js";
 import { navigate } from "../router.js";
 import { getNotice, rememberConversation, setNotice, setUser } from "../state.js";
@@ -34,7 +35,7 @@ export function loginView({ container }) {
       h(
         "form",
         { class: "auth-card", onsubmit: onSubmit },
-        h("div", { class: "brand" }, "NEXARO"),
+        brand(),
         h("h1", {}, "Iniciar sesión"),
         notice ? h("div", { class: "form-ok", role: "status" }, notice) : null,
         h("div", { class: "field" }, h("label", { for: "email" }, "Correo electrónico"), email),

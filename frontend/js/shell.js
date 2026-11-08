@@ -1,13 +1,27 @@
 // Marco de la aplicación: barra lateral con navegación, estado del modelo y cierre de sesión.
 import { api } from "./api.js";
+import { brand } from "./components/brand.js";
 import { clear, h } from "./dom.js";
 import { setNotice, setUser, rememberConversation } from "./state.js";
+import { LABELS, getTheme, nextTheme, setTheme } from "./theme.js";
 
 const HEALTH_INTERVAL_MS = 60_000;
 
 export function createShell({ user }) {
   const dot = h("span", { class: "dot", "aria-hidden": "true" });
   const statusText = h("span", {}, "Comprobando conexión...");
+  let theme = getTheme();
+  const themeButton = h("button", { class: "button secondary small", type: "button", onclick: cycleTheme });
+  const themeLabel = () => {
+    themeButton.textContent = `Tema: ${LABELS[theme]}`;
+    themeButton.setAttribute("aria-label", `Cambiar tema (actual: ${LABELS[theme]})`);
+  };
+  themeLabel();
+  function cycleTheme() {
+    theme = nextTheme(theme);
+    setTheme(theme);
+    themeLabel();
+  }
   const logoutError = h("span", { role: "alert", "aria-live": "polite" });
   const logoutButton = h("button", { class: "button secondary small", type: "button", onclick: logout }, "Cerrar sesión");
 
@@ -29,13 +43,12 @@ export function createShell({ user }) {
       h(
         "div",
         {},
-        h("div", { class: "brand" }, "NEXARO"),
-        h("div", { class: "subtitle" }, "PERSONAL AI"),
+        brand(),
         h("div", { class: "status", role: "status" }, dot, statusText),
       ),
       h("nav", { class: "nav", "aria-label": "Principal" }, links),
       sidebarSlot,
-      h("div", { class: "sidebar-footer" }, h("span", { class: "who", title: user.email }, user.email), logoutButton, logoutError),
+      h("div", { class: "sidebar-footer" }, h("span", { class: "who", title: user.email }, user.email), themeButton, logoutButton, logoutError),
     ),
     main,
   );

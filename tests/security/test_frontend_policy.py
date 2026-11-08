@@ -67,6 +67,10 @@ def test_csp_and_manifest_are_served(tmp_path: Path) -> None:
         assert manifest.status_code == 200
         assert manifest.headers["content-type"].startswith("application/manifest+json")
         assert client.get("/js/main.js").status_code == 200
+        font = client.get("/fonts/inter-latin-wght-normal.woff2")
+        assert font.status_code == 200
+        assert font.headers["content-type"] == "font/woff2"
+        assert client.get("/css/tokens.css").status_code == 200
 
 
 def test_swagger_is_not_covered_by_strict_csp_outside_production(tmp_path: Path) -> None:

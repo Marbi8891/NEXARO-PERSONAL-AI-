@@ -3,5 +3,9 @@
   "private": true,
   "type": "module",
   "description": "Prueba de extremo a extremo del frontend (jsdom contra la API real). Solo desarrollo.",
-  "devDependencies": { "jsdom": "^31.0.0" }
+  "devDependencies": {
+    "jsdom": "^31.0.0",
+    "@sparticuz/chromium": "^153.0.0",
+    "playwright-core": "^1.65.0"
+  }
 }
