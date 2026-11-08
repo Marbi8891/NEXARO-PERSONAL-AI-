@@ -12,6 +12,8 @@
 
 - Migraciones versionadas con checksum (`schema_migrations`), modelo multiorganización, API de organizaciones y miembros, DDL de PostgreSQL con RLS validado con servidor real, ADR-0005.
 
+- Terraform para AWS por entorno (dev/staging/prod), ADR-0006, costes y job de CI con `terraform validate`; sin aplicar.
+
 ### Cambiado
 - La app pasa a `create_app()` (factory); el comando de admin es `python -m nexaro_api.bootstrap_admin`.
 - Prompt del asistente generado desde proveedor y modelo configurados (sin modelo fijo en código).

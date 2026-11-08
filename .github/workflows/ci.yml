@@ -52,6 +52,33 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  terraform:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        env: [dev, staging, prod]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform fmt -check -recursive infrastructure/aws/terraform
+      - name: validate (sin credenciales ni estado remoto)
+        working-directory: infrastructure/aws/terraform/envs/${{ matrix.env }}
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate
+
+  terraform-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Escaneo de configuración (informativo en la primera ejecución)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          scan-ref: infrastructure/aws/terraform
+          severity: HIGH,CRITICAL
+          exit-code: "0" # pasar a "1" tras revisar los primeros hallazgos (VERIFY)
+
   docker:
     runs-on: ubuntu-latest
     needs: quality

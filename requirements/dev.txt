@@ -7,3 +7,4 @@ pip-audit>=2.7
 pre-commit>=3.8
 pgserver==0.1.4
 psycopg[binary]==3.3.8
+python-hcl2>=8

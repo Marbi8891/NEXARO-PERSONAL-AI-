@@ -18,6 +18,10 @@
   eres miembro, incluso siendo admin de plataforma) y, en PostgreSQL, Row Level Security.
   Un test inspecciona el esquema y falla si una tabla nueva no lo cumple.
 
+- Infraestructura (Terraform): rol de la tarea sin comodines, cifrado con KMS, buckets sin acceso
+  público, HTTPS obligatorio, credenciales de base de datos gestionadas por AWS. Tests estáticos
+  lo vigilan; `terraform validate` solo se ejecuta en CI.
+
 ## Pendiente / límites
 
 - CSP estricta: requiere sacar el JavaScript inline del frontend (fase de frontend).

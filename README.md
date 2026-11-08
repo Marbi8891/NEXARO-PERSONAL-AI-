@@ -10,6 +10,7 @@ proveedores en la nube. Monolito modular en Python (FastAPI) con frontend HTML/C
 |---|---|
 | Autenticación, sesiones, auditoría, administración | Implementado y probado |
 | Chat con Ollama (`products/personal_ai`) | Implementado y probado |
+| AWS (Terraform: red, KMS, ECR, S3, ALB+Fargate, Aurora, alarmas, presupuesto) | Escrito, **no validado ni aplicado** (ADR-0006) |
 | AI Gateway: políticas, respaldo, registro de uso, proveedores Bedrock/SageMaker | Implementado; AWS probado solo con dobles (ADR-0004) |
 | Multiorganización: organizaciones, miembros, roles y permisos | Implementado y probado |
 | Documentos, agentes, tareas, embeddings | Solo esquema (sin API) |
