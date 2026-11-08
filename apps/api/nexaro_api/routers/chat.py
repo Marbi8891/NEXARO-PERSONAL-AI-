@@ -2,7 +2,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 
-from ai_gateway.errors import ProviderError
+from ai_gateway.errors import PolicyError, ProviderError
 from nexaro_api.deps import Ctx, CurrentUser, validate_origin
 from nexaro_api.schemas import ChatRequest
 from products.personal_ai.service import ConversationNotFoundError
@@ -20,6 +20,8 @@ async def chat(request: Request, body: ChatRequest, user: CurrentUser, ctx: Ctx)
         outcome = await ctx.personal_ai.chat(user["id"], body.message, body.conversation_id)
     except ConversationNotFoundError:
         raise NOT_FOUND from None
+    except PolicyError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except ProviderError as exc:
         # El detalle del proveedor (URLs internas, etc.) no se devuelve al cliente.
         raise HTTPException(status_code=502, detail="Error al consultar el servicio de IA") from exc

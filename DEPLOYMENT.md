@@ -23,6 +23,12 @@ docker exec -it nexaro-backend python -m nexaro_api.bootstrap_admin \
     --confirm-database /data/nexaro.db --email TU_CORREO [--promote-existing]
 ```
 
+### Nube (opcional, desactivada)
+
+`docker build --build-arg INSTALL_AWS=1 .` instala boto3. Variables en `.env.example`. Las
+credenciales vienen del rol/entorno de AWS, no del repositorio. Mientras `AI_ALLOW_CLOUD` no sea
+`true`, ningún dato sale a la nube.
+
 ## Producción / AWS
 
 **No implementado.** Está previsto describirlo como Terraform por entorno (dev/staging/prod)

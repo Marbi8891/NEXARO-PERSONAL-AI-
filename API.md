@@ -21,7 +21,9 @@ modifican estado exigen cabecera `Origin` incluida en `ALLOWED_ORIGINS`. En prod
 | PATCH | `/admin/users/{id}/active` | admin | no sobre uno mismo; protege al último admin |
 | PATCH | `/admin/settings/registration` | admin | abre/cierra el registro público |
 | GET | `/admin/audit` | admin | |
+| GET | `/admin/usage` | admin | uso de modelos por proveedor/modelo (`days`, máx. 365) y coste del mes |
 
 Códigos: 400 operación no permitida (p. ej. sobre uno mismo o el último admin), 401 sin sesión,
 403 origen/rol/registro cerrado, 404 recurso ajeno, 409 correo duplicado, 422 validación,
-429 limitación de intentos.
+422 también cuando la política del gateway rechaza la entrada (p. ej. demasiado larga),
+429 limitación de intentos, 502 fallo del proveedor de IA (sin detalles).

@@ -15,6 +15,7 @@ class CompletionRequest(BaseModel):
     messages: list[ChatMessage] = Field(min_length=1)
     max_output_tokens: int | None = Field(default=None, gt=0)
     timeout_seconds: float | None = Field(default=None, gt=0)
+    user_id: str | None = None  # solo para el registro de uso; los proveedores lo ignoran
 
 
 class CompletionResult(BaseModel):

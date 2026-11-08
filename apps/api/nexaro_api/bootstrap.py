@@ -1,5 +1,6 @@
 """Ensamblado del esquema: orden de migraciones entre módulos."""
 
+from ai_gateway.usage import init_usage_schema
 from nexaro_core.audit import init_audit_schema
 from nexaro_core.database import Database, begin_write
 from nexaro_core.identity import init_identity_schema
@@ -13,3 +14,4 @@ def migrate(database: Database) -> None:
         init_personal_ai_schema(db)
         init_identity_schema(db)  # añade conversations.user_id: requiere el paso anterior
         init_audit_schema(db)
+        init_usage_schema(db)

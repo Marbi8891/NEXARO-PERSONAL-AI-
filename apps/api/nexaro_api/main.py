@@ -6,9 +6,9 @@ from fastapi import FastAPI, Request, Response
 from fastapi.staticfiles import StaticFiles
 
 from ai_gateway.providers.base import ChatProvider
-from ai_gateway.providers.ollama import OllamaProvider
 from nexaro_api.bootstrap import migrate
 from nexaro_api.context import AppContext
+from nexaro_api.gateway import build_gateway
 from nexaro_api.routers import admin, auth, chat, health
 from nexaro_core.config import Settings, get_settings
 from nexaro_core.database import Database
@@ -30,7 +30,12 @@ def create_app(
     """Fábrica de la aplicación. Sin efectos al importar el módulo."""
     settings = settings or get_settings()
     database = Database(settings.database_path)
-    provider = chat_provider or OllamaProvider(settings.ollama_base_url)
+    if chat_provider is None:
+        gateway = build_gateway(settings, database)
+        provider: ChatProvider = gateway
+        model = gateway.model
+    else:  # inyectado (tests): sin política ni registro de uso
+        provider, model = chat_provider, settings.ollama_model
     ctx = AppContext(
         settings=settings,
         database=database,
@@ -40,7 +45,7 @@ def create_app(
             settings.login_max_tracked_keys,
         ),
         provider=provider,
-        personal_ai=PersonalAIService(database, provider, settings.ollama_model),
+        personal_ai=PersonalAIService(database, provider, model),
     )
 
     @asynccontextmanager

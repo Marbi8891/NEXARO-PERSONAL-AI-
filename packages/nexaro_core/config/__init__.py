@@ -1,3 +1,3 @@
-from nexaro_core.config.settings import Settings, get_settings
+from nexaro_core.config.settings import CLOUD_PROVIDERS, Settings, get_settings
 
-__all__ = ["Settings", "get_settings"]
+__all__ = ["CLOUD_PROVIDERS", "Settings", "get_settings"]

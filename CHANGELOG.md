@@ -8,6 +8,8 @@
 - Tests unit/integration/security (96) con cobertura ~94 %; ruff y mypy limpios.
 - CI (GitHub Actions), Dockerfile con healthcheck, `.env.example`, ADR-0001..0003.
 
+- AI Gateway (`Gateway`, `GatewayPolicy`, `UsageStore`), proveedores Bedrock y SageMaker, `GET /api/admin/usage`, ADR-0004.
+
 ### Cambiado
 - La app pasa a `create_app()` (factory); el comando de admin es `python -m nexaro_api.bootstrap_admin`.
 - Prompt del asistente generado desde proveedor y modelo configurados (sin modelo fijo en código).

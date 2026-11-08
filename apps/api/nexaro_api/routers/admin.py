@@ -3,6 +3,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 
+from ai_gateway.usage import UsageStore
 from nexaro_api.deps import AdminUser, Ctx, client_ip, validate_origin
 from nexaro_api.schemas import (
     AdminCreateUserRequest,
@@ -181,3 +182,12 @@ def admin_audit(
 ) -> dict[str, Any]:
     with ctx.database.connect() as db:
         return {"events": list_events(db, limit=limit, action=action)}
+
+
+@router.get("/usage")
+def admin_usage(admin: AdminUser, ctx: Ctx, days: int = 30) -> dict[str, Any]:
+    store = UsageStore(ctx.database)
+    return {
+        "usage": store.summary(min(max(days, 1), 365)),
+        "month_cost_usd": store.month_cost_usd(),
+    }

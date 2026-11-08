@@ -7,6 +7,8 @@ from typing import Annotated, Literal
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
+KNOWN_PROVIDERS = frozenset({"ollama", "bedrock", "sagemaker"})
+CLOUD_PROVIDERS = frozenset({"bedrock", "sagemaker"})
 DEFAULT_ORIGINS = frozenset({"http://127.0.0.1:8001", "http://localhost:8001"})
 
 
@@ -21,6 +23,28 @@ class Settings(BaseSettings):
 
     ollama_base_url: str = Field(default="http://localhost:11434", alias="OLLAMA_BASE_URL")
     ollama_model: str = Field(default="qwen2.5:3b", alias="OLLAMA_MODEL")
+
+    # AI Gateway. Nube desactivada por defecto; activarla exige región, presupuesto y precios.
+    ai_provider_order: Annotated[tuple[str, ...], NoDecode] = Field(
+        default=("ollama",), alias="AI_PROVIDER_ORDER"
+    )
+    ai_allow_cloud: bool = Field(default=False, alias="AI_ALLOW_CLOUD")
+    ai_max_output_tokens: int = Field(default=2048, gt=0, alias="AI_MAX_OUTPUT_TOKENS")
+    ai_max_input_chars: int = Field(default=32_000, gt=0, alias="AI_MAX_INPUT_CHARS")
+    ai_timeout_seconds: float = Field(default=180.0, gt=0, alias="AI_TIMEOUT_SECONDS")
+    ai_max_retries: int = Field(default=1, ge=0, le=3, alias="AI_MAX_RETRIES")
+    ai_cloud_monthly_budget_usd: float | None = Field(
+        default=None, gt=0, alias="AI_CLOUD_MONTHLY_BUDGET_USD"
+    )
+    aws_region: str | None = Field(default=None, alias="AWS_REGION")
+    bedrock_model_id: str | None = Field(default=None, alias="BEDROCK_MODEL_ID")
+    bedrock_price_input_per_1k: float | None = Field(
+        default=None, ge=0, alias="BEDROCK_PRICE_INPUT_PER_1K"
+    )
+    bedrock_price_output_per_1k: float | None = Field(
+        default=None, ge=0, alias="BEDROCK_PRICE_OUTPUT_PER_1K"
+    )
+    sagemaker_endpoint: str | None = Field(default=None, alias="SAGEMAKER_ENDPOINT")
 
     allowed_origins: Annotated[frozenset[str], NoDecode] = Field(
         default=DEFAULT_ORIGINS, alias="ALLOWED_ORIGINS"
@@ -40,6 +64,40 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return frozenset(item.strip() for item in value.split(",") if item.strip())
         return value
+
+    @field_validator("ai_provider_order", mode="before")
+    @classmethod
+    def _split_providers(cls, value: object) -> object:
+        if isinstance(value, str):
+            return tuple(item.strip() for item in value.split(",") if item.strip())
+        return value
+
+    @model_validator(mode="after")
+    def _gateway_is_consistent(self) -> "Settings":
+        order = self.ai_provider_order
+        if not order:
+            raise ValueError("AI_PROVIDER_ORDER no puede estar vacío")
+        unknown = set(order) - KNOWN_PROVIDERS
+        if unknown:
+            raise ValueError(f"Proveedores desconocidos en AI_PROVIDER_ORDER: {sorted(unknown)}")
+        cloud = set(order) & CLOUD_PROVIDERS
+        if not cloud:
+            return self
+        if not self.ai_allow_cloud:
+            raise ValueError(
+                "Hay proveedores en la nube en AI_PROVIDER_ORDER: exige AI_ALLOW_CLOUD=true"
+            )
+        if self.ai_cloud_monthly_budget_usd is None or not self.aws_region:
+            raise ValueError("La nube exige AI_CLOUD_MONTHLY_BUDGET_USD y AWS_REGION")
+        if "bedrock" in cloud and not (
+            self.bedrock_model_id
+            and self.bedrock_price_input_per_1k is not None
+            and self.bedrock_price_output_per_1k is not None
+        ):
+            raise ValueError("Bedrock exige BEDROCK_MODEL_ID y los precios por 1.000 tokens")
+        if "sagemaker" in cloud and not self.sagemaker_endpoint:
+            raise ValueError("SageMaker exige SAGEMAKER_ENDPOINT")
+        return self
 
     @model_validator(mode="after")
     def _production_must_be_secure(self) -> "Settings":

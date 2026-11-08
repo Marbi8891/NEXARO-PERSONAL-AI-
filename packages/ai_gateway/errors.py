@@ -8,3 +8,7 @@ class ProviderTimeoutError(ProviderError):
 
 class ProviderUnavailableError(ProviderError):
     pass
+
+
+class PolicyError(Exception):
+    """La política del gateway rechaza la solicitud (no es un fallo del proveedor)."""

@@ -51,7 +51,7 @@ class PersonalAIService:
             ChatMessage(role="user", content=message),
         ]
         result = await self._provider.complete(
-            CompletionRequest(model=self._model, messages=messages)
+            CompletionRequest(model=self._model, messages=messages, user_id=user_id)
         )
 
         with self._database.connect() as db:

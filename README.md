@@ -10,7 +10,7 @@ proveedores en la nube. Monolito modular en Python (FastAPI) con frontend HTML/C
 |---|---|
 | Autenticación, sesiones, auditoría, administración | Implementado y probado |
 | Chat con Ollama (`products/personal_ai`) | Implementado y probado |
-| AI Gateway: Bedrock, SageMaker, enrutado, políticas, uso | Pendiente (ver CHANGELOG) |
+| AI Gateway: políticas, respaldo, registro de uso, proveedores Bedrock/SageMaker | Implementado; AWS probado solo con dobles (ADR-0004) |
 | Multiorganización (organizaciones, roles, documentos, agentes) | Pendiente |
 | PostgreSQL | Pendiente (hoy solo SQLite) |
 | AWS (Terraform) | Pendiente; **no se crea nada en AWS sin autorización expresa** |

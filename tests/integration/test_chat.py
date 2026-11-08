@@ -91,3 +91,13 @@ def test_security_headers_are_present(client: TestClient) -> None:
 def test_liveness_does_not_depend_on_provider(client: TestClient, provider: FakeProvider) -> None:
     provider.healthy = False
     assert client.get("/api/health/live").json() == {"status": "ok"}
+
+
+def test_policy_violation_returns_422_without_details(
+    client: TestClient, logged_in: Callable[..., TestClient], provider: FakeProvider
+) -> None:
+    from ai_gateway.errors import PolicyError
+
+    provider.error = PolicyError("La entrada supera el límite permitido")
+    alice = logged_in("alice@example.com")
+    assert post_chat(alice, "hola").status_code == 422

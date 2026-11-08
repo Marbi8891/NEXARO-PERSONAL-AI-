@@ -9,8 +9,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN groupadd --gid 10001 nexaro \
     && useradd --uid 10001 --gid nexaro --create-home nexaro
 
-COPY requirements/base.txt requirements/base.txt
-RUN pip install --no-cache-dir -r requirements/base.txt
+# boto3 (~70 MB) solo si se van a usar Bedrock/SageMaker: docker build --build-arg INSTALL_AWS=1
+ARG INSTALL_AWS=0
+COPY requirements/ requirements/
+RUN pip install --no-cache-dir -r requirements/base.txt \
+    && if [ "$INSTALL_AWS" = "1" ]; then pip install --no-cache-dir -r requirements/aws.txt; fi
 
 COPY packages ./packages
 COPY products ./products
