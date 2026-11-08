@@ -1,7 +1,8 @@
 services:
   backend:
     build:
-      context: ./backend
+      context: .
+      dockerfile: Dockerfile
     container_name: nexaro-backend
     restart: unless-stopped
     ports:

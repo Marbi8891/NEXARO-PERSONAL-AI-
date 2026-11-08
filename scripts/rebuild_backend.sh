@@ -15,7 +15,7 @@ SERVICE="backend"
 VOLUME="nexaro-personal-ai_nexaro_data"
 NETWORK="ollama-local_default"
 URL="http://127.0.0.1:8001"
-PY="${PYTHON:-.venv-nexaro-tests/bin/python}"
+PY="${PYTHON:-.venv-nexaro-tests/bin/python}"  # debe tener requirements/dev.txt instalado
 STAMP="$(date +%Y%m%d-%H%M%S)"
 ASSUME_YES=0
 [[ "${1:-}" == "--yes" ]] && ASSUME_YES=1
@@ -44,7 +44,9 @@ db_report "$BACKUP" | grep -q '"integrity": "ok"' || fail "integridad de la copi
 db_report "$BACKUP"
 
 step "2/8 Pruebas unitarias y de integración"
-"$PY" -B -m unittest discover -s backend/tests
+"$PY" -c "import pytest, fastapi, httpx, pydantic_settings" 2>/dev/null \
+  || fail "faltan dependencias en $PY: $PY -m pip install -r requirements/dev.txt"
+"$PY" -B -m pytest -q -p no:cacheprovider tests
 
 step "3/8 Configuración, volumen y red"
 docker compose config --quiet
@@ -111,6 +113,6 @@ echo "Ollama (/api/health) -> HTTP $(curl -s -o /dev/null -w '%{http_code}' "$UR
 cat <<MSG
 
 Hecho. Siguiente paso (manual, interactivo; pide la contraseña solo si la cuenta no existe):
-  docker exec -it $CONTAINER python -m app.bootstrap_admin \\
+  docker exec -it $CONTAINER python -m nexaro_api.bootstrap_admin \\
       --confirm-database /data/nexaro.db --email TU_CORREO --promote-existing
 MSG

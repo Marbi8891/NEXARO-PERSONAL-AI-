@@ -86,3 +86,8 @@ def test_security_headers_are_present(client: TestClient) -> None:
     assert headers["x-content-type-options"] == "nosniff"
     assert headers["x-frame-options"] == "DENY"
     assert headers["referrer-policy"] == "no-referrer"
+
+
+def test_liveness_does_not_depend_on_provider(client: TestClient, provider: FakeProvider) -> None:
+    provider.healthy = False
+    assert client.get("/api/health/live").json() == {"status": "ok"}

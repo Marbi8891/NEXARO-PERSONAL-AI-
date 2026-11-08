@@ -25,7 +25,8 @@ cov:
 check: lint typecheck cov
 
 run:
-	DATABASE_PATH=./data/nexaro.db uvicorn nexaro_api.main:app --reload --app-dir apps/api
+	DATABASE_PATH=./data/nexaro.db FRONTEND_PATH=./frontend PYTHONPATH=.:packages:apps/api \
+	uvicorn nexaro_api.main:create_app --factory --reload --host 127.0.0.1 --port 8001
 
 up:
 	docker compose up -d --build backend

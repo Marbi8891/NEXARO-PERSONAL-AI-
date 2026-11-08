@@ -1,3 +1,5 @@
+> Nota (nov 2026): registro histórico de la Fase 1. Las rutas `backend/…` y `app.*` se movieron en la reestructura a `apps/api/nexaro_api/` y `packages/nexaro_core/`; ver `ARCHITECTURE.md`.
+
 # NEXARO Personal AI — Auditoría de autenticación (2026-11-08)
 
 Estado: **código y pruebas validados; imagen Docker NO reconstruida todavía** (ver §6).

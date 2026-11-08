@@ -12,3 +12,9 @@ async def health(ctx: Ctx) -> dict[str, Any]:
     if not await ctx.provider.health():
         raise HTTPException(status_code=503, detail="Servicio de IA no disponible")
     return {"status": "ok", "ollama": "connected"}
+
+
+@router.get("/health/live")
+def live() -> dict[str, str]:
+    """Liveness del proceso: no depende de Ollama (lo usa el HEALTHCHECK de Docker)."""
+    return {"status": "ok"}
