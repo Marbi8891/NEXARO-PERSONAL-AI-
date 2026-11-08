@@ -14,6 +14,8 @@
 
 - Terraform para AWS por entorno (dev/staging/prod), ADR-0006, costes y job de CI con `terraform validate`; sin aplicar.
 
+- Frontend modular (ES Modules, CSS por capas, router por hash, PWA): acceso, registro, chat con historial, administración (usuarios, auditoría, uso) y organizaciones; CSP estricta; prueba E2E con jsdom; ADR-0007.
+
 ### Cambiado
 - La app pasa a `create_app()` (factory); el comando de admin es `python -m nexaro_api.bootstrap_admin`.
 - Prompt del asistente generado desde proveedor y modelo configurados (sin modelo fijo en código).

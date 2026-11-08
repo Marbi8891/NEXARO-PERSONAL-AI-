@@ -1,4 +1,5 @@
 import logging
+import mimetypes
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 
@@ -17,11 +18,22 @@ from products.personal_ai.service import PersonalAIService
 
 logger = logging.getLogger("nexaro")
 
+mimetypes.add_type("application/manifest+json", ".webmanifest")
+
 SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "no-referrer",
 }
+
+# El frontend no usa scripts ni estilos en línea (lo verifica tests/security).
+CONTENT_SECURITY_POLICY = (
+    "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; "
+    "img-src 'self' data:; manifest-src 'self'; worker-src 'self'; base-uri 'none'; "
+    "frame-ancestors 'none'; form-action 'self'"
+)
+# Swagger UI necesita recursos externos y scripts en línea: solo fuera de producción.
+CSP_EXEMPT_PATHS = ("/docs", "/redoc", "/openapi.json")
 
 
 def create_app(
@@ -77,6 +89,8 @@ def create_app(
         response = await call_next(request)
         for name, value in SECURITY_HEADERS.items():
             response.headers.setdefault(name, value)
+        if not request.url.path.startswith(CSP_EXEMPT_PATHS):
+            response.headers.setdefault("Content-Security-Policy", CONTENT_SECURITY_POLICY)
         return response
 
     for module in (auth, admin, chat, health, organizations):

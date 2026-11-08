@@ -48,7 +48,7 @@ apps/api/nexaro_api/   FastAPI: app factory, rutas, dependencias, CLI bootstrap_
 packages/nexaro_core/  config, security, database, identity, audit
 packages/ai_gateway/   contrato de proveedores y proveedor Ollama
 products/personal_ai/  caso de uso de chat (sin FastAPI)
-frontend/              HTML/CSS/ES Modules
-tests/                 unit, integration, security
+frontend/              HTML/CSS/ES Modules (js/, css/, views/), PWA
+tests/                 unit, integration, security, frontend (E2E jsdom: tests/frontend/run.sh)
 docs/decisions/        ADRs
 ```

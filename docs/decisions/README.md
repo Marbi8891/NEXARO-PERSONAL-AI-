@@ -8,3 +8,7 @@ Una decisión aceptada no se cambia en silencio: se propone un *DECISION REVIEW*
 | [0001](0001-modular-monolith.md) | Monolito modular | Aceptada |
 | [0002](0002-python-layout-and-dependencies.md) | Estructura Python y dependencias | Aceptada |
 | [0003](0003-auth-sessions.md) | Autenticación por sesiones con cookie | Aceptada |
+| [0004](0004-ai-gateway.md) | AI Gateway con política, coste y proveedores | Aceptada |
+| [0005](0005-migrations-multitenancy-postgres.md) | Migraciones, multitenencia y PostgreSQL | Aceptada |
+| [0006](0006-aws-infrastructure.md) | Infraestructura AWS como Terraform (no aplicada) | Propuesta implementada |
+| [0007](0007-frontend-es-modules.md) | Frontend con ES Modules nativos bajo CSP estricta | Aceptada |
