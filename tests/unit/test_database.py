@@ -1,48 +1,17 @@
-import ast
 import sqlite3
 import tempfile
 import unittest
-from contextlib import contextmanager
 from pathlib import Path
+
+from nexaro_core.database import Database
 
 
 class SQLiteConnectionTests(unittest.TestCase):
-
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.db_path = Path(self.temp_dir.name) / "test.db"
 
-        source_path = (
-            Path(__file__).resolve().parents[1]
-            / "app"
-            / "main.py"
-        )
-
-        tree = ast.parse(source_path.read_text())
-
-        function_node = next(
-            node for node in tree.body
-            if isinstance(node, ast.FunctionDef)
-            and node.name == "get_connection"
-        )
-
-        module = ast.Module(
-            body=[function_node],
-            type_ignores=[]
-        )
-
-        namespace = {
-            "sqlite3": sqlite3,
-            "contextmanager": contextmanager,
-            "DATABASE_PATH": self.db_path
-        }
-
-        exec(
-            compile(module, str(source_path), "exec"),
-            namespace
-        )
-
-        self.get_connection = namespace["get_connection"]
+        self.get_connection = Database(self.db_path).connect
 
         with self.get_connection() as db:
             db.execute("""
@@ -66,48 +35,38 @@ class SQLiteConnectionTests(unittest.TestCase):
 
     def test_foreign_keys_enabled(self):
         with self.get_connection() as db:
-            result = db.execute(
-                "PRAGMA foreign_keys"
-            ).fetchone()[0]
+            result = db.execute("PRAGMA foreign_keys").fetchone()[0]
 
         self.assertEqual(result, 1)
 
     def test_valid_insert_is_committed(self):
         with self.get_connection() as db:
-            db.execute(
-                "INSERT INTO conversations (id) VALUES (?)",
-                ("test-1",)
-            )
+            db.execute("INSERT INTO conversations (id) VALUES (?)", ("test-1",))
             db.execute(
                 """
                 INSERT INTO messages (conversation_id, content)
                 VALUES (?, ?)
                 """,
-                ("test-1", "Mensaje válido")
+                ("test-1", "Mensaje válido"),
             )
 
         with self.get_connection() as db:
-            count = db.execute(
-                "SELECT COUNT(*) FROM messages"
-            ).fetchone()[0]
+            count = db.execute("SELECT COUNT(*) FROM messages").fetchone()[0]
 
         self.assertEqual(count, 1)
 
     def test_invalid_foreign_key_is_rejected_and_rolled_back(self):
-        with self.assertRaises(sqlite3.IntegrityError):
-            with self.get_connection() as db:
-                db.execute(
-                    """
+        with self.assertRaises(sqlite3.IntegrityError), self.get_connection() as db:
+            db.execute(
+                """
                     INSERT INTO messages (conversation_id, content)
                     VALUES (?, ?)
                     """,
-                    ("inexistente", "Mensaje inválido")
-                )
+                ("inexistente", "Mensaje inválido"),
+            )
 
         with self.get_connection() as db:
-            count = db.execute(
-                "SELECT COUNT(*) FROM messages"
-            ).fetchone()[0]
+            count = db.execute("SELECT COUNT(*) FROM messages").fetchone()[0]
 
         self.assertEqual(count, 0)
 

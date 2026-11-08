@@ -3,14 +3,11 @@
 Reproduce la forma de la copia real (1 usuario, 4 sesiones, 11 conversaciones,
 52 mensajes) sin depender de datos personales ni de ficheros ignorados por git.
 """
+
 import sqlite3
-import sys
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-from app.auth import create_session_token, hash_password, hash_session_token
+from nexaro_core.security import create_session_token, hash_password, hash_session_token
 
 LEGACY_EMAIL = "legacy@example.com"
 LEGACY_PASSWORD = "legacy-password-123"
@@ -82,8 +79,7 @@ def create_legacy_database(path):
             )
 
         connection.execute(
-            "INSERT INTO sessions (id, user_id, token_hash, expires_at) "
-            "VALUES ('live', ?, ?, ?)",
+            "INSERT INTO sessions (id, user_id, token_hash, expires_at) VALUES ('live', ?, ?, ?)",
             (user_id, hash_session_token(live_token), expires),
         )
 
@@ -95,8 +91,7 @@ def create_legacy_database(path):
 
         for index in range(52):
             connection.execute(
-                "INSERT INTO messages (conversation_id, role, content) "
-                "VALUES (?, 'user', ?)",
+                "INSERT INTO messages (conversation_id, role, content) VALUES (?, 'user', ?)",
                 (f"conv-{index % 11}", f"mensaje {index}"),
             )
 

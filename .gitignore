@@ -19,3 +19,17 @@ venv/
 
 # Ficheros intermedios apartados para borrado manual
 _to_delete/
+
+# Herramientas y artefactos
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Terraform: nunca versionar estado ni variables reales
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example

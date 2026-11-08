@@ -7,17 +7,11 @@ from contextlib import closing
 from datetime import datetime
 from pathlib import Path
 
-from app.auth import (
-    approve_user,
-    hash_password,
-    init_auth_schema,
-    set_user_role,
-)
-
-
-DATABASE_PATH = Path(
-    os.getenv("DATABASE_PATH", "/data/nexaro.db")
-).expanduser()
+from nexaro_api.bootstrap import migrate
+from nexaro_core.config import get_settings
+from nexaro_core.database import Database
+from nexaro_core.identity import approve_user, set_user_role
+from nexaro_core.security import hash_password
 
 
 def create_backup(database_path: Path) -> Path:
@@ -29,14 +23,16 @@ def create_backup(database_path: Path) -> Path:
     if backup_path.exists():
         raise RuntimeError("Ya existe el archivo de backup.")
 
-    with closing(sqlite3.connect(database_path)) as source:
-        with closing(sqlite3.connect(backup_path)) as destination:
-            source.backup(destination)
+    with (
+        closing(sqlite3.connect(database_path)) as source,
+        closing(sqlite3.connect(backup_path)) as destination,
+    ):
+        source.backup(destination)
 
     return backup_path
 
 
-def find_user_id(database_path: Path, email: str):
+def find_user_id(database_path: Path, email: str) -> str | None:
     """Consulta de solo lectura: devuelve el id de la cuenta o None."""
     uri = f"file:{database_path}?mode=ro"
 
@@ -52,7 +48,7 @@ def find_user_id(database_path: Path, email: str):
     return row[0] if row else None
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Alta inicial y segura del administrador de NEXARO."
     )
@@ -88,13 +84,12 @@ def main():
             "No se ha modificado nada."
         )
 
-    database_path = DATABASE_PATH.resolve()
+    database_path = get_settings().database_path.expanduser().resolve()
     confirmed_path = Path(args.confirm_database).expanduser().resolve()
 
     if database_path != confirmed_path:
         raise SystemExit(
-            "ERROR: la ruta confirmada no coincide con DATABASE_PATH. "
-            "No se ha modificado nada."
+            "ERROR: la ruta confirmada no coincide con DATABASE_PATH. No se ha modificado nada."
         )
 
     if not database_path.is_file():
@@ -128,10 +123,12 @@ def main():
         try:
             password_hash = hash_password(password)
         except ValueError as exc:
-            raise SystemExit(str(exc))
+            raise SystemExit(str(exc)) from None
 
     backup_path = create_backup(database_path)
     print("Copia de seguridad creada:", backup_path)
+
+    migrate(Database(database_path))  # esquema al día, en su propia transacción atómica
 
     connection = sqlite3.connect(database_path)
     connection.row_factory = sqlite3.Row
@@ -140,7 +137,6 @@ def main():
     try:
         with connection:
             connection.execute("BEGIN IMMEDIATE")
-            init_auth_schema(connection)
 
             current = connection.execute(
                 "SELECT id FROM users WHERE email = ? COLLATE NOCASE",
@@ -148,9 +144,7 @@ def main():
             ).fetchone()
 
             if current and not args.promote_existing:
-                raise RuntimeError(
-                    "La cuenta ya existe. No se ha cambiado ningún usuario."
-                )
+                raise RuntimeError("La cuenta ya existe. No se ha cambiado ningún usuario.")
 
             if current:
                 admin_id = current["id"]
@@ -158,9 +152,7 @@ def main():
                 set_user_role(connection, admin_id, "admin")
             else:
                 if password_hash is None:
-                    raise RuntimeError(
-                        "La cuenta ha desaparecido durante la operación."
-                    )
+                    raise RuntimeError("La cuenta ha desaparecido durante la operación.")
 
                 connection.execute(
                     """

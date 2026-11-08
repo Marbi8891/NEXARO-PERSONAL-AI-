@@ -1,15 +1,11 @@
 import sqlite3
-import sys
 import unittest
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-from app.auth import (
+from nexaro_core.identity import init_identity_schema
+from nexaro_core.security import (
     create_session_token,
     hash_password,
     hash_session_token,
-    init_auth_schema,
     verify_password,
 )
 
@@ -74,13 +70,10 @@ class AuthCoreTests(unittest.TestCase):
         )
         db.commit()
 
-        init_auth_schema(db)
-        init_auth_schema(db)
+        init_identity_schema(db)
+        init_identity_schema(db)
 
-        columns = {
-            row["name"]
-            for row in db.execute("PRAGMA table_info(conversations)")
-        }
+        columns = {row["name"] for row in db.execute("PRAGMA table_info(conversations)")}
 
         self.assertIn("user_id", columns)
         self.assertEqual(
@@ -94,19 +87,13 @@ class AuthCoreTests(unittest.TestCase):
             ).fetchone()[0]
         )
         self.assertIsNotNone(
-            db.execute(
-                "SELECT name FROM sqlite_master WHERE name = 'users'"
-            ).fetchone()
+            db.execute("SELECT name FROM sqlite_master WHERE name = 'users'").fetchone()
         )
         self.assertIsNotNone(
-            db.execute(
-                "SELECT name FROM sqlite_master WHERE name = 'sessions'"
-            ).fetchone()
+            db.execute("SELECT name FROM sqlite_master WHERE name = 'sessions'").fetchone()
         )
 
         db.close()
-
-
 
     def test_user_email_must_be_unique_case_insensitive(self):
         db = sqlite3.connect(":memory:")
@@ -118,7 +105,7 @@ class AuthCoreTests(unittest.TestCase):
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        init_auth_schema(db)
+        init_identity_schema(db)
 
         db.execute(
             "INSERT INTO users (id, email, password_hash) VALUES (?, ?, ?)",
@@ -142,13 +129,16 @@ class AuthCoreTests(unittest.TestCase):
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        init_auth_schema(db)
+        init_identity_schema(db)
 
         with self.assertRaises(sqlite3.IntegrityError):
-            db.execute("""
+            db.execute(
+                """
                 INSERT INTO sessions (id, user_id, token_hash, expires_at)
                 VALUES (?, ?, ?, ?)
-            """, ("session-1", "missing-user", "token-hash", "2030-01-01"))
+            """,
+                ("session-1", "missing-user", "token-hash", "2030-01-01"),
+            )
         db.close()
 
     def test_conversation_can_be_assigned_to_existing_user(self):
@@ -161,7 +151,7 @@ class AuthCoreTests(unittest.TestCase):
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        init_auth_schema(db)
+        init_identity_schema(db)
 
         db.execute(
             "INSERT INTO users (id, email, password_hash) VALUES (?, ?, ?)",
@@ -180,12 +170,10 @@ class AuthCoreTests(unittest.TestCase):
         self.assertEqual(owner, "user-1")
         db.close()
 
-
-
-
     def _create_session_test_database(self):
         import sqlite3
-        from app.auth import init_auth_schema
+
+        from nexaro_core.identity import init_identity_schema
 
         db = sqlite3.connect(":memory:")
         db.row_factory = sqlite3.Row
@@ -196,7 +184,7 @@ class AuthCoreTests(unittest.TestCase):
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        init_auth_schema(db)
+        init_identity_schema(db)
         db.execute(
             "INSERT INTO users (id, email, password_hash) VALUES (?, ?, ?)",
             ("session-user", "admin@example.com", "test-hash"),
@@ -204,8 +192,9 @@ class AuthCoreTests(unittest.TestCase):
         return db
 
     def test_active_session_returns_user(self):
-        from datetime import datetime, timezone, timedelta
-        from app.auth import create_session, get_session_user
+        from datetime import datetime, timedelta, timezone
+
+        from nexaro_core.identity import create_session, get_session_user
 
         db = self._create_session_test_database()
         now = datetime(2026, 11, 7, 12, 0, tzinfo=timezone.utc)
@@ -220,23 +209,24 @@ class AuthCoreTests(unittest.TestCase):
 
     def test_session_stores_only_token_hash(self):
         from datetime import datetime, timezone
-        from app.auth import create_session, hash_session_token
+
+        from nexaro_core.identity import create_session
+        from nexaro_core.security import hash_session_token
 
         db = self._create_session_test_database()
         now = datetime(2026, 11, 7, 12, 0, tzinfo=timezone.utc)
 
         token = create_session(db, "session-user", now=now)
-        row = db.execute(
-            "SELECT token_hash FROM sessions"
-        ).fetchone()
+        row = db.execute("SELECT token_hash FROM sessions").fetchone()
 
         self.assertEqual(row["token_hash"], hash_session_token(token))
         self.assertNotEqual(row["token_hash"], token)
         db.close()
 
     def test_expired_session_returns_no_user(self):
-        from datetime import datetime, timezone, timedelta
-        from app.auth import create_session, get_session_user
+        from datetime import datetime, timedelta, timezone
+
+        from nexaro_core.identity import create_session, get_session_user
 
         db = self._create_session_test_database()
         now = datetime(2026, 11, 7, 12, 0, tzinfo=timezone.utc)
@@ -255,7 +245,8 @@ class AuthCoreTests(unittest.TestCase):
 
     def test_revoked_session_returns_no_user(self):
         from datetime import datetime, timezone
-        from app.auth import create_session, get_session_user, revoke_session
+
+        from nexaro_core.identity import create_session, get_session_user, revoke_session
 
         db = self._create_session_test_database()
         now = datetime(2026, 11, 7, 12, 0, tzinfo=timezone.utc)
@@ -268,7 +259,7 @@ class AuthCoreTests(unittest.TestCase):
         db.close()
 
     def test_unknown_session_returns_no_user(self):
-        from app.auth import get_session_user
+        from nexaro_core.identity import get_session_user
 
         db = self._create_session_test_database()
 
@@ -277,7 +268,8 @@ class AuthCoreTests(unittest.TestCase):
 
     def test_session_rejects_naive_datetime(self):
         from datetime import datetime
-        from app.auth import create_session
+
+        from nexaro_core.identity import create_session
 
         db = self._create_session_test_database()
 
@@ -290,12 +282,10 @@ class AuthCoreTests(unittest.TestCase):
 
         db.close()
 
-
-
-
     def test_session_expires_at_exact_boundary(self):
-        from datetime import datetime, timezone, timedelta
-        from app.auth import create_session, get_session_user
+        from datetime import datetime, timedelta, timezone
+
+        from nexaro_core.identity import create_session, get_session_user
 
         db = self._create_session_test_database()
         now = datetime(2026, 11, 7, 12, 0, tzinfo=timezone.utc)
@@ -317,8 +307,9 @@ class AuthCoreTests(unittest.TestCase):
         db.close()
 
     def test_session_rejects_non_positive_lifetime(self):
-        from datetime import datetime, timezone, timedelta
-        from app.auth import create_session
+        from datetime import datetime, timedelta, timezone
+
+        from nexaro_core.identity import create_session
 
         db = self._create_session_test_database()
         now = datetime(2026, 11, 7, 12, 0, tzinfo=timezone.utc)
@@ -327,20 +318,20 @@ class AuthCoreTests(unittest.TestCase):
             timedelta(0),
             timedelta(seconds=-1),
         ):
-            with self.subTest(lifetime=lifetime):
-                with self.assertRaises(ValueError):
-                    create_session(
-                        db,
-                        "session-user",
-                        lifetime=lifetime,
-                        now=now,
-                    )
+            with self.subTest(lifetime=lifetime), self.assertRaises(ValueError):
+                create_session(
+                    db,
+                    "session-user",
+                    lifetime=lifetime,
+                    now=now,
+                )
 
         db.close()
 
     def test_session_creation_can_be_rolled_back(self):
         from datetime import datetime, timezone
-        from app.auth import create_session, get_session_user
+
+        from nexaro_core.identity import create_session, get_session_user
 
         db = self._create_session_test_database()
         now = datetime(2026, 11, 7, 12, 0, tzinfo=timezone.utc)
@@ -364,9 +355,7 @@ class AuthCoreTests(unittest.TestCase):
 
         for encoded in unsafe_hashes:
             with self.subTest(encoded=encoded):
-                self.assertFalse(
-                    verify_password("UnaClaveDePrueba-2026!", encoded)
-                )
+                self.assertFalse(verify_password("UnaClaveDePrueba-2026!", encoded))
 
     def test_password_verification_rejects_invalid_salt_and_hash_lengths(self):
         valid_hash = hash_password("UnaClaveDePrueba-2026!")
@@ -392,10 +381,10 @@ class AuthCoreTests(unittest.TestCase):
             )
         )
 
-
     def _create_accounts_database(self):
         import sqlite3
-        from app.auth import init_auth_schema
+
+        from nexaro_core.identity import init_identity_schema
 
         db = sqlite3.connect(":memory:")
         db.row_factory = sqlite3.Row
@@ -406,21 +395,18 @@ class AuthCoreTests(unittest.TestCase):
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        init_auth_schema(db)
+        init_identity_schema(db)
         return db
 
     def test_public_registration_is_disabled_by_default(self):
-        from app.auth import get_registration_enabled
+        from nexaro_core.identity import get_registration_enabled
 
         db = self._create_accounts_database()
         self.assertFalse(get_registration_enabled(db))
         db.close()
 
     def test_registration_setting_can_be_changed(self):
-        from app.auth import (
-            get_registration_enabled,
-            set_registration_enabled,
-        )
+        from nexaro_core.identity import get_registration_enabled, set_registration_enabled
 
         db = self._create_accounts_database()
         set_registration_enabled(db, True)
@@ -430,7 +416,7 @@ class AuthCoreTests(unittest.TestCase):
         db.close()
 
     def test_new_user_is_pending_and_never_admin(self):
-        from app.auth import create_user, list_users
+        from nexaro_core.identity import create_user, list_users
 
         db = self._create_accounts_database()
         user_id = create_user(
@@ -447,7 +433,8 @@ class AuthCoreTests(unittest.TestCase):
 
     def test_pending_user_session_is_rejected_until_approved(self):
         from datetime import datetime, timezone
-        from app.auth import create_user, create_session, get_session_user, approve_user
+
+        from nexaro_core.identity import approve_user, create_session, create_user, get_session_user
 
         db = self._create_accounts_database()
         user_id = create_user(
@@ -468,7 +455,8 @@ class AuthCoreTests(unittest.TestCase):
 
     def test_rejected_user_cannot_use_existing_session(self):
         from datetime import datetime, timezone
-        from app.auth import create_user, create_session, get_session_user, reject_user
+
+        from nexaro_core.identity import create_session, create_user, get_session_user, reject_user
 
         db = self._create_accounts_database()
         user_id = create_user(
@@ -487,7 +475,13 @@ class AuthCoreTests(unittest.TestCase):
 
     def test_deactivated_user_cannot_use_existing_session(self):
         from datetime import datetime, timezone
-        from app.auth import create_user, create_session, get_session_user, set_user_active
+
+        from nexaro_core.identity import (
+            create_session,
+            create_user,
+            get_session_user,
+            set_user_active,
+        )
 
         db = self._create_accounts_database()
         user_id = create_user(
@@ -505,7 +499,8 @@ class AuthCoreTests(unittest.TestCase):
 
     def test_duplicate_account_email_is_rejected(self):
         import sqlite3
-        from app.auth import create_user
+
+        from nexaro_core.identity import create_user
 
         db = self._create_accounts_database()
         create_user(db, "duplicate@example.com", "UnaClaveSegura-2026!")
@@ -515,7 +510,7 @@ class AuthCoreTests(unittest.TestCase):
         db.close()
 
     def test_invalid_role_is_rejected(self):
-        from app.auth import create_user, set_user_role
+        from nexaro_core.identity import create_user, set_user_role
 
         db = self._create_accounts_database()
         user_id = create_user(
