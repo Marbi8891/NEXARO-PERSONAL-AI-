@@ -1,0 +1,10 @@
+# Contexto de build del backend: solo código de producción.
+# (COPY app ./app copiaba también las copias .pre-*, .bak y .backup-*)
+**/__pycache__
+**/*.pyc
+app/*.pre-*
+app/*.bak
+app/*.backup*
+app/*.before-*
+tests
+.venv*

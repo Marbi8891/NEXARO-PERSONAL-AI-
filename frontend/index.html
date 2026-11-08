@@ -196,9 +196,119 @@ button:disabled { opacity: .5; cursor: wait; }
   .composer-wrap { padding: 12px; }
   .send { padding: 0 15px; }
 }
+
+body:not(.authenticated) .app {
+  display: none;
+}
+#nexaro-login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+body.authenticated #nexaro-login {
+  display: none;
+}
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 32px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.login-card h1 {
+  margin: 0 0 8px;
+  font-size: 25px;
+}
+.login-card p {
+  color: var(--muted);
+  line-height: 1.5;
+}
+.login-card label {
+  display: block;
+  margin: 18px 0 7px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.login-card input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+.login-card button, .logout-button {
+  padding: 11px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #101319;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.logout-error {
+  color: #ff8585;
+  font-size: 12px;
+  margin-left: auto;
+  text-align: right;
+}
+.login-card button {
+  width: 100%;
+  margin-top: 22px;
+}
+.login-card button:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+.login-error {
+  min-height: 20px;
+  margin-top: 14px;
+  color: #ff8585;
+  font-size: 13px;
+}
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.logout-button {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 12px;
+}
+@media (max-width: 600px) {
+  .login-card { padding: 24px; }
+}
+
 </style>
 </head>
 <body>
+
+<section id="nexaro-login" aria-label="Acceso a NEXARO">
+  <form class="login-card" id="nexaro-login-form">
+    <div class="brand">NEXARO</div>
+    <div class="subtitle">PERSONAL AI</div>
+    <h1>Iniciar sesión</h1>
+    <p>Introduce tus credenciales para acceder a tu asistente personal.</p>
+    <label for="nexaro-email">Correo electrónico</label>
+    <input id="nexaro-email" name="email" type="email"
+      autocomplete="username" required maxlength="254">
+    <label for="nexaro-password">Contraseña</label>
+    <input id="nexaro-password" name="password" type="password"
+      autocomplete="current-password" required maxlength="1024">
+    <button id="nexaro-login-button" type="submit">Entrar</button>
+    <div class="login-error" id="nexaro-login-error"
+      role="alert" aria-live="polite"></div>
+  </form>
+</section>
+
 <div class="app">
   <aside class="sidebar">
     <div>
@@ -219,7 +329,13 @@ button:disabled { opacity: .5; cursor: wait; }
   </aside>
 
   <main class="main">
-    <header class="header">Asistente personal</header>
+    <header class="header">
+  <span>Asistente personal</span>
+  <span id="nexaro-logout-error" class="logout-error" role="alert" aria-live="polite"></span>
+  <button class="logout-button" id="nexaro-logout" type="button">
+    Cerrar sesión
+  </button>
+</header>
 
     <section class="messages" id="messages">
       <div class="welcome" id="welcome">
@@ -240,6 +356,126 @@ button:disabled { opacity: .5; cursor: wait; }
     </div>
   </main>
 </div>
+
+
+<script>
+(() => {
+  const loginForm = document.getElementById("nexaro-login-form");
+  const loginButton = document.getElementById("nexaro-login-button");
+  const loginError = document.getElementById("nexaro-login-error");
+  const passwordInput = document.getElementById("nexaro-password");
+  const logoutButton = document.getElementById("nexaro-logout");
+  const logoutError = document.getElementById("nexaro-logout-error");
+
+  const originalFetch = window.fetch.bind(window);
+
+  function showLogin(message = "") {
+    document.body.classList.remove("authenticated");
+    localStorage.removeItem("nexaro_conversation_id");
+    loginError.textContent = message;
+  }
+
+  window.fetch = async (...args) => {
+    const response = await originalFetch(...args);
+    const url = String(args[0]?.url || args[0] || "");
+
+    if (
+      response.status === 401 &&
+      !url.includes("/api/auth/login") &&
+      !url.includes("/api/auth/me")
+    ) {
+      showLogin("Tu sesión ha caducado. Inicia sesión de nuevo.");
+    }
+    return response;
+  };
+
+  async function checkSession() {
+    try {
+      const response = await originalFetch("/api/auth/me", {
+        credentials: "same-origin"
+      });
+
+      if (!response.ok) {
+        showLogin();
+        return false;
+      }
+
+      document.body.classList.add("authenticated");
+      return true;
+    } catch {
+      showLogin("No se ha podido conectar con el servidor.");
+      return false;
+    }
+  }
+
+  loginForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    loginError.textContent = "";
+    loginButton.disabled = true;
+    loginButton.textContent = "Comprobando...";
+
+    const email = document.getElementById("nexaro-email").value.trim();
+    const password = passwordInput.value;
+
+    try {
+      const response = await originalFetch("/api/auth/login", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(
+          data.detail || "No se ha podido iniciar sesión."
+        );
+      }
+
+      passwordInput.value = "";
+      localStorage.removeItem("nexaro_conversation_id");
+      window.location.reload();
+    } catch (error) {
+      loginError.textContent = error.message;
+      passwordInput.value = "";
+      passwordInput.focus();
+    } finally {
+      loginButton.disabled = false;
+      loginButton.textContent = "Entrar";
+    }
+  });
+
+  logoutButton?.addEventListener("click", async () => {
+    logoutButton.disabled = true;
+    logoutError.textContent = "";
+
+    try {
+      const response = await originalFetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "same-origin"
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          response.status === 401
+            ? "La sesión ya no es válida. Recarga la página para volver a acceder."
+            : "No se pudo cerrar la sesión. Inténtalo de nuevo."
+        );
+      }
+
+      localStorage.removeItem("nexaro_conversation_id");
+      window.location.reload();
+
+    } catch (error) {
+      logoutError.textContent = error.message ||
+        "Error de conexión al cerrar la sesión.";
+      logoutButton.disabled = false;
+    }
+  });
+
+  window.nexaroSessionReady = checkSession();
+})();
+</script>
 
 <script>
 const messagesElement = document.getElementById("messages");
@@ -364,7 +600,7 @@ async function checkHealth() {
 
     const data = await response.json();
     dot.className = "dot online";
-    label.textContent = `Conectado · ${data.configured_model}`;
+    label.textContent = data.ollama === "connected" ? "Conectado · Ollama" : "Ollama no disponible";
   } catch {
     dot.className = "dot offline";
     label.textContent = "Sin conexión";
@@ -482,8 +718,12 @@ async function restoreConversation() {
   }
 }
 
-checkHealth();
-loadConversations().then(() => restoreConversation());
+window.nexaroSessionReady.then((authenticated) => {
+  if (!authenticated) return;
+
+  checkHealth();
+  loadConversations().then(() => restoreConversation());
+});
 </script>
 </body>
 </html>

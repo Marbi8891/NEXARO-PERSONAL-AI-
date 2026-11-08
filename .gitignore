@@ -14,3 +14,8 @@ venv/
 *.bak
 *.backup*
 *.before-*
+
+.venv-nexaro-tests/
+
+# Ficheros intermedios apartados para borrado manual
+_to_delete/
