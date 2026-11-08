@@ -10,6 +10,8 @@
 
 - AI Gateway (`Gateway`, `GatewayPolicy`, `UsageStore`), proveedores Bedrock y SageMaker, `GET /api/admin/usage`, ADR-0004.
 
+- Migraciones versionadas con checksum (`schema_migrations`), modelo multiorganización, API de organizaciones y miembros, DDL de PostgreSQL con RLS validado con servidor real, ADR-0005.
+
 ### Cambiado
 - La app pasa a `create_app()` (factory); el comando de admin es `python -m nexaro_api.bootstrap_admin`.
 - Prompt del asistente generado desde proveedor y modelo configurados (sin modelo fijo en código).

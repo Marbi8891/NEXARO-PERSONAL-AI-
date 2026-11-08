@@ -13,11 +13,18 @@
   `Referrer-Policy`.
 - CI: pip-audit, gitleaks, escaneo de imagen con Trivy.
 
+- Aislamiento entre organizaciones: `organization_id NOT NULL` + claves foráneas compuestas
+  (la base rechaza referencias entre organizaciones), acceso por membresía y permiso (404 si no
+  eres miembro, incluso siendo admin de plataforma) y, en PostgreSQL, Row Level Security.
+  Un test inspecciona el esquema y falla si una tabla nueva no lo cumple.
+
 ## Pendiente / límites
 
 - CSP estricta: requiere sacar el JavaScript inline del frontend (fase de frontend).
 - Subir el coste de scrypt exige verificación versionada y rehash (no hecho).
-- El aislamiento entre organizaciones aún no existe.
+- RLS solo existe en el DDL de PostgreSQL y no protege frente a superusuarios; la aplicación aún no
+  ejecuta sobre PostgreSQL (ADR-0005). En SQLite el aislamiento depende de claves compuestas y de la capa de aplicación.
+- Documentos, agentes y tareas tienen tablas pero aún no API: el aislamiento está probado a nivel de esquema.
 
 ## Reporte de vulnerabilidades
 

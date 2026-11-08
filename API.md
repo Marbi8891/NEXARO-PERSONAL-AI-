@@ -21,6 +21,11 @@ modifican estado exigen cabecera `Origin` incluida en `ALLOWED_ORIGINS`. En prod
 | PATCH | `/admin/users/{id}/active` | admin | no sobre uno mismo; protege al último admin |
 | PATCH | `/admin/settings/registration` | admin | abre/cierra el registro público |
 | GET | `/admin/audit` | admin | |
+| GET | `/organizations` | sesión | organizaciones del usuario y su rol |
+| POST | `/organizations` | admin plataforma | crea la organización; el creador es propietario (ASSUMPTION: solo admins de plataforma) |
+| GET | `/organizations/{id}/members` | `members:read` | 404 si no eres miembro (también para admins de plataforma) |
+| POST | `/organizations/{id}/members` | `members:manage` | `{email, role}`; el usuario debe existir |
+| PATCH/DELETE | `/organizations/{id}/members/{user_id}` | `members:manage` | solo propietarios tocan propietarios; el último no se puede quitar |
 | GET | `/admin/usage` | admin | uso de modelos por proveedor/modelo (`days`, máx. 365) y coste del mes |
 
 Códigos: 400 operación no permitida (p. ej. sobre uno mismo o el último admin), 401 sin sesión,

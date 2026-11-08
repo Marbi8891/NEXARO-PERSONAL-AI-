@@ -27,6 +27,8 @@ jobs:
       - run: ruff format --check .
       - run: mypy packages products apps
       - name: Tests con cobertura (umbral en pyproject.toml)
+        env:
+          NEXARO_REQUIRE_POSTGRES: "1"  # valida el DDL de PostgreSQL con un servidor real (pgserver)
         run: pytest --cov=packages --cov=products --cov=apps --cov-report=term --cov-report=xml
       - uses: actions/upload-artifact@v4
         with:

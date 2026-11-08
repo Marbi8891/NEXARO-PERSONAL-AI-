@@ -9,7 +9,7 @@ from ai_gateway.providers.base import ChatProvider
 from nexaro_api.bootstrap import migrate
 from nexaro_api.context import AppContext
 from nexaro_api.gateway import build_gateway
-from nexaro_api.routers import admin, auth, chat, health
+from nexaro_api.routers import admin, auth, chat, health, organizations
 from nexaro_core.config import Settings, get_settings
 from nexaro_core.database import Database
 from nexaro_core.security import RateLimiter
@@ -79,7 +79,7 @@ def create_app(
             response.headers.setdefault(name, value)
         return response
 
-    for module in (auth, admin, chat, health):
+    for module in (auth, admin, chat, health, organizations):
         app.include_router(module.router)
 
     if settings.frontend_path.is_dir():

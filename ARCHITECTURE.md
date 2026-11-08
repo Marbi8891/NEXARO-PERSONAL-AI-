@@ -29,8 +29,17 @@ apps/api  ──►  products/*  ──►  packages/{nexaro_core, ai_gateway}
 `create_app()` ejecuta en el lifespan una migración aditiva e idempotente dentro de
 `BEGIN IMMEDIATE`. Si falla, el arranque aborta (fail-fast) y no queda estado parcial.
 
+## Migraciones y multitenencia (ADR-0005)
+
+`schema_migrations` registra versión y checksum; el lote pendiente se aplica en una transacción.
+La 1 es la línea base (esquema anterior); la 2 crea organizaciones, roles/permisos, membresías,
+suscripciones, proveedores de modelos, documentos, fragmentos, embeddings, agentes, ejecuciones y
+tareas. Hay un juego de SQL por dialecto (`migrations/sqlite`, `migrations/postgresql`) y un test
+de paridad contra un PostgreSQL real.
+
 ## Límites conocidos
 
-- Persistencia solo SQLite; el esquema no está versionado todavía (migración aditiva por código).
-- Sin multitenencia efectiva: el aislamiento actual es por usuario (`conversations.user_id`).
+- La aplicación solo ejecuta sobre SQLite: el DDL de PostgreSQL está validado, pero falta la capa de acceso (ADR-0005).
+- Organizaciones y miembros tienen API; documentos, agentes y tareas solo esquema.
+- Las conversaciones siguen siendo personales (`organization_id` es opcional y aún no se usa).
 - Un solo proveedor de IA (Ollama).

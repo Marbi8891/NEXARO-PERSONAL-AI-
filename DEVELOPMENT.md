@@ -12,6 +12,7 @@ make check
 - Dependencias: `requirements/{base,aws,dev}.txt`, con versiones fijadas.
 - Tests: `tests/unit`, `tests/integration`, `tests/security`. Umbral de cobertura 80 %
   (`pyproject.toml`); la cobertura se mide, no se fuerza.
+- Los tests de PostgreSQL usan `pgserver` (PostgreSQL embebido): no necesitas instalar nada. En CI son obligatorios.
 - No se modifican tests existentes para hacerlos pasar.
 - `pre-commit install` activa ruff y gitleaks.
 - Nunca ejecutes `docker compose down -v` ni borres el volumen `nexaro-personal-ai_nexaro_data`.
