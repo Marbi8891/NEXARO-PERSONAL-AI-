@@ -322,3 +322,7 @@ th[aria-sort] .th-button { color: var(--text); }
 .secret-row input { flex: 1 1 18rem; min-width: 0; font-family: var(--font-mono); }
 .code-block { margin: 0; padding: var(--space-3); background: var(--panel-2); border-radius: var(--radius-sm); overflow-x: auto; font-size: var(--fs-sm); }
 code { font-family: var(--font-mono); }
+
+.answer { white-space: pre-wrap; margin: 0; }
+.sources { margin: 0; padding-left: var(--space-5); display: grid; gap: var(--space-3); }
+.sources p { margin: var(--space-1) 0 0; color: var(--muted); }

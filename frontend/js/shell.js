@@ -15,6 +15,7 @@ export function createShell({ user }) {
   const links = [
     { nav: "dashboard", href: "#/dashboard", label: "Panel" },
     { nav: "chat", href: "#/chat", label: "Chat" },
+    { nav: "documents", href: "#/documents", label: "Documentos" },
     { nav: "organizations", href: "#/organizations", label: "Organizaciones" },
     { nav: "developer", href: "#/developer", label: "Developer" },
     ...(user.role === "admin"

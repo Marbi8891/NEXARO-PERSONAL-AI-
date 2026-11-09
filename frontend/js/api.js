@@ -72,6 +72,12 @@ export const api = {
   revokeApiKey: (orgId, keyId) => request(`/api/organizations/${id(orgId)}/api-keys/${id(keyId)}`, { method: "DELETE" }),
   organizationUsage: (orgId, days = 30) => request(`/api/organizations/${id(orgId)}/usage?days=${days}`),
 
+  documents: (orgId) => request(`/api/organizations/${id(orgId)}/documents`),
+  createDocument: (orgId, body) => request(`/api/organizations/${id(orgId)}/documents`, { method: "POST", body }),
+  deleteDocument: (orgId, docId) => request(`/api/organizations/${id(orgId)}/documents/${id(docId)}`, { method: "DELETE" }),
+  searchDocuments: (orgId, q) => request(`/api/organizations/${id(orgId)}/documents/search?q=${encodeURIComponent(q)}`),
+  askDocuments: (orgId, question) => request(`/api/organizations/${id(orgId)}/documents/ask`, { method: "POST", body: { question } }),
+
   organizations: () => request("/api/organizations"),
   createOrganization: (name, slug) => request("/api/organizations", { method: "POST", body: { name, slug } }),
   members: (orgId) => request(`/api/organizations/${id(orgId)}/members`),

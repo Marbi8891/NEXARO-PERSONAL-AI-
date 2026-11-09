@@ -35,3 +35,4 @@
 ## Fase 1 — `4453ef1`
 - Autenticación por cuentas con migración atómica; registro cerrado; sin admins automáticos.
 - Developer ampliado (F16): permisos por clave (`chat:write`, `conversations:read`), `GET /api/v1/conversations[/{id}]` limitado a conversaciones creadas con claves de la organización, límite de 60 peticiones/minuto por clave (429 + `Retry-After`), migración 4 (SQLite y PostgreSQL) y ADR-0011.
+- Documentos (F17): subida de texto por organización, búsqueda léxica BM25 y preguntas con fuentes (`/api/organizations/{id}/documents`), vista `#/documents`, sin migración nueva y ADR-0012.

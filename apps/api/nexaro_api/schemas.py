@@ -50,3 +50,14 @@ class ApiKeyCreateRequest(BaseModel):
     scopes: list[str] = Field(
         default_factory=lambda: list(DEFAULT_SCOPES), min_length=1, max_length=5
     )
+
+
+class DocumentCreateRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    content: str = Field(min_length=1, max_length=400_000)  # el servicio aplica el límite real
+    source: str | None = Field(default=None, max_length=255)
+    mime_type: str | None = Field(default=None, max_length=100)
+
+
+class DocumentAskRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=2000)

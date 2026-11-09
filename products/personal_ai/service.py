@@ -30,6 +30,10 @@ class PersonalAIService:
         self._provider = provider
         self._model = model
 
+    @property
+    def model(self) -> str:
+        return self._model
+
     async def chat(
         self,
         user_id: str,

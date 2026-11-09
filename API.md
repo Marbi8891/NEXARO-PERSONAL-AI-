@@ -67,6 +67,18 @@ curl -X POST http://127.0.0.1:8001/api/v1/chat \
   -d '{"message": "Hola"}'
 ```
 
+## Documentos
+
+Bajo `/organizations/{id}/documents`. Lectura: `documents:read` (todos los roles); escritura: `documents:write` (propietario, administrador, miembro). Solo texto plano. Ver [ADR-0012](docs/decisions/0012-documents-lexical-search.md).
+
+| Método | Ruta | Notas |
+|---|---|---|
+| GET | `/documents` | lista con `chunk_count` y `limits` |
+| POST | `/documents` | `{title, content, source?, mime_type?}`. 422 vacío, 413 más de 200 000 caracteres, 409 duplicado o 100 documentos |
+| DELETE | `/documents/{doc_id}` | 204; borrado lógico, elimina sus fragmentos; 404 si no es de esa organización |
+| GET | `/documents/search?q=&limit=5` | fragmentos por relevancia (BM25): `document_id, title, ordinal, snippet, score` |
+| POST | `/documents/ask` | `{question}` → `{answer, sources}`. Sin fragmentos relevantes no consulta al modelo |
+
 ## Administración de plataforma
 
 | Método | Ruta | Acceso | Notas |

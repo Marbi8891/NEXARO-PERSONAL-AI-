@@ -253,6 +253,26 @@ await check("developer: crear clave muestra el secreto una vez, lista solo el pr
   await until(() => $(".data-table").textContent.includes("Revocada"), "revocada");
   assert.ok(!$(".secret-card"), "el secreto no persiste tras recargar la lista");
 });
+await check("documentos: subir, buscar, preguntar con fuentes y borrar", async () => {
+  location.hash = "#/documents";
+  await until(() => $("#doc-file"), "formulario de documentos");
+  const contenido = "La fianza equivale a dos mensualidades.\n\nEl preaviso es de treinta días.";
+  Object.defineProperty($("#doc-file"), "files", { value: [{ name: "contrato.txt", type: "text/plain", text: async () => contenido }] });
+  fill("#doc-title", "Contrato");
+  submit([...document.querySelectorAll("form.inline-form")].find((f) => f.querySelector("#doc-file")));
+  await until(() => $(".data-table")?.textContent.includes("Contrato"), "documento listado");
+  assert.ok($(".data-table").textContent.includes("contrato.txt"));
+  fill("#doc-question", "fianza");
+  [...document.querySelectorAll("button")].find((b) => b.textContent === "Solo buscar").click();
+  await until(() => $(".sources")?.textContent.includes("dos mensualidades"), "resultados");
+  submit([...document.querySelectorAll("form.inline-form")].find((f) => f.querySelector("#doc-question")));
+  await until(() => text().includes("Respuesta") && $(".sources"), "respuesta con fuentes");
+  assert.ok($(".sources").textContent.includes("Contrato"));
+  [...document.querySelectorAll("button")].find((b) => b.getAttribute("aria-label") === "Borrar Contrato").click();
+  await until(() => document.querySelector("dialog"), "confirmación");
+  [...document.querySelectorAll("dialog button")].find((b) => b.textContent === "Borrar").click();
+  await until(() => !$(".data-table") || !$(".data-table").textContent.includes("contrato.txt"), "borrado");
+});
 await check("sesión caducada (cookie borrada) devuelve a login con aviso", async () => {
   globalThis.fetch = async () => new Response(JSON.stringify({ detail: "No autenticado" }), { status: 401 });
   location.hash = "#/chat";

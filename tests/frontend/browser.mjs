@@ -124,6 +124,23 @@ await scenario("panel sin desbordamiento horizontal (móvil)", { scheme: "dark",
   await page.screenshot({ path: `${OUT}m-dark-dashboard.png` });
 });
 
+await scenario("documentos: subida, pregunta con fuentes", { scheme: "light", viewport: { width: 1280, height: 800 } }, async (page) => {
+  await login(page, "admin@x.io");
+  const status = await page.evaluate(async () => (await fetch("/api/organizations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: "Demo Docs", slug: "demo-docs" }) })).status);
+  assert.equal(status, 201);
+  await page.goto("/#/documents");
+  await page.waitForSelector("#doc-file");
+  await page.setInputFiles("#doc-file", { name: "politica-vacaciones.txt", mimeType: "text/plain", buffer: Buffer.from("Las vacaciones son de 22 días laborables al año.\n\nSe solicitan con quince días de antelación.") });
+  await page.getByRole("button", { name: "Subir" }).click();
+  await page.waitForSelector(".data-table");
+  await page.getByLabel("Pregunta o búsqueda").fill("vacaciones antelación");
+  await page.getByRole("button", { name: "Preguntar" }).click();
+  await page.waitForSelector(".sources");
+  await page.screenshot({ path: `${OUT}d-light-documents.png`, fullPage: true });
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  assert.ok(overflow <= 0);
+});
+
 await scenario("developer: clave creada con secreto visible una vez", { scheme: "light", viewport: { width: 1280, height: 800 } }, async (page) => {
   await login(page, "admin@x.io");
   const status = await page.evaluate(async () => (await fetch("/api/organizations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: "Demo Dev", slug: "demo-dev" }) })).status);
