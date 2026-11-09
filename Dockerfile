@@ -1,4 +1,7 @@
-FROM python:3.12-slim
+# Imagen fijada por digest (misma que se construyó y probó). Política de actualización: cada mes, o
+# ante un aviso de seguridad, tomar la nueva con `docker pull python:3.12-slim`, copiar su digest
+# aquí, pasar los tests y reconstruir con scripts/rebuild_backend.sh.
+FROM python:3.12-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b
 
 WORKDIR /app
 
