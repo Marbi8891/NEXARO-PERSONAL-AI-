@@ -41,6 +41,61 @@ export async function request(path, { method = "GET", body, session = true } = {
   return data;
 }
 
+// Eventos SSE completos (separados por línea en blanco) de un buffer; devuelve el resto sin cerrar.
+export function parseSse(buffer) {
+  const parts = buffer.split("\n\n");
+  const rest = parts.pop();
+  const events = [];
+  for (const part of parts) {
+    const data = part.split("\n").filter((line) => line.startsWith("data: ")).map((line) => line.slice(6)).join("\n");
+    if (!data) continue;
+    try {
+      events.push(JSON.parse(data));
+    } catch {
+      // fragmento ilegible: se ignora
+    }
+  }
+  return { events, rest };
+}
+
+// Chat en streaming: llama a onEvent por cada evento (start, token, done, error) según llega.
+export async function chatStream(message, conversationId, { signal, onEvent }) {
+  let response;
+  try {
+    response = await fetch("/api/chat/stream", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, conversation_id: conversationId }),
+      signal,
+    });
+  } catch (error) {
+    if (error?.name === "AbortError") throw error;
+    throw new ApiError(0, "No se ha podido conectar con el servidor.");
+  }
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    if (response.status === 401) unauthorizedHandler();
+    throw new ApiError(response.status, messageFrom(data, response.status));
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  try {
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const parsed = parseSse(buffer);
+      buffer = parsed.rest;
+      for (const event of parsed.events) onEvent(event);
+    }
+  } catch (error) {
+    if (error?.name === "AbortError") throw error;
+    throw new ApiError(0, "Se ha interrumpido la conexión con el servidor.");
+  }
+}
+
 const id = encodeURIComponent;
 
 export const api = {
@@ -55,6 +110,7 @@ export const api = {
 
   conversations: () => request("/api/conversations"),
   conversation: (conversationId) => request(`/api/conversations/${id(conversationId)}`),
+  chatStream,
   chat: (message, conversationId) => request("/api/chat", { method: "POST", body: { message, conversation_id: conversationId } }),
 
   adminUsers: () => request("/api/admin/users"),

@@ -1,5 +1,6 @@
 import { api } from "../api.js";
 import { clear, formatDate, h } from "../dom.js";
+import { renderMarkdown } from "../markdown.js";
 import { navigate } from "../router.js";
 import { rememberConversation, rememberedConversation } from "../state.js";
 
@@ -7,6 +8,7 @@ export async function chatView({ container, sidebar, params, shell }) {
   shell.setTitle("Chat");
   let conversationId = params[0] || null;
   let sending = false;
+  let controller = null;
 
   const messages = h("div", { class: "messages", role: "log", "aria-live": "polite" });
   const input = h("textarea", { id: "message", rows: "2", placeholder: "Escribe tu mensaje...", "aria-label": "Mensaje", maxlength: "8000" });
@@ -28,10 +30,49 @@ export async function chatView({ container, sidebar, params, shell }) {
 
   function addMessage(role, text) {
     messages.querySelector(".welcome")?.remove();
-    const node = h("div", { class: `message ${role}` }, text);
+    const markdown = role === "assistant";
+    const node = h("div", { class: `message ${role}${markdown ? " md" : ""}` });
+    if (markdown) node.append(...renderMarkdown(text));
+    else node.textContent = text;
     messages.append(node);
     messages.scrollTop = messages.scrollHeight;
     return node;
+  }
+
+  function addNote(parent, text, kind = "note") {
+    parent.append(h("div", { class: `message-note ${kind}` }, text));
+  }
+
+  // Solo se repinta el mensaje en curso, como mucho cada ~60 ms, no todo el historial.
+  function liveRenderer(node) {
+    let text = "";
+    let timer = null;
+    const paint = () => {
+      timer = null;
+      node.replaceChildren(...renderMarkdown(text));
+      messages.scrollTop = messages.scrollHeight;
+    };
+    return {
+      push(piece) {
+        text += piece;
+        if (timer === null) timer = setTimeout(paint, 60);
+      },
+      flush() {
+        if (timer !== null) clearTimeout(timer);
+        if (text) paint();
+      },
+      get text() {
+        return text;
+      },
+    };
+  }
+
+  function setSending(value) {
+    sending = value;
+    send.textContent = value ? "Detener" : "Enviar";
+    send.type = value ? "button" : "submit";
+    send.classList.toggle("danger", value);
+    send.setAttribute("aria-label", value ? "Detener la respuesta" : "Enviar mensaje");
   }
 
   async function loadHistory() {
@@ -79,34 +120,68 @@ export async function chatView({ container, sidebar, params, shell }) {
     event.preventDefault();
     const text = input.value.trim();
     if (!text || sending) return;
-    sending = true;
-    send.disabled = true;
+    setSending(true);
     input.value = "";
     addMessage("user", text);
     const pending = addMessage("assistant", "Pensando...");
+    pending.classList.add("generating");
+    pending.setAttribute("aria-busy", "true");
+    const live = liveRenderer(pending);
+    let started = false;
+    let failure = null;
+    let truncated = false;
+    let aborted = false;
+    controller = new AbortController();
     try {
-      const data = await api.chat(text, conversationId);
-      pending.textContent = data.answer;
-      const isNew = data.conversation_id !== conversationId;
-      conversationId = data.conversation_id;
-      rememberConversation(conversationId);
-      if (isNew) history.replaceState(null, "", `#/chat/${encodeURIComponent(conversationId)}`);
-      await loadHistory();
-      shell.refreshHealth();
+      await api.chatStream(text, conversationId, {
+        signal: controller.signal,
+        onEvent(item) {
+          if (item.event === "start") {
+            const isNew = item.conversation_id !== conversationId;
+            conversationId = item.conversation_id;
+            rememberConversation(conversationId);
+            if (isNew) history.replaceState(null, "", `#/chat/${encodeURIComponent(conversationId)}`);
+          } else if (item.event === "token") {
+            if (!started) {
+              started = true;
+              pending.replaceChildren();
+            }
+            live.push(item.content);
+          } else if (item.event === "done") truncated = Boolean(item.truncated);
+          else if (item.event === "error") failure = item.message;
+        },
+      });
     } catch (error) {
-      pending.className = "message assistant error";
-      pending.textContent = error.message;
+      if (error?.name === "AbortError") aborted = true;
+      else failure = error.message;
     } finally {
-      sending = false;
-      send.disabled = false;
-      input.focus();
+      live.flush();
+      pending.classList.remove("generating");
+      pending.removeAttribute("aria-busy");
+      controller = null;
     }
+    if (aborted) {
+      if (!started) pending.replaceChildren();
+      addNote(pending, "Respuesta detenida.");
+    } else if (failure) {
+      if (!started) {
+        pending.className = "message assistant error";
+        pending.textContent = failure;
+      } else addNote(pending, failure, "error");
+    } else if (truncated) addNote(pending, "Respuesta cortada por el límite de longitud. Pídeme que continúe.");
+    setSending(false);
+    input.focus();
+    await loadHistory();
+    shell.refreshHealth();
   }
 
+  send.addEventListener("click", () => {
+    if (sending) controller?.abort();
+  });
   input.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
       event.preventDefault();
-      send.click();
+      if (!sending) send.click();
     }
   });
 

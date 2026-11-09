@@ -305,6 +305,49 @@ await check("finanzas: alta con importes exactos, resumen, edición, borrado y e
   [...document.querySelectorAll("dialog button")].find((b) => b.textContent === "Borrar").click();
   await until(() => text().includes("Sin gastos este mes"), "borrado");
 });
+await check("chat en streaming: Markdown y bloques de código como nodos seguros", async () => {
+  location.hash = "#/chat";
+  await until(() => $("#message"), "chat");
+  [...document.querySelectorAll("button")].find((b) => b.textContent.includes("Nueva")).click();
+  await until(() => $(".welcome"), "welcome");
+  $("#message").value = "dame codigo";
+  submit($(".composer"));
+  await until(() => $(".message.assistant pre.code-block code"), "bloque de código");
+  await until(() => !$(".message.generating"), "fin de generación");
+  assert.equal($("pre.code-block code").textContent, "print(1)");
+  assert.equal($("pre.code-block").getAttribute("data-lang"), "py");
+  assert.equal($(".message.assistant strong").textContent, "Hola");
+  assert.equal($(".message.assistant .inline-code").textContent, "x");
+  assert.equal(document.querySelectorAll(".message b").length, 0, "el HTML del modelo no se interpreta");
+  assert.ok(text().includes("<b>x</b>"));
+  assert.equal($(".composer button").textContent, "Enviar");
+});
+await check("botón Detener corta la respuesta, conserva lo generado y deja enviar de nuevo", async () => {
+  $("#message").value = "algo lento";
+  submit($(".composer"));
+  await until(() => $(".composer button").textContent === "Detener", "botón Detener");
+  assert.ok($(".message.generating"), "indicador de generación");
+  await until(() => $(".message.generating")?.textContent.includes("parte"), "primeros fragmentos");
+  $(".composer button").click();
+  await until(() => $(".composer button").textContent === "Enviar", "enviar de nuevo");
+  assert.ok(text().includes("Respuesta detenida."));
+  assert.ok(!$(".message.generating"));
+  const last = [...document.querySelectorAll(".message.assistant")].pop();
+  assert.ok(last.textContent.includes("parte"), "se conserva lo generado");
+  assert.equal($(".composer button").disabled, false);
+});
+await check("lo detenido queda guardado: al reabrir la conversación está el texto parcial", async () => {
+  const id = decodeURIComponent(location.hash.split("/")[2]);
+  const { api } = await import(pathToFileURL(`${REPO}/frontend/js/api.js`).href);
+  let saved = null;
+  for (let i = 0; i < 40 && !saved; i++) {
+    const data = await api.conversation(id);
+    const last = data.messages.at(-1);
+    if (last.role === "assistant" && last.content.includes("parte")) saved = last.content;
+    else await sleep(100);
+  }
+  assert.ok(saved, "respuesta parcial persistida");
+});
 await check("sesión caducada (cookie borrada) devuelve a login con aviso", async () => {
   globalThis.fetch = async () => new Response(JSON.stringify({ detail: "No autenticado" }), { status: 401 });
   location.hash = "#/chat";

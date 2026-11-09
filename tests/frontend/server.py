@@ -3,14 +3,16 @@
 Requiere PYTHONPATH con packages/ y apps/api (lo fija run.sh).
 """
 
+import asyncio
 import os
 import tempfile
+from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
 
 import uvicorn
 
-from ai_gateway.schemas import CompletionRequest, CompletionResult
+from ai_gateway.schemas import CompletionRequest, CompletionResult, InferenceMetrics, StreamChunk
 from nexaro_api.bootstrap import migrate
 from nexaro_api.main import create_app
 from nexaro_core.config import Settings
@@ -32,6 +34,22 @@ class FakeProvider:
 
     async def health(self) -> bool:
         return True
+
+    async def stream(self, request: CompletionRequest) -> AsyncIterator[StreamChunk]:
+        """Streaming de pruebas: «lento» genera durante varios segundos (para probar «Detener»)
+        y «codigo» devuelve Markdown con un bloque de código y HTML que debe verse como texto."""
+        asked = request.messages[-1].content
+        if "lento" in asked:
+            for _ in range(200):
+                yield StreamChunk(content="parte ")
+                await asyncio.sleep(0.05)
+        elif "codigo" in asked:
+            for piece in ["**Hola** con `x`\n\n", "```py\nprint(1)\n", "```\n", "<b>x</b>"]:
+                yield StreamChunk(content=piece)
+        else:
+            for piece in ["Hola <b>mundo</b> ", "desde el modelo ", "falso"]:
+                yield StreamChunk(content=piece)
+        yield StreamChunk(done=True, metrics=InferenceMetrics(ttft_ms=1.0, tokens=3))
 
 
 def main() -> None:
