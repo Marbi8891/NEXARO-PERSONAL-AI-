@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, Response
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from ai_gateway.providers.base import ChatProvider
@@ -11,6 +12,7 @@ from nexaro_api.bootstrap import migrate
 from nexaro_api.context import AppContext
 from nexaro_api.gateway import build_gateway
 from nexaro_api.limits import BodyLimitMiddleware
+from nexaro_api.request_context import RequestContextMiddleware
 from nexaro_api.routers import (
     admin,
     api_keys,
@@ -24,6 +26,7 @@ from nexaro_api.routers import (
 )
 from nexaro_core.config import Settings, get_settings
 from nexaro_core.database import Database
+from nexaro_core.observability import configure_logging, request_id_var
 from nexaro_core.security import ConcurrencyGuard, RateLimiter
 from products.personal_ai.service import PersonalAIService
 
@@ -104,6 +107,7 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        configure_logging(settings.log_level, settings.log_format)
         database.ensure_parent()
         try:
             migrate(database)
@@ -148,6 +152,26 @@ def create_app(
         return response
 
     app.add_middleware(BodyLimitMiddleware, max_bytes=settings.max_body_bytes)
+    app.add_middleware(RequestContextMiddleware)  # el último añadido es el más externo
+
+    @app.exception_handler(Exception)
+    async def unhandled(request: Request, exc: Exception) -> JSONResponse:
+        # Corre fuera del middleware de contexto: el id viaja en el scope, no en el contextvar.
+        request_id = request.scope.get("nexaro_request_id")
+        token = request_id_var.set(request_id)
+        try:
+            logger.error(
+                "unhandled_exception",
+                exc_info=exc,
+                extra={"fields": {"method": request.method, "path": request.url.path}},
+            )
+        finally:
+            request_id_var.reset(token)
+        return JSONResponse(
+            {"detail": "Error interno", "request_id": request_id},
+            status_code=500,
+            headers={"X-Request-ID": request_id or ""},
+        )
 
     for module in (
         auth,

@@ -7,11 +7,14 @@ No se almacenan secretos: las claves sensibles de `details` se redactan.
 
 import hashlib
 import json
+import logging
 import sqlite3
 from datetime import datetime, timezone
 from typing import Any, Literal
 
 from nexaro_core.timeseries import fill_days, last_days
+
+logger = logging.getLogger("nexaro.security")
 
 Outcome = Literal["success", "failure", "denied"]
 
@@ -103,6 +106,23 @@ def record_event(
             ip,
             serialized,
         ),
+    )
+    # Mismo evento en el log (correlado por request_id). Sin `details`: ya van redactados en la BD.
+    logger.log(
+        logging.INFO if outcome == "success" else logging.WARNING,
+        "%s %s",
+        action,
+        outcome,
+        extra={
+            "fields": {
+                "event": action,
+                "outcome": outcome,
+                "actor_user_id": actor_user_id,
+                "target_type": target_type,
+                "target_id": target_id,
+                "ip": ip,
+            }
+        },
     )
 
 

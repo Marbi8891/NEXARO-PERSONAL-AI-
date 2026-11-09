@@ -79,6 +79,10 @@ class Settings(BaseSettings):
     chat_max_concurrent: int = Field(default=2, gt=0, alias="CHAT_MAX_CONCURRENT")
     chat_max_concurrent_per_user: int = Field(default=2, gt=0, alias="CHAT_MAX_CONCURRENT_PER_USER")
     health_cache_seconds: float = Field(default=0.0, ge=0, alias="HEALTH_CACHE_SECONDS")
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(
+        default="INFO", alias="LOG_LEVEL"
+    )
+    log_format: Literal["json", "text"] = Field(default="json", alias="LOG_FORMAT")
     max_body_bytes: int = Field(default=2 * 1024 * 1024, gt=0, alias="MAX_BODY_BYTES")
     # None = solo en desarrollo. Swagger/OpenAPI describen toda la superficie de la API.
     api_docs: bool | None = Field(default=None, alias="API_DOCS")
