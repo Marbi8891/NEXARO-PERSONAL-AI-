@@ -58,7 +58,10 @@ def sql_migration(version: int, name: str, path: Path) -> Migration:
 def platform_migrations() -> list[Migration]:
     """Migraciones de la plataforma (organizaciones, documentos, agentes...). La 1 es la línea
     base y la aporta la raíz de composición, que conoce los módulos de producto."""
-    return [sql_migration(2, "platform", MIGRATIONS_DIR / "sqlite" / "0002_platform.sql")]
+    return [
+        sql_migration(2, "platform", MIGRATIONS_DIR / "sqlite" / "0002_platform.sql"),
+        sql_migration(3, "api_keys", MIGRATIONS_DIR / "sqlite" / "0003_api_keys.sql"),
+    ]
 
 
 def run_migrations(database: Database, migrations: list[Migration]) -> list[int]:

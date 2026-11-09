@@ -30,7 +30,15 @@ class PersonalAIService:
         self._provider = provider
         self._model = model
 
-    async def chat(self, user_id: str, message: str, conversation_id: str | None) -> ChatOutcome:
+    async def chat(
+        self,
+        user_id: str,
+        message: str,
+        conversation_id: str | None,
+        *,
+        organization_id: str | None = None,
+        api_key_id: str | None = None,
+    ) -> ChatOutcome:
         conversation_id = conversation_id or str(uuid.uuid4())
 
         with self._database.connect() as db:
@@ -52,7 +60,13 @@ class PersonalAIService:
             ChatMessage(role="user", content=message),
         ]
         result = await self._provider.complete(
-            CompletionRequest(model=self._model, messages=messages, user_id=user_id)
+            CompletionRequest(
+                model=self._model,
+                messages=messages,
+                user_id=user_id,
+                organization_id=organization_id,
+                api_key_id=api_key_id,
+            )
         )
 
         with self._database.connect() as db:

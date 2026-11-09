@@ -4,6 +4,7 @@ import { rememberConversation, setNotice, setUser } from "./state.js";
 import { adminView } from "./views/admin.js";
 import { chatView } from "./views/chat.js";
 import { dashboardView } from "./views/dashboard.js";
+import { developerView } from "./views/developer.js";
 import { loginView } from "./views/login.js";
 import { organizationsView } from "./views/organizations.js";
 import { profileView } from "./views/profile.js";
@@ -15,6 +16,7 @@ export async function boot(root) {
     { pattern: /^\/register$/, guest: true, view: registerView },
     { pattern: /^\/dashboard$/, nav: "dashboard", view: dashboardView },
     { pattern: /^\/chat(?:\/([^/]+))?$/, nav: "chat", view: chatView },
+    { pattern: /^\/developer$/, nav: "developer", view: developerView },
     { pattern: /^\/organizations$/, nav: "organizations", view: organizationsView },
     { pattern: /^\/admin$/, nav: "admin", admin: true, view: adminView },
     { pattern: /^\/profile$/, nav: null, view: profileView },

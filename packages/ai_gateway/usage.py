@@ -66,18 +66,25 @@ class UsageStore:
         latency_ms: float | None = None,
         cost_usd: float | None = None,
         error_kind: str | None = None,
+        organization_id: str | None = None,
+        api_key_id: str | None = None,
     ) -> None:
+        columns = {
+            "user_id": user_id, "provider": provider, "model": model, "status": status,
+            "input_tokens": input_tokens, "output_tokens": output_tokens,
+            "latency_ms": latency_ms, "cost_usd": cost_usd, "error_kind": error_kind,
+        }  # fmt: skip
+        # Las columnas de organización y clave las añade la migración 3: solo con valor.
+        if organization_id is not None:
+            columns["organization_id"] = organization_id
+        if api_key_id is not None:
+            columns["api_key_id"] = api_key_id
+        marks = ", ".join("?" for _ in columns)
         with self._database.connect() as db:
             db.execute(
-                """
-                INSERT INTO model_usage
-                    (user_id, provider, model, status, input_tokens, output_tokens,
-                     latency_ms, cost_usd, error_kind)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (user_id, provider, model, status, input_tokens, output_tokens,
-                 latency_ms, cost_usd, error_kind),
-            )  # fmt: skip
+                f"INSERT INTO model_usage ({', '.join(columns)}) VALUES ({marks})",  # noqa: S608
+                tuple(columns.values()),
+            )
 
     def month_cost_usd(self) -> float:
         with self._database.connect() as db:
@@ -118,5 +125,25 @@ class UsageStore:
                 GROUP BY day
                 """,
                 (f"-{int(days) - 1} days",),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def by_api_key(self, organization_id: str, days: int) -> list[dict[str, Any]]:
+        """Uso de la organización por clave de API en los últimos `days` días (una consulta)."""
+        with self._database.connect() as db:
+            rows = db.execute(
+                """
+                SELECT u.api_key_id AS key_id, k.name, k.prefix, COUNT(*) AS requests,
+                       COALESCE(SUM(u.status != 'ok'), 0) AS errors,
+                       COALESCE(SUM(u.input_tokens), 0) AS input_tokens,
+                       COALESCE(SUM(u.output_tokens), 0) AS output_tokens,
+                       COALESCE(SUM(u.cost_usd), 0.0) AS cost_usd
+                FROM model_usage u LEFT JOIN api_keys k ON k.id = u.api_key_id
+                WHERE u.organization_id = ?
+                  AND u.created_at >= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', ?)
+                GROUP BY u.api_key_id
+                ORDER BY requests DESC
+                """,
+                (organization_id, f"-{int(days)} days"),
             ).fetchall()
         return [dict(row) for row in rows]

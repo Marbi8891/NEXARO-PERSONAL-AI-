@@ -315,3 +315,10 @@ th[aria-sort] .th-button { color: var(--text); }
 .recent-list a:hover strong { text-decoration: underline; }
 .recent-list strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .recent-list small { color: var(--muted); white-space: nowrap; }
+
+/* Developer */
+.secret-card { border-color: var(--warn); background: var(--warn-bg); }
+.secret-row { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
+.secret-row input { flex: 1 1 18rem; min-width: 0; font-family: var(--font-mono); }
+.code-block { margin: 0; padding: var(--space-3); background: var(--panel-2); border-radius: var(--radius-sm); overflow-x: auto; font-size: var(--fs-sm); }
+code { font-family: var(--font-mono); }

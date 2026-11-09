@@ -10,7 +10,7 @@ from ai_gateway.providers.base import ChatProvider
 from nexaro_api.bootstrap import migrate
 from nexaro_api.context import AppContext
 from nexaro_api.gateway import build_gateway
-from nexaro_api.routers import admin, auth, chat, dashboard, health, organizations
+from nexaro_api.routers import admin, api_keys, auth, chat, dashboard, health, organizations
 from nexaro_core.config import Settings, get_settings
 from nexaro_core.database import Database
 from nexaro_core.security import RateLimiter
@@ -94,7 +94,7 @@ def create_app(
             response.headers.setdefault("Content-Security-Policy", CONTENT_SECURITY_POLICY)
         return response
 
-    for module in (auth, admin, chat, dashboard, health, organizations):
+    for module in (auth, admin, api_keys, chat, dashboard, health, organizations):
         app.include_router(module.router)
 
     if settings.frontend_path.is_dir():

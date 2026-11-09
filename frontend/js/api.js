@@ -66,6 +66,11 @@ export const api = {
   adminAudit: (action) => request(`/api/admin/audit?limit=100${action ? `&action=${id(action)}` : ""}`),
   adminUsage: () => request("/api/admin/usage"),
 
+  apiKeys: (orgId) => request(`/api/organizations/${id(orgId)}/api-keys`),
+  createApiKey: (orgId, name, expiresInDays) => request(`/api/organizations/${id(orgId)}/api-keys`, { method: "POST", body: { name, expires_in_days: expiresInDays } }),
+  revokeApiKey: (orgId, keyId) => request(`/api/organizations/${id(orgId)}/api-keys/${id(keyId)}`, { method: "DELETE" }),
+  organizationUsage: (orgId, days = 30) => request(`/api/organizations/${id(orgId)}/usage?days=${days}`),
+
   organizations: () => request("/api/organizations"),
   createOrganization: (name, slug) => request("/api/organizations", { method: "POST", body: { name, slug } }),
   members: (orgId) => request(`/api/organizations/${id(orgId)}/members`),

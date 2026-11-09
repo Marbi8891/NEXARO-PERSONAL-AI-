@@ -5,6 +5,7 @@ from typing import Annotated, Any
 from fastapi import Depends, HTTPException, Request
 
 from nexaro_api.context import AppContext
+from nexaro_core.api_keys import ApiKeyIdentity, authenticate_api_key
 from nexaro_core.audit import record_event
 from nexaro_core.identity import get_session_user
 from nexaro_core.organizations import Membership, get_membership, has_permission
@@ -98,3 +99,29 @@ def require_permission(permission: str) -> Callable[..., OrgAccess]:
         return OrgAccess(user=user, membership=membership)
 
     return dependency
+
+
+def get_api_key_identity(request: Request, ctx: Ctx) -> ApiKeyIdentity:
+    """Autenticación por clave de API (`Authorization: Bearer nxr_...`) para /api/v1.
+
+    No usa cookies ni exige Origin (no hay navegador). Los fallos se limitan por IP y no
+    distinguen si la clave no existe, caducó o fue revocada."""
+    ip = f"apikey-ip:{client_ip(request)}"
+    if ctx.limiter.is_limited(ip):
+        raise HTTPException(status_code=429, detail="Demasiados intentos. Inténtalo más tarde.")
+    scheme, _, secret = request.headers.get("authorization", "").partition(" ")
+    identity = None
+    if scheme.lower() == "bearer" and secret:
+        with ctx.database.connect() as db:
+            identity = authenticate_api_key(db, secret.strip())
+    if identity is None:
+        ctx.limiter.record(ip)
+        raise HTTPException(
+            status_code=401,
+            detail="Clave de API no válida",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return identity
+
+
+ApiKeyAuth = Annotated[ApiKeyIdentity, Depends(get_api_key_identity)]

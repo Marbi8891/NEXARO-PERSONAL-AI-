@@ -78,6 +78,7 @@ CSS en `frontend/css/components.css`; lógica en `frontend/js/components/`. Todo
 | Campana de avisos | `notifications.js` | Avisos derivados del estado real (`GET /api/notifications`); contador solo si hay avisos; sin avisos, el panel lo dice. Icono SVG, nunca emoji |
 | Cifras | `.stats` / `.stat` | Valor grande, etiqueta y nota opcional; el valor se lee primero |
 | Gráfico de barras | `chart.js` → `barChart()` | Una serie, color `--accent`, eje desde cero; `role="img"` con resumen y `<details>` con la tabla de datos. Solo donde informa (series diarias) |
+| Bloque de secreto | `.secret-card` (`views/developer.js`) | Fondo de advertencia, `role="alert"`, campo de solo lectura que se selecciona al enfocar y botón «Copiar» con alternativa manual |
 | Marca | `brand.js` | Símbolo + logotipo |
 | Pestañas | `.tabs` + `role="tab"` | `aria-selected` |
 | Etiqueta de estado | `.badge.ok/.warn/.bad` | Color + texto |
@@ -106,4 +107,4 @@ con botón de menú, botón de cierre, capa de fondo y cierre con Escape o al na
 
 ## Capturas de referencia
 `docs/design/screenshots/` (generadas por `tests/frontend/browser.mjs` con datos de prueba, no reales):
-`d-light-*`, `d-dark-*` (escritorio) y `m-light-*` (móvil, 390 px) para login, chat y administración, más `d-light-dashboard` (panel con campana abierta) y `m-dark-dashboard`.
+`d-light-*`, `d-dark-*` (escritorio) y `m-light-*` (móvil, 390 px) para login, chat y administración, más `d-light-dashboard` (panel con campana abierta), `m-dark-dashboard` y `d-light-developer` (clave recién creada; el valor se enmascara en la captura).

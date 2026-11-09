@@ -162,6 +162,8 @@ class Gateway:
             await asyncio.to_thread(
                 self._usage.record,
                 user_id=request.user_id,
+                organization_id=request.organization_id,
+                api_key_id=request.api_key_id,
                 provider=route.provider,
                 model=route.model,
                 status=status,

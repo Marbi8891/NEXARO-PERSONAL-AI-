@@ -40,3 +40,8 @@ class MemberAddRequest(BaseModel):
 
 class MemberRoleRequest(BaseModel):
     role: str = Field(min_length=1, max_length=20)
+
+
+class ApiKeyCreateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    expires_in_days: int | None = Field(default=None, ge=1, le=365)

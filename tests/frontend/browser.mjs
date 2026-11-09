@@ -124,6 +124,26 @@ await scenario("panel sin desbordamiento horizontal (móvil)", { scheme: "dark",
   await page.screenshot({ path: `${OUT}m-dark-dashboard.png` });
 });
 
+await scenario("developer: clave creada con secreto visible una vez", { scheme: "light", viewport: { width: 1280, height: 800 } }, async (page) => {
+  await login(page, "admin@x.io");
+  const status = await page.evaluate(async () => (await fetch("/api/organizations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: "Demo Dev", slug: "demo-dev" }) })).status);
+  assert.equal(status, 201);
+  await page.goto("/#/developer");
+  await page.getByLabel("Nombre de la clave").fill("Producción");
+  await page.getByRole("button", { name: "Crear clave" }).click();
+  await page.waitForSelector(".secret-card");
+  assert.match(await page.locator(".secret-card input").inputValue(), /^nxr_/);
+  // La captura no debe contener una cadena con forma de clave real, aunque sea de una base de pruebas.
+  await page.locator(".secret-card input").evaluate((el) => { el.value = "nxr_EJEMPLO-no-es-una-clave"; });
+  await page.screenshot({ path: `${OUT}d-light-developer.png` });
+  await page.goto("/#/dashboard");
+  await page.goto("/#/developer");
+  await page.waitForSelector(".data-table");
+  assert.equal(await page.locator(".secret-card").count(), 0, "el secreto no debe volver a mostrarse");
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  assert.ok(overflow <= 0);
+});
+
 await scenario("cajón de navegación en móvil", { scheme: "light", viewport: { width: 390, height: 780 } }, async (page) => {
   await login(page, "user@x.io");
   assert.equal(await page.locator("#sidebar").isVisible(), false, "la barra lateral empieza cerrada");

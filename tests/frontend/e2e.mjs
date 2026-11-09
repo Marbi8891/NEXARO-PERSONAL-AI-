@@ -112,6 +112,11 @@ await check("organizaciones: usuario normal no ve formulario de creación", asyn
   await until(() => text().includes("No perteneces a ninguna organización"), "orgs");
   assert.ok(!text().includes("Crear organización"));
 });
+await check("developer: usuario sin rol de gestión no ve claves y se le explica", async () => {
+  location.hash = "#/developer";
+  await until(() => text().includes("Sin acceso a claves de API"), "sin acceso");
+  assert.ok(!$("#key-name"), "no debe haber formulario de claves");
+});
 await check("logout vuelve a login", async () => {
   [...document.querySelectorAll("button")].find((b) => b.textContent === "Cerrar sesión").click();
   await until(() => $("form.auth-card") && location.hash === "#/login", "logout");
@@ -210,6 +215,23 @@ await check("admin crea organización y añade miembro", async () => {
   await until(() => text().includes("Acme"), "orglist");
   [...document.querySelectorAll("button")].find((b) => b.textContent.startsWith("Acme")).click();
   await until(() => text().includes("Miembros de Acme"), "members");
+});
+await check("developer: crear clave muestra el secreto una vez, lista solo el prefijo y se revoca", async () => {
+  location.hash = "#/developer";
+  await until(() => $("#key-name"), "formulario de claves");
+  fill("#key-name", "CI");
+  submit([...document.querySelectorAll("form.inline-form")].find((f) => f.querySelector("#key-name")));
+  const secretInput = await until(() => $(".secret-card input"), "secreto");
+  const secret = secretInput.value;
+  assert.match(secret, /^nxr_[A-Za-z0-9_-]{40,}$/);
+  const table = $(".data-table");
+  assert.ok(table.textContent.includes("CI") && table.textContent.includes("Activa"));
+  assert.ok(!table.textContent.includes(secret), "la tabla no debe contener la clave completa");
+  [...document.querySelectorAll("button")].find((b) => b.getAttribute("aria-label") === "Revocar CI").click();
+  await until(() => document.querySelector("dialog"), "confirmación");
+  [...document.querySelectorAll("dialog button")].find((b) => b.textContent === "Revocar").click();
+  await until(() => $(".data-table").textContent.includes("Revocada"), "revocada");
+  assert.ok(!$(".secret-card"), "el secreto no persiste tras recargar la lista");
 });
 await check("sesión caducada (cookie borrada) devuelve a login con aviso", async () => {
   globalThis.fetch = async () => new Response(JSON.stringify({ detail: "No autenticado" }), { status: 401 });
