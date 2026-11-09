@@ -9,7 +9,9 @@ import logging
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
 from dataclasses import dataclass
+from typing import Any
 
+from ai_gateway.breaker import CircuitBreaker
 from ai_gateway.errors import PolicyError, ProviderError, ProviderUnavailableError
 from ai_gateway.policy import GatewayPolicy
 from ai_gateway.providers.base import ChatProvider
@@ -37,6 +39,7 @@ class Gateway:
         prices: Mapping[tuple[str, str], ModelPrice] | None = None,
         usage: UsageStore | None = None,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+        clock: Callable[[], float] = time.monotonic,
     ) -> None:
         policy = policy or GatewayPolicy()
         if not routes:
@@ -57,6 +60,10 @@ class Gateway:
         self._prices = prices or {}
         self._usage = usage
         self._sleep = sleep
+        self._breakers = {
+            name: CircuitBreaker(policy.breaker_threshold, policy.breaker_cooldown_seconds, clock)
+            for name in providers
+        }
 
     @property
     def name(self) -> str:
@@ -75,6 +82,41 @@ class Gateway:
             close = getattr(provider, "aclose", None)
             if close is not None:
                 await close()
+
+    async def describe(self) -> list[dict[str, Any]]:
+        """Estado de cada ruta para administración: salud, cortacircuitos y modelos instalados."""
+        rows: list[dict[str, Any]] = []
+        for route in self._routes:
+            provider = self._providers[route.provider]
+            breaker = self._breakers[route.provider]
+            try:
+                healthy = await provider.health()
+            except Exception:  # un proveedor roto no debe tumbar el panel
+                healthy = False
+            installed: list[dict[str, Any]] | None = None
+            lister = getattr(provider, "list_models", None)
+            if lister is not None and healthy:
+                try:
+                    installed = await lister()
+                except ProviderError:
+                    installed = None
+            rows.append(
+                {
+                    "provider": route.provider,
+                    "model": route.model,
+                    "cloud": route.provider in self._cloud,
+                    "healthy": healthy,
+                    "circuit": breaker.state,
+                    "consecutive_failures": breaker.failures,
+                    "installed_models": installed,
+                    "model_installed": (
+                        None
+                        if installed is None
+                        else any(m["name"] == route.model for m in installed)
+                    ),
+                }
+            )
+        return rows
 
     def _check_input(self, request: CompletionRequest) -> None:
         chars = sum(len(m.content) for m in request.messages)
@@ -104,10 +146,15 @@ class Gateway:
             denial = await self._denial(route)
             if denial is not None:
                 await self._record(request, route, "denied", error_kind=denial)
+                if denial == "circuit_open" and last_error is None:
+                    last_error = ProviderUnavailableError("Proveedor en pausa tras varios fallos")
                 continue
             routed = self._routed(route, request)
             provider = self._providers[route.provider]
+            breaker = self._breakers[route.provider]
             for attempt in range(self._policy.max_retries + 1):
+                if attempt > 0 and not breaker.allow():
+                    break  # el fallo anterior abrió el circuito: no se reintenta
                 started = time.perf_counter()
                 emitted = False
                 final: InferenceMetrics | None = None
@@ -120,14 +167,18 @@ class Gateway:
                         yield chunk
                 except ProviderError as exc:
                     latency = (time.perf_counter() - started) * 1000
+                    if isinstance(exc, ProviderUnavailableError):
+                        breaker.failure()
                     await self._record(
                         request, route, "error", latency_ms=latency, error_kind=type(exc).__name__
                     )
                     if emitted:
                         raise
                     last_error = exc
-                    if isinstance(exc, ProviderUnavailableError) and attempt < (
-                        self._policy.max_retries
+                    if (
+                        isinstance(exc, ProviderUnavailableError)
+                        and attempt < self._policy.max_retries
+                        and breaker.state != "open"
                     ):
                         await self._sleep(self._policy.retry_backoff_seconds * 2**attempt)
                         continue
@@ -139,6 +190,7 @@ class Gateway:
                     )
                     raise
                 else:
+                    breaker.success()
                     await self._record_stream(request, route, started, final, None)
                     return
         if last_error is not None:
@@ -175,6 +227,8 @@ class Gateway:
             denial = await self._denial(route)
             if denial is not None:
                 await self._record(request, route, "denied", error_kind=denial)
+                if denial == "circuit_open" and last_error is None:
+                    last_error = ProviderUnavailableError("Proveedor en pausa tras varios fallos")
                 continue
             try:
                 return await self._attempt(route, request)
@@ -186,44 +240,43 @@ class Gateway:
         raise PolicyError("Ningún proveedor permitido por la política")
 
     async def _denial(self, route: Route) -> str | None:
-        if route.provider not in self._cloud:
-            return None
-        if not self._policy.allow_cloud:
-            return "cloud_disabled"
-        budget = self._policy.cloud_monthly_budget_usd
-        if budget is not None and self._usage is not None:
-            spent = await asyncio.to_thread(self._usage.month_cost_usd)
-            if spent >= budget:
-                return "budget_exceeded"
+        if route.provider in self._cloud:
+            if not self._policy.allow_cloud:
+                return "cloud_disabled"
+            budget = self._policy.cloud_monthly_budget_usd
+            if budget is not None and self._usage is not None:
+                spent = await asyncio.to_thread(self._usage.month_cost_usd)
+                if spent >= budget:
+                    return "budget_exceeded"
+        # Lo último: `allow()` gasta la sonda de un circuito semiabierto, y no debe gastarse
+        # en una petición que la política o el presupuesto ya han rechazado.
+        if not self._breakers[route.provider].allow():
+            return "circuit_open"
         return None
 
     async def _attempt(self, route: Route, request: CompletionRequest) -> CompletionResult:
         policy = self._policy
-        routed = request.model_copy(
-            update={
-                "model": route.model,
-                "max_output_tokens": min(
-                    request.max_output_tokens or policy.max_output_tokens,
-                    policy.max_output_tokens,
-                ),
-                "timeout_seconds": request.timeout_seconds or policy.timeout_seconds,
-            }
-        )
+        routed = self._routed(route, request)
         provider = self._providers[route.provider]
         started = time.perf_counter()
         error: ProviderError | None = None
 
+        breaker = self._breakers[route.provider]
         for attempt in range(policy.max_retries + 1):
+            if attempt > 0 and not breaker.allow():
+                break  # el fallo anterior abrió el circuito: no se vuelve a llamar al proveedor
             try:
                 result = await provider.complete(routed)
             except ProviderUnavailableError as exc:
                 error = exc
-                if attempt < policy.max_retries:
+                breaker.failure()
+                if attempt < policy.max_retries and breaker.state != "open":
                     await self._sleep(policy.retry_backoff_seconds * 2**attempt)
                     continue
             except ProviderError as exc:
                 error = exc
             else:
+                self._breakers[route.provider].success()
                 await self._record(request, route, "ok", result=result)
                 return result
             break

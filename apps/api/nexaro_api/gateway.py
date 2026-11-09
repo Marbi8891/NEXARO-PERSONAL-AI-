@@ -52,6 +52,8 @@ def build_gateway(settings: Settings, database: Database) -> Gateway:
             max_output_tokens=settings.ai_max_output_tokens,
             timeout_seconds=settings.ai_timeout_seconds,
             max_retries=settings.ai_max_retries,
+            breaker_threshold=settings.ai_breaker_threshold,
+            breaker_cooldown_seconds=settings.ai_breaker_cooldown_seconds,
             allow_cloud=settings.ai_allow_cloud,
             cloud_monthly_budget_usd=settings.ai_cloud_monthly_budget_usd,
         ),

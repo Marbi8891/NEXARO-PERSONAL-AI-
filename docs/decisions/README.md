@@ -13,4 +13,11 @@ Una decisión aceptada no se cambia en silencio: se propone un *DECISION REVIEW*
 | [0006](0006-aws-infrastructure.md) | Infraestructura AWS como Terraform (no aplicada) | Propuesta implementada |
 | [0007](0007-frontend-es-modules.md) | Frontend con ES Modules nativos bajo CSP estricta | Aceptada |
 | [0008](0008-design-system.md) | Sistema de diseño con tokens, tema claro/oscuro y módulos solo si existen | Aceptada |
+| [0009](0009-api-keys-developer-module.md) | Claves de API por organización como primer módulo real (Developer) | Aceptada |
+| [0010](0010-security-module-from-audit.md) | Módulo Security como vista derivada de la auditoría | Aceptada |
+| [0011](0011-api-key-scopes-and-read-api.md) | Permisos por clave de API, lectura de conversaciones y límite por clave | Aceptada |
+| [0012](0012-documents-lexical-search.md) | Documentos por organización con búsqueda léxica (sin embeddings por ahora) | Aceptada |
+| [0013](0013-finance-expenses.md) | Módulo Finance, primer alcance: gastos de la organización | Aceptada |
 | [0014](0014-streaming-and-ollama-tuning.md) | Streaming real y parámetros de Ollama configurables | Aceptada |
+| [0015](0015-sqlite-wal.md) | SQLite en modo WAL | Aceptada |
+| [0016](0016-gateway-circuit-breaker-and-model-status.md) | Cortacircuitos del gateway y estado de modelos | Aceptada |

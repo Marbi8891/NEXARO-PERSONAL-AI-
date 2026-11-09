@@ -157,6 +157,30 @@ class OllamaProvider:
             raise ProviderError("Respuesta no válida de Ollama") from exc
         raise ProviderError("Ollama cerró la conexión sin terminar la respuesta")
 
+    async def list_models(self) -> list[dict[str, Any]]:
+        """Modelos instalados en Ollama (`/api/tags`): nombre, tamaño, parámetros y cuantización."""
+        try:
+            response = await self._http.get(
+                f"{self._base_url}/api/tags", timeout=HEALTH_TIMEOUT_SECONDS
+            )
+            response.raise_for_status()
+            items = response.json()["models"]
+            return [
+                {
+                    "name": str(item["name"]),
+                    "size_bytes": item.get("size"),
+                    "parameter_size": (item.get("details") or {}).get("parameter_size"),
+                    "quantization": (item.get("details") or {}).get("quantization_level"),
+                }
+                for item in items
+            ]
+        except httpx.TimeoutException as exc:
+            raise ProviderTimeoutError("Ollama agotó el tiempo de espera") from exc
+        except httpx.TransportError as exc:
+            raise ProviderUnavailableError("Ollama no está disponible") from exc
+        except (httpx.HTTPStatusError, KeyError, TypeError, ValueError) as exc:
+            raise ProviderError("Respuesta no válida de Ollama") from exc
+
     async def health(self) -> bool:
         try:
             response = await self._http.get(

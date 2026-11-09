@@ -192,6 +192,13 @@ def admin_security(admin: AdminUser, ctx: Ctx, days: int = 14) -> dict[str, Any]
         return {"days": days, **security_summary(db, days=days)}
 
 
+@router.get("/models")
+async def admin_models(admin: AdminUser, ctx: Ctx) -> dict[str, Any]:
+    """Rutas del gateway: modelo configurado, si está instalado, salud y cortacircuitos."""
+    describe = getattr(ctx.provider, "describe", None)
+    return {"routes": await describe() if describe is not None else []}
+
+
 @router.get("/usage")
 def admin_usage(admin: AdminUser, ctx: Ctx, days: int = 30) -> dict[str, Any]:
     store = UsageStore(ctx.database)

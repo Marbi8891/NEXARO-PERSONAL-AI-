@@ -2,7 +2,7 @@ from collections.abc import Callable
 
 from fastapi.testclient import TestClient
 
-from ai_gateway.gateway import Gateway
+from ai_gateway.gateway import Gateway, Route
 from ai_gateway.usage import UsageStore
 from nexaro_api.gateway import build_gateway
 from nexaro_core.config import Settings
@@ -84,3 +84,44 @@ def test_chat_through_the_real_gateway_records_usage(
     assert (row["provider"], row["model"], row["status"], row["output_tokens"]) == (
         "ollama", "qwen-test", "ok", 2,
     )  # fmt: skip
+
+
+def test_admin_models_requires_admin_and_describes_routes(
+    logged_in: Callable[..., TestClient],
+) -> None:
+    admin = logged_in("admin@example.com", role="admin")
+    user = logged_in("user@example.com")
+
+    assert user.get("/api/admin/models").status_code == 403
+    assert admin.get("/api/admin/models").json() == {
+        "routes": []
+    }  # proveedor de pruebas sin gateway
+
+
+def test_admin_models_with_a_real_gateway(settings: Settings) -> None:
+    import httpx
+
+    from ai_gateway.providers.ollama import OllamaProvider
+    from nexaro_api.main import create_app
+    from tests.conftest import login
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"models": [{"name": settings.ollama_model}]})
+
+    gateway = Gateway(
+        {"ollama": OllamaProvider("http://ollama:11434", transport=httpx.MockTransport(handler))},
+        [Route("ollama", settings.ollama_model)],
+    )
+    app = create_app(settings, chat_provider=gateway)
+    with TestClient(app) as client:
+        database = Database(settings.database_path)
+        from nexaro_core.identity import create_user
+
+        with database.connect() as db:
+            user_id = create_user(db, "admin@example.com", "correct-horse-battery", approved=True)
+            db.execute("UPDATE users SET role = 'admin' WHERE id = ?", (user_id,))
+        assert login(client, "admin@example.com").status_code == 200
+        route = client.get("/api/admin/models").json()["routes"][0]
+
+    assert route["healthy"] is True and route["model_installed"] is True
+    assert route["circuit"] == "closed" and route["cloud"] is False

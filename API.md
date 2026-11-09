@@ -28,6 +28,7 @@ En producción `/docs` está desactivado. En desarrollo, la referencia generada 
 | POST | `/chat/stream` | sesión | mismo cuerpo; respuesta `text/event-stream` con eventos JSON `start` (`conversation_id`), `token` (`content`), `done` (`truncated`, `metrics`) o `error` (`message`). 404 antes de emitir si la conversación es ajena. Cerrar la conexión cancela la generación y se guarda lo generado |
 | GET | `/conversations` | sesión | solo las del usuario |
 | GET | `/conversations/{id}` | sesión | 404 si no es del usuario |
+| DELETE | `/conversations/{id}` | sesión + `Origin` | 204. Borra la conversación y todos sus mensajes (incluidas las creadas con claves de API); 404 si no es del usuario. Queda `conversation.delete` en la auditoría |
 
 ## Panel y avisos
 
@@ -104,6 +105,7 @@ Bajo `/organizations/{id}/expenses`. Solo propietario y administrador (`expenses
 | PATCH | `/admin/settings/registration` | admin | abre/cierra el registro público |
 | GET | `/admin/audit` | admin | filtro `action`, `limit` |
 | GET | `/admin/security?days=14` | admin | `days` 1–90. Resumen derivado de la auditoría: totales (accesos fallidos y correctos, denegaciones, bloqueos), serie diaria sin huecos, 5 IP con más fallos, incidencias por tipo y las 10 últimas. Sin correos, seudónimos ni `details` |
+| GET | `/admin/models` | admin | rutas del gateway: `provider`, `model`, `cloud`, `healthy`, `circuit` (`closed`/`open`/`half_open`), `consecutive_failures`, `installed_models` (Ollama: nombre, tamaño, parámetros, cuantización; `null` si no responde) y `model_installed` |
 | GET | `/admin/usage` | admin | uso de modelos por proveedor/modelo (`days`, máx. 365), coste del mes y `inference`: medias de primer token, carga, lectura del prompt, total, tokens/s y cargas en frío |
 
 ## Códigos

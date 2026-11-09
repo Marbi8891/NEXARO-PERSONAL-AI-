@@ -15,4 +15,6 @@ class GatewayPolicy:
     max_retries: int = 1  # solo ante indisponibilidad; un timeout no se reintenta
     retry_backoff_seconds: float = 0.5
     allow_cloud: bool = False
+    breaker_threshold: int = 3  # fallos de disponibilidad seguidos que abren el cortacircuitos
+    breaker_cooldown_seconds: float = 30.0
     cloud_monthly_budget_usd: float | None = None

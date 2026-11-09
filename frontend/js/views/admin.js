@@ -14,6 +14,7 @@ export function adminView({ container, shell }) {
   const tabs = [
     ["users", "Usuarios", usersPanel],
     ["audit", "Auditoría", auditPanel],
+    ["models", "Modelos", modelsPanel],
     ["usage", "Uso del modelo", usagePanel],
   ];
   const buttons = tabs.map(([key, label, render]) => h("button", { type: "button", role: "tab", "aria-selected": "false", onclick: () => select(key, render) }, label));
@@ -202,4 +203,39 @@ async function usagePanel(panel) {
     rows: usage,
   });
   clear(panel).append(h("section", { class: "card" }, h("h2", {}, "Coste del mes (USD)"), h("p", { class: "metric mono" }, Number(cost ?? 0).toFixed(4))), table.element, speed.element);
+}
+
+const CIRCUIT = { closed: "Normal", open: "En pausa", half_open: "Probando" };
+
+async function modelsPanel(panel) {
+  const { routes } = await api.adminModels();
+  const gb = (bytes) => (typeof bytes === "number" ? `${(bytes / 1e9).toFixed(1)} GB` : "—");
+  const status = dataTable({
+    caption: "Rutas del gateway",
+    empty: { title: "Sin rutas", text: "El gateway no está configurado." },
+    search: false,
+    columns: [
+      { key: "provider", label: "Proveedor" },
+      { key: "model", label: "Modelo", className: "mono" },
+      { key: "cloud", label: "Ubicación", value: (r) => (r.cloud ? "Nube" : "Local") },
+      { key: "healthy", label: "Estado", render: (r) => h("span", { class: `badge ${r.healthy ? "ok" : "bad"}` }, r.healthy ? "Disponible" : "No disponible") },
+      { key: "model_installed", label: "Modelo instalado", value: (r) => (r.model_installed === null ? "—" : r.model_installed ? "Sí" : "No") },
+      { key: "circuit", label: "Cortacircuitos", value: (r) => CIRCUIT[r.circuit] ?? r.circuit },
+      { key: "consecutive_failures", label: "Fallos seguidos" },
+    ],
+    rows: routes,
+  });
+  const installed = dataTable({
+    caption: "Modelos instalados en Ollama",
+    empty: { title: "Sin datos", text: "Ollama no responde o no hay modelos instalados." },
+    search: false,
+    columns: [
+      { key: "name", label: "Modelo", className: "mono" },
+      { key: "parameter_size", label: "Parámetros", value: (m) => m.parameter_size ?? "—" },
+      { key: "quantization", label: "Cuantización", value: (m) => m.quantization ?? "—" },
+      { key: "size_bytes", label: "Tamaño", value: (m) => gb(m.size_bytes) },
+    ],
+    rows: routes.flatMap((r) => r.installed_models ?? []),
+  });
+  clear(panel).append(status.element, installed.element);
 }

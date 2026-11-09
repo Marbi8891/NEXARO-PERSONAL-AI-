@@ -3,6 +3,8 @@
 ## [Sin publicar] — rama `refactor/nexaro-platform`
 
 ### Añadido
+- Gateway (Fase 2): cortacircuitos por proveedor (`AI_BREAKER_THRESHOLD`, `AI_BREAKER_COOLDOWN_SECONDS`) que falla en el acto si Ollama está caído y lo vuelve a probar tras el enfriamiento, `GET /api/admin/models` (salud, modelo configurado, instalado o no, modelos instalados) y pestaña «Modelos» en Administración (ADR-0016).
+- Estabilización (Fase 1): `DELETE /api/conversations/{id}` (con botón en el historial), imagen Docker con el frontend incluido, SQLite en modo WAL con espera de bloqueos (ADR-0015), `/api/chat` con el mismo historial acotado y tope de salida que el streaming, y un turno sin respuesta ya no deja mensajes huérfanos.
 - Endurecimiento de seguridad (F20): límites de ritmo y concurrencia del modelo, cuerpo máximo, umbral de login por IP configurable, cabeceras adicionales, Swagger cerrable, delimitadores de documentos a prueba de inyección, logs JSON con `request_id`, contenedor con privilegios mínimos e imagen por digest, tests de inyección SQL, Bandit y SBOM en CI, `scripts/prune_backups.sh` y `docs/security/`.
 - Rendimiento de inferencia (F19): streaming real Ollama→cliente (`POST /api/chat/stream`, SSE), cliente HTTP único, `keep_alive`/`num_ctx`/`num_thread` configurables, tope de salida adaptativo, historial acotado, métricas de TTFT/carga/tokens por segundo (migración 6, panel de Administración), botón «Detener», Markdown seguro en el chat, `scripts/ollama_benchmark.py`, ADR-0014.
 - Estructura de monolito modular: `apps/api`, `packages/{nexaro_core,ai_gateway}`, `products/personal_ai`.

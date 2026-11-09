@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     ai_max_input_chars: int = Field(default=32_000, gt=0, alias="AI_MAX_INPUT_CHARS")
     ai_timeout_seconds: float = Field(default=180.0, gt=0, alias="AI_TIMEOUT_SECONDS")
     ai_max_retries: int = Field(default=1, ge=0, le=3, alias="AI_MAX_RETRIES")
+    ai_breaker_threshold: int = Field(default=3, ge=1, alias="AI_BREAKER_THRESHOLD")
+    ai_breaker_cooldown_seconds: float = Field(
+        default=30.0, gt=0, alias="AI_BREAKER_COOLDOWN_SECONDS"
+    )
     ai_cloud_monthly_budget_usd: float | None = Field(
         default=None, gt=0, alias="AI_CLOUD_MONTHLY_BUDGET_USD"
     )

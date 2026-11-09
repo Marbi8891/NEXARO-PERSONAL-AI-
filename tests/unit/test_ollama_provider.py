@@ -62,3 +62,40 @@ def test_failures_are_mapped_to_provider_errors(handler, error) -> None:
 def test_health() -> None:
     assert asyncio.run(provider_with(lambda r: httpx.Response(200, json={})).health()) is True
     assert asyncio.run(provider_with(lambda r: httpx.Response(503)).health()) is False
+
+
+def test_list_models_maps_tags() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/api/tags"
+        return httpx.Response(
+            200,
+            json={
+                "models": [
+                    {
+                        "name": "qwen2.5:3b",
+                        "size": 1_900_000_000,
+                        "details": {"parameter_size": "3.1B", "quantization_level": "Q4_K_M"},
+                    },
+                    {"name": "sin-detalles:latest"},
+                ]
+            },
+        )
+
+    models = asyncio.run(provider_with(handler).list_models())
+
+    assert models[0] == {
+        "name": "qwen2.5:3b",
+        "size_bytes": 1_900_000_000,
+        "parameter_size": "3.1B",
+        "quantization": "Q4_K_M",
+    }
+    assert models[1]["name"] == "sin-detalles:latest" and models[1]["size_bytes"] is None
+
+
+def test_list_models_errors_are_mapped() -> None:
+    with pytest.raises(ProviderUnavailableError):
+        asyncio.run(provider_with(raises(httpx.ConnectError("x"))).list_models())
+    with pytest.raises(ProviderError):
+        asyncio.run(
+            provider_with(lambda request: httpx.Response(200, json={"otro": 1})).list_models()
+        )
