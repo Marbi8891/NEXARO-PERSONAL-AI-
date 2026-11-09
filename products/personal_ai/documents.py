@@ -303,10 +303,20 @@ def search(db: sqlite3.Connection, organization_id: str, query: str, limit: int 
     return scored[:limit]
 
 
+_DELIMITER = re.compile(r"<(/?)\s*fragmento", re.IGNORECASE)
+
+
+def _neutralize(text: str) -> str:
+    """Un documento no puede cerrar ni abrir los delimitadores (inyección indirecta)."""
+    return _DELIMITER.sub(lambda m: f"&lt;{m.group(1)}fragmento", text)
+
+
 def build_context(hits: list[Hit]) -> str:
     """Fragmentos numerados y delimitados: el modelo debe tratarlos como datos, no como órdenes."""
-    blocks = [
-        f'<fragmento n="{i}" documento="{h.title}">\n{h.content}\n</fragmento>'
-        for i, h in enumerate(hits, 1)
-    ]
+    blocks = []
+    for i, h in enumerate(hits, 1):
+        title = _neutralize(" ".join(h.title.split())).replace('"', "'")
+        blocks.append(
+            f'<fragmento n="{i}" documento="{title}">\n{_neutralize(h.content)}\n</fragmento>'
+        )
     return "\n\n".join(blocks)

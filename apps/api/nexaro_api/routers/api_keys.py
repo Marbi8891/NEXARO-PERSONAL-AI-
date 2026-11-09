@@ -11,6 +11,7 @@ from nexaro_api.deps import (
     Ctx,
     OrgAccess,
     ReadKey,
+    acquire_generation,
     client_ip,
     require_permission,
     validate_origin,
@@ -108,6 +109,8 @@ def usage(organization_id: str, access: CanReadUsage, ctx: Ctx, days: int = 30) 
 
 @router.post("/api/v1/chat")
 async def public_chat(body: ChatRequest, key: ChatKey, ctx: Ctx) -> dict[str, Any]:
+    # Ya hay límite por minuto y clave (key_limiter); aquí solo el tope de generaciones.
+    lease = acquire_generation(ctx, f"key:{key.key_id}", rate_limit=False)
     try:
         outcome = await ctx.personal_ai.chat(
             key.user_id,
@@ -122,6 +125,8 @@ async def public_chat(body: ChatRequest, key: ChatKey, ctx: Ctx) -> dict[str, An
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except ProviderError as exc:
         raise HTTPException(status_code=502, detail="Error al consultar el servicio de IA") from exc
+    finally:
+        lease.release()
     return {"conversation_id": outcome.conversation_id, "answer": outcome.answer}
 
 

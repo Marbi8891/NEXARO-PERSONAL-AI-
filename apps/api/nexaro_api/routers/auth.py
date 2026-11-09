@@ -66,9 +66,9 @@ def login(request: Request, credentials: LoginRequest, ctx: Ctx) -> JSONResponse
     ip = client_ip(request)
     email_ref = pseudonymize(credentials.email)
     ip_key, email_key = f"ip:{ip}", f"email:{credentials.email.strip().lower()}"
-    limiter = ctx.limiter
+    limiter, ip_limiter = ctx.limiter, ctx.ip_limiter
 
-    if limiter.is_limited(ip_key) or limiter.is_limited(email_key):
+    if ip_limiter.is_limited(ip_key) or limiter.is_limited(email_key):
         raise HTTPException(status_code=429, detail="Demasiados intentos. Inténtalo más tarde.")
 
     with ctx.database.connect() as db:
@@ -83,9 +83,9 @@ def login(request: Request, credentials: LoginRequest, ctx: Ctx) -> JSONResponse
             record_event(db, "auth.login", "success", actor_user_id=user["id"], ip=ip)
 
     if user is None:
-        limiter.record(ip_key)
+        ip_limiter.record(ip_key)
         limiter.record(email_key)
-        if limiter.is_limited(email_key) or limiter.is_limited(ip_key):
+        if limiter.is_limited(email_key) or ip_limiter.is_limited(ip_key):
             # Una sola vez, al cruzar el umbral: evita que un ataque llene la auditoría.
             with ctx.database.connect() as db:
                 record_event(db, "auth.lockout", "denied", target_id=email_ref, ip=ip)

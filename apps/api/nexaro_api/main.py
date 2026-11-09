@@ -10,6 +10,7 @@ from ai_gateway.providers.base import ChatProvider
 from nexaro_api.bootstrap import migrate
 from nexaro_api.context import AppContext
 from nexaro_api.gateway import build_gateway
+from nexaro_api.limits import BodyLimitMiddleware
 from nexaro_api.routers import (
     admin,
     api_keys,
@@ -23,7 +24,7 @@ from nexaro_api.routers import (
 )
 from nexaro_core.config import Settings, get_settings
 from nexaro_core.database import Database
-from nexaro_core.security import RateLimiter
+from nexaro_core.security import ConcurrencyGuard, RateLimiter
 from products.personal_ai.service import PersonalAIService
 
 logger = logging.getLogger("nexaro")
@@ -35,7 +36,11 @@ SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "no-referrer",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+    "Cross-Origin-Opener-Policy": "same-origin",
+    "Cross-Origin-Resource-Policy": "same-origin",
 }
+HSTS = "max-age=31536000; includeSubDomains"
 
 # El frontend no usa scripts ni estilos en línea (lo verifica tests/security).
 CONTENT_SECURITY_POLICY = (
@@ -66,6 +71,19 @@ def create_app(
             settings.login_max_attempts,
             settings.login_window_seconds,
             settings.login_max_tracked_keys,
+        ),
+        ip_limiter=RateLimiter(
+            settings.login_ip_max_attempts or settings.login_max_attempts,
+            settings.login_window_seconds,
+            settings.login_max_tracked_keys,
+        ),
+        chat_limiter=RateLimiter(
+            settings.chat_requests_per_minute, 60, settings.login_max_tracked_keys
+        ),
+        chat_guard=ConcurrencyGuard(
+            settings.chat_max_concurrent,
+            settings.chat_max_concurrent_per_user,
+            settings.ai_timeout_seconds + 30,
         ),
         key_limiter=RateLimiter(
             settings.api_key_requests_per_minute, 60, settings.login_max_tracked_keys
@@ -99,13 +117,18 @@ def create_app(
             await close()
 
     production = settings.environment == "production"
+    docs_enabled = (
+        settings.api_docs
+        if settings.api_docs is not None
+        else settings.environment == "development"
+    ) and not production
     app = FastAPI(
         title="NEXARO",
         version="0.3.0",
         lifespan=lifespan,
-        docs_url=None if production else "/docs",
+        docs_url="/docs" if docs_enabled else None,
         redoc_url=None,
-        openapi_url=None if production else "/openapi.json",
+        openapi_url="/openapi.json" if docs_enabled else None,
     )
     app.state.ctx = ctx
 
@@ -118,7 +141,13 @@ def create_app(
             response.headers.setdefault(name, value)
         if not request.url.path.startswith(CSP_EXEMPT_PATHS):
             response.headers.setdefault("Content-Security-Policy", CONTENT_SECURITY_POLICY)
+        if settings.cookie_secure:  # HTTPS (producción): el navegador no vuelve a usar HTTP
+            response.headers.setdefault("Strict-Transport-Security", HSTS)
+        if request.url.path.startswith("/api/"):  # respuestas autenticadas: nada de caché
+            response.headers.setdefault("Cache-Control", "no-store")
         return response
+
+    app.add_middleware(BodyLimitMiddleware, max_bytes=settings.max_body_bytes)
 
     for module in (
         auth,

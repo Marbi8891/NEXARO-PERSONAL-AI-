@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from ai_gateway.errors import PolicyError, ProviderError
-from nexaro_api.deps import Ctx, CurrentUser, validate_origin
+from nexaro_api.deps import Ctx, CurrentUser, acquire_generation, validate_origin
 from nexaro_api.schemas import ChatRequest
 from products.personal_ai.service import ConversationNotFoundError
 
@@ -18,6 +18,7 @@ NOT_FOUND = HTTPException(status_code=404, detail="Conversación no encontrada")
 @router.post("/chat")
 async def chat(request: Request, body: ChatRequest, user: CurrentUser, ctx: Ctx) -> dict[str, Any]:
     validate_origin(request, ctx)
+    lease = acquire_generation(ctx, f"user:{user['id']}")
 
     try:
         outcome = await ctx.personal_ai.chat(user["id"], body.message, body.conversation_id)
@@ -28,6 +29,8 @@ async def chat(request: Request, body: ChatRequest, user: CurrentUser, ctx: Ctx)
     except ProviderError as exc:
         # El detalle del proveedor (URLs internas, etc.) no se devuelve al cliente.
         raise HTTPException(status_code=502, detail="Error al consultar el servicio de IA") from exc
+    finally:
+        lease.release()
 
     return {"conversation_id": outcome.conversation_id, "answer": outcome.answer}
 
@@ -42,12 +45,16 @@ async def chat_stream(
 ) -> StreamingResponse:
     """Respuesta en streaming (SSE): start, token*, done | error."""
     validate_origin(request, ctx)
+    lease = acquire_generation(ctx, f"user:{user['id']}")
     try:
         conversation_id, events = await ctx.personal_ai.open_stream(
             user["id"], body.message, body.conversation_id
         )
-    except ConversationNotFoundError:
-        raise NOT_FOUND from None
+    except BaseException as exc:
+        lease.release()
+        if isinstance(exc, ConversationNotFoundError):
+            raise NOT_FOUND from None
+        raise
 
     async def body_iter() -> AsyncIterator[str]:
         yield _sse({"event": "start", "conversation_id": conversation_id})
@@ -57,6 +64,7 @@ async def chat_stream(
         finally:
             # Cierra el flujo del modelo (y con él la conexión con Ollama) si el cliente se va.
             await events.aclose()  # type: ignore[attr-defined]
+            lease.release()
 
     return StreamingResponse(
         body_iter(),

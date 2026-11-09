@@ -68,7 +68,20 @@ class Settings(BaseSettings):
     login_window_seconds: int = Field(default=900, gt=0)
     login_max_tracked_keys: int = Field(default=10_000, gt=0)
 
+    # Por defecto igual que login_max_attempts. Tras la NAT de Docker Desktop todos los clientes
+    # llegan con la misma IP (la pasarela): ahí compose lo sube para que nadie bloquee a todos.
+    login_ip_max_attempts: int | None = Field(default=None, gt=0, alias="LOGIN_IP_MAX_ATTEMPTS")
+
     api_key_requests_per_minute: int = Field(default=60, gt=0)
+
+    # Abuso de recursos del modelo (CPU): ritmo por usuario y generaciones simultáneas.
+    chat_requests_per_minute: int = Field(default=30, gt=0, alias="CHAT_REQUESTS_PER_MINUTE")
+    chat_max_concurrent: int = Field(default=2, gt=0, alias="CHAT_MAX_CONCURRENT")
+    chat_max_concurrent_per_user: int = Field(default=2, gt=0, alias="CHAT_MAX_CONCURRENT_PER_USER")
+    health_cache_seconds: float = Field(default=0.0, ge=0, alias="HEALTH_CACHE_SECONDS")
+    max_body_bytes: int = Field(default=2 * 1024 * 1024, gt=0, alias="MAX_BODY_BYTES")
+    # None = solo en desarrollo. Swagger/OpenAPI describen toda la superficie de la API.
+    api_docs: bool | None = Field(default=None, alias="API_DOCS")
 
     @field_validator("allowed_origins", mode="before")
     @classmethod
