@@ -1,6 +1,6 @@
 // Service worker mínimo: guarda el armazón estático para abrir la app sin red.
 // Nunca toca /api: las respuestas autenticadas no se almacenan en caché.
-const CACHE = "nexaro-shell-v4";
+const CACHE = "nexaro-shell-v5";
 const SHELL = ["/", "/css/base.css", "/css/layout.css", "/css/components.css", "/manifest.webmanifest", "/icons/icon.svg"];
 
 self.addEventListener("install", (event) => {

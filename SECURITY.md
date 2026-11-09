@@ -23,6 +23,7 @@
 - Claves de API: solo se guarda el hash SHA-256 (clave de 256 bits), el secreto se muestra una vez, caducan
   y se revocan, dejan de valer si su creador pierde cuenta o membresía, y los fallos se limitan por IP
   con respuesta uniforme. Nunca se registran en auditoría (ADR-0009).
+- Resumen de seguridad (`/api/admin/security`): solo administradores; muestra IP de origen de accesos fallidos (dato personal: acceso restringido) y nunca correos, seudónimos ni `details`.
 - Avisos y panel: se calculan en servidor a partir de datos reales; no incluyen correos, IPs ni contenido.
 - Infraestructura (Terraform): rol de la tarea sin comodines, cifrado con KMS, buckets sin acceso
   público, HTTPS obligatorio, credenciales de base de datos gestionadas por AWS. Tests estáticos

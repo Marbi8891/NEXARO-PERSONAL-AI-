@@ -144,6 +144,19 @@ await scenario("developer: clave creada con secreto visible una vez", { scheme: 
   assert.ok(overflow <= 0);
 });
 
+await scenario("seguridad: resumen y sin desbordamiento (escritorio y móvil)", { scheme: "light", viewport: { width: 1280, height: 800 } }, async (page) => {
+  await login(page, "admin@x.io");
+  for (let i = 0; i < 3; i++) {
+    await page.evaluate(() => fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: "intruso@x.io", password: "clave-incorrecta-123" }) }));
+  }
+  await page.goto("/#/security");
+  await page.waitForSelector(".chart");
+  await page.screenshot({ path: `${OUT}d-light-security.png` });
+  await page.setViewportSize({ width: 390, height: 780 });
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  assert.ok(overflow <= 0, `desbordamiento horizontal: ${overflow}px`);
+});
+
 await scenario("cajón de navegación en móvil", { scheme: "light", viewport: { width: 390, height: 780 } }, async (page) => {
   await login(page, "user@x.io");
   assert.equal(await page.locator("#sidebar").isVisible(), false, "la barra lateral empieza cerrada");

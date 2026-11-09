@@ -17,7 +17,12 @@ export function createShell({ user }) {
     { nav: "chat", href: "#/chat", label: "Chat" },
     { nav: "organizations", href: "#/organizations", label: "Organizaciones" },
     { nav: "developer", href: "#/developer", label: "Developer" },
-    ...(user.role === "admin" ? [{ nav: "admin", href: "#/admin", label: "Administración" }] : []),
+    ...(user.role === "admin"
+      ? [
+          { nav: "security", href: "#/security", label: "Seguridad" },
+          { nav: "admin", href: "#/admin", label: "Administración" },
+        ]
+      : []),
   ].map((link) => h("a", { href: link.href, "data-nav": link.nav, onclick: () => setDrawer(false) }, link.label));
 
   const sidebarSlot = h("div", { class: "sidebar-slot" });

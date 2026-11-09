@@ -47,8 +47,8 @@ Solo se usa en icono, etiqueta y filete de cabecera; nunca como fondo grande.
 | NEXARO Developer | `--module-developer` | `#4f6a1f` |
 
 Un módulo aparece en la navegación **solo cuando tiene funcionalidad real** (ADR-0008). Hoy: Personal AI,
-Developer (claves de API y uso) y la plataforma (panel, organizaciones, administración). Finance, Business
-y Security solo existen como acento de marca.
+Developer (claves de API y uso), Security (resumen de seguridad, solo administradores) y la plataforma
+(panel, organizaciones, administración). Finance y Business solo existen como acento de marca.
 
 ## Tema
 Claro por defecto y oscuro opcional. Tres modos: *Sistema* (sigue `prefers-color-scheme`), *Claro* y
@@ -108,4 +108,4 @@ con botón de menú, botón de cierre, capa de fondo y cierre con Escape o al na
 
 ## Capturas de referencia
 `docs/design/screenshots/` (generadas por `tests/frontend/browser.mjs` con datos de prueba, no reales):
-`d-light-*`, `d-dark-*` (escritorio) y `m-light-*` (móvil, 390 px) para login, chat y administración, más `d-light-dashboard` (panel con campana abierta), `m-dark-dashboard` y `d-light-developer` (clave recién creada; el valor se enmascara en la captura).
+`d-light-*`, `d-dark-*` (escritorio) y `m-light-*` (móvil, 390 px) para login, chat y administración, más `d-light-dashboard` (panel con campana abierta), `m-dark-dashboard` `d-light-security` (resumen con datos reales de prueba) y `d-light-developer` (clave recién creada; el valor se enmascara en la captura).

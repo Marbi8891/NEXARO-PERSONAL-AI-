@@ -107,6 +107,11 @@ await check("usuario normal no accede a #/admin", async () => {
   location.hash = "#/admin";
   await until(() => location.hash.startsWith("#/chat"), "redirect");
 });
+await check("usuario normal no accede a #/security", async () => {
+  location.hash = "#/security";
+  await until(() => location.hash.startsWith("#/chat"), "redirect");
+  assert.ok(!text().includes("Seguridad"), "el enlace Seguridad es solo de administradores");
+});
 await check("organizaciones: usuario normal no ve formulario de creación", async () => {
   location.hash = "#/organizations";
   await until(() => text().includes("No perteneces a ninguna organización"), "orgs");
@@ -179,6 +184,19 @@ await check("panel de admin: sección de plataforma con cifras reales", async ()
   assert.ok(text().includes("Cuentas"));
   assert.ok(text().includes("Accesos fallidos"));
   assert.ok(text().includes("Pendientes: 1"));
+  location.hash = "#/admin"; // las comprobaciones siguientes parten de Administración
+  await until(() => text().includes("pend@x.io"), "users");
+});
+await check("seguridad: cifras reales de la auditoría y cambio de periodo", async () => {
+  location.hash = "#/security";
+  await until(() => $(".stats") && text().includes("Accesos fallidos"), "seguridad");
+  const stats = () => Object.fromEntries([...document.querySelectorAll(".stat")].map((s) => [s.querySelector("dt").textContent, Number(s.querySelector("dd").textContent)]));
+  assert.ok(stats()["Accesos fallidos"] >= 1, "el acceso fallido de la prueba anterior debe aparecer");
+  assert.ok($(".chart"), "gráfico de fallos por día");
+  assert.ok(text().includes("Orígenes con más accesos fallidos"));
+  const select = $("#sec-days");
+  select.value = "7"; select.dispatchEvent(new window.Event("change"));
+  await until(() => text().includes("Últimos 7 días"), "periodo 7");
   location.hash = "#/admin"; // las comprobaciones siguientes parten de Administración
   await until(() => text().includes("pend@x.io"), "users");
 });

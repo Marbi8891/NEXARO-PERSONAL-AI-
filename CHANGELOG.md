@@ -22,6 +22,7 @@
 - Panel y avisos (F12): `GET /api/dashboard` (actividad del usuario y, solo para administradores, cuentas, uso del modelo y contadores de seguridad) y `GET /api/notifications` (avisos derivados del estado real, sin persistencia ni datos personales); vista `#/dashboard`, gráfico de barras SVG accesible y campana en la cabecera. Sin cifras inventadas: lo que no hay se muestra como 0 o vacío.
 - Módulo Developer (F13): claves de API por organización (hash SHA-256, secreto mostrado una vez, caducidad opcional, revocación, auditoría), `POST /api/v1/chat` con `Authorization: Bearer`, uso por clave (`GET /api/organizations/{id}/usage`), migración 3 (SQLite y PostgreSQL), vista `#/developer` y ADR-0009.
 - Documentación final (F14): `API.md` completa, sección Frontend en `ARCHITECTURE.md`, guía de instalación y copias en `DEPLOYMENT.md`, pruebas de frontend en `DEVELOPMENT.md`, `SECURITY.md` actualizado e `docs/informe-calidad-profesional.md`.
+- Módulo Security (F15): `GET /api/admin/security` y vista `#/security` (solo administradores) con accesos fallidos, denegaciones, bloqueos, IP de origen e incidencias, calculados desde la auditoría existente (sin tablas nuevas); ADR-0010.
 
 ### Cambiado
 - La app pasa a `create_app()` (factory); el comando de admin es `python -m nexaro_api.bootstrap_admin`.

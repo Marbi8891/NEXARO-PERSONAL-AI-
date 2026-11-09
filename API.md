@@ -73,6 +73,7 @@ curl -X POST http://127.0.0.1:8001/api/v1/chat \
 | PATCH | `/admin/users/{id}/active` | admin | no sobre uno mismo; protege al último admin |
 | PATCH | `/admin/settings/registration` | admin | abre/cierra el registro público |
 | GET | `/admin/audit` | admin | filtro `action`, `limit` |
+| GET | `/admin/security?days=14` | admin | `days` 1–90. Resumen derivado de la auditoría: totales (accesos fallidos y correctos, denegaciones, bloqueos), serie diaria sin huecos, 5 IP con más fallos, incidencias por tipo y las 10 últimas. Sin correos, seudónimos ni `details` |
 | GET | `/admin/usage` | admin | uso de modelos por proveedor/modelo (`days`, máx. 365) y coste del mes |
 
 ## Códigos

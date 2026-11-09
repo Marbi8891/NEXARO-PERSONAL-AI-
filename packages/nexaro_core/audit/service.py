@@ -11,6 +11,8 @@ import sqlite3
 from datetime import datetime, timezone
 from typing import Any, Literal
 
+from nexaro_core.timeseries import fill_days, last_days
+
 Outcome = Literal["success", "failure", "denied"]
 
 SENSITIVE_KEYS = frozenset({"password", "token", "secret", "authorization", "cookie", "hash"})
@@ -132,3 +134,84 @@ def count_events(
         (action, outcome, f"-{int(since_minutes)} minutes"),
     ).fetchone()
     return int(row["total"])
+
+
+def security_summary(
+    db: sqlite3.Connection, *, days: int, top_ips: int = 5, recent: int = 10
+) -> dict[str, Any]:
+    """Resumen de seguridad de los últimos `days` días (UTC, incluido hoy) a partir de la auditoría.
+
+    Acotado: una consulta agrupada por día/acción/resultado, una por IP y una por eventos recientes.
+    No devuelve correos, seudónimos ni `details`; la IP solo sale para quien ya es administrador.
+    """
+    window = last_days(days)
+    start = window[0]
+    rows = db.execute(
+        """
+        SELECT date(occurred_at) AS day, action, outcome, COUNT(*) AS total
+        FROM audit_events
+        WHERE date(occurred_at) >= ?
+        GROUP BY day, action, outcome
+        """,
+        (start,),
+    ).fetchall()
+
+    failed: dict[str, int] = {}
+    denied: dict[str, int] = {}
+    lockouts: dict[str, int] = {}
+    successful = 0
+    by_action: dict[tuple[str, str], int] = {}
+    for row in rows:
+        day, action, outcome, total = row["day"], row["action"], row["outcome"], int(row["total"])
+        if action == "auth.lockout":
+            lockouts[day] = lockouts.get(day, 0) + total
+        elif action == "auth.login" and outcome == "failure":
+            failed[day] = failed.get(day, 0) + total
+        elif action == "auth.login" and outcome == "success":
+            successful += total
+        if outcome in ("failure", "denied"):
+            by_action[(action, outcome)] = by_action.get((action, outcome), 0) + total
+            if outcome == "denied" and action != "auth.lockout":
+                denied[day] = denied.get(day, 0) + total
+
+    daily = [
+        {"date": d, "failed_logins": f, "denied": x, "lockouts": k}
+        for d, f, x, k in zip(
+            window,
+            (c["failed_logins"] for c in fill_days(window, failed, "failed_logins")),
+            (c["denied"] for c in fill_days(window, denied, "denied")),
+            (c["lockouts"] for c in fill_days(window, lockouts, "lockouts")),
+            strict=True,
+        )
+    ]
+    ips = db.execute(
+        """
+        SELECT ip, COUNT(*) AS failed_logins FROM audit_events
+        WHERE action = 'auth.login' AND outcome = 'failure' AND ip IS NOT NULL
+          AND date(occurred_at) >= ?
+        GROUP BY ip ORDER BY failed_logins DESC, ip LIMIT ?
+        """,
+        (start, top_ips),
+    ).fetchall()
+    latest = db.execute(
+        """
+        SELECT id, occurred_at, action, outcome, ip FROM audit_events
+        WHERE outcome IN ('failure', 'denied') ORDER BY id DESC LIMIT ?
+        """,
+        (recent,),
+    ).fetchall()
+    return {
+        "totals": {
+            "failed_logins": sum(failed.values()),
+            "denied": sum(denied.values()),
+            "lockouts": sum(lockouts.values()),
+            "successful_logins": successful,
+        },
+        "daily": daily,
+        "top_ips": [{"ip": r["ip"], "failed_logins": int(r["failed_logins"])} for r in ips],
+        "by_action": [
+            {"action": a, "outcome": o, "count": n}
+            for (a, o), n in sorted(by_action.items(), key=lambda kv: (-kv[1], kv[0]))
+        ],
+        "recent": [dict(r) for r in latest],
+    }

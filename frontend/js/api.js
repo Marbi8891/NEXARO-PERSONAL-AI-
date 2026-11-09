@@ -64,6 +64,7 @@ export const api = {
   adminSetActive: (userId, active) => request(`/api/admin/users/${id(userId)}/active`, { method: "PATCH", body: { active } }),
   adminSetRegistration: (enabled) => request("/api/admin/settings/registration", { method: "PATCH", body: { enabled } }),
   adminAudit: (action) => request(`/api/admin/audit?limit=100${action ? `&action=${id(action)}` : ""}`),
+  adminSecurity: (days = 14) => request(`/api/admin/security?days=${days}`),
   adminUsage: () => request("/api/admin/usage"),
 
   apiKeys: (orgId) => request(`/api/organizations/${id(orgId)}/api-keys`),

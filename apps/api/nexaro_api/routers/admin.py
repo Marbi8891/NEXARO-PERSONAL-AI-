@@ -10,7 +10,7 @@ from nexaro_api.schemas import (
     RegistrationSettingRequest,
     UserActiveRequest,
 )
-from nexaro_core.audit import list_events, record_event
+from nexaro_core.audit import list_events, record_event, security_summary
 from nexaro_core.database import begin_write
 from nexaro_core.identity import (
     LastAdminError,
@@ -182,6 +182,14 @@ def admin_audit(
 ) -> dict[str, Any]:
     with ctx.database.connect() as db:
         return {"events": list_events(db, limit=limit, action=action)}
+
+
+@router.get("/security")
+def admin_security(admin: AdminUser, ctx: Ctx, days: int = 14) -> dict[str, Any]:
+    """Resumen de seguridad derivado de la auditoría (solo administradores de plataforma)."""
+    days = min(max(days, 1), 90)
+    with ctx.database.connect() as db:
+        return {"days": days, **security_summary(db, days=days)}
 
 
 @router.get("/usage")

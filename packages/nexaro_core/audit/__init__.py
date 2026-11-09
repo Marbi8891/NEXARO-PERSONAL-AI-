@@ -4,6 +4,14 @@ from nexaro_core.audit.service import (
     list_events,
     pseudonymize,
     record_event,
+    security_summary,
 )
 
-__all__ = ["count_events", "init_audit_schema", "list_events", "pseudonymize", "record_event"]
+__all__ = [
+    "count_events",
+    "init_audit_schema",
+    "list_events",
+    "pseudonymize",
+    "record_event",
+    "security_summary",
+]

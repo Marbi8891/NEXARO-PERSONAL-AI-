@@ -15,7 +15,8 @@ proveedores en la nube. Monolito modular en Python (FastAPI) con frontend HTML/C
 | Multiorganización: organizaciones, miembros, roles y permisos | Implementado y probado |
 | Interfaz (sistema de diseño, tema claro/oscuro, panel con datos reales, avisos, PWA) | Implementado; probado con jsdom y Chromium |
 | Developer: claves de API por organización, `/api/v1/chat`, uso por clave | Implementado y probado |
-| Finance, Business, Security | Solo identidad de marca; sin funcionalidad (no aparecen en la navegación) |
+| Security: resumen de seguridad derivado de la auditoría (solo administradores) | Implementado y probado |
+| Finance, Business | Solo identidad de marca; sin funcionalidad (no aparecen en la navegación) |
 | Documentos, agentes, tareas, embeddings | Solo esquema (sin API) |
 | Migraciones versionadas | Implementado (SQLite, hasta la 3) |
 | PostgreSQL | DDL validado con un servidor real; la app aún no ejecuta sobre él |
