@@ -238,12 +238,14 @@ await check("developer: crear clave muestra el secreto una vez, lista solo el pr
   location.hash = "#/developer";
   await until(() => $("#key-name"), "formulario de claves");
   fill("#key-name", "CI");
+  $("#key-scopes").value = "chat:write,conversations:read";
   submit([...document.querySelectorAll("form.inline-form")].find((f) => f.querySelector("#key-name")));
   const secretInput = await until(() => $(".secret-card input"), "secreto");
   const secret = secretInput.value;
   assert.match(secret, /^nxr_[A-Za-z0-9_-]{40,}$/);
   const table = $(".data-table");
   assert.ok(table.textContent.includes("CI") && table.textContent.includes("Activa"));
+  assert.ok(table.textContent.includes("Chat, Leer conversaciones"), "la tabla muestra los permisos");
   assert.ok(!table.textContent.includes(secret), "la tabla no debe contener la clave completa");
   [...document.querySelectorAll("button")].find((b) => b.getAttribute("aria-label") === "Revocar CI").click();
   await until(() => document.querySelector("dialog"), "confirmación");

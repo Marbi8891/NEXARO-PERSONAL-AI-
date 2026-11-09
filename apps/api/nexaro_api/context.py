@@ -14,5 +14,6 @@ class AppContext:
     settings: Settings
     database: Database
     limiter: RateLimiter
+    key_limiter: RateLimiter  # peticiones por clave de API y minuto
     provider: ChatProvider
     personal_ai: PersonalAIService

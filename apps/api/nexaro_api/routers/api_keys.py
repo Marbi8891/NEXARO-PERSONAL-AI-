@@ -7,9 +7,10 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from ai_gateway.errors import PolicyError, ProviderError
 from ai_gateway.usage import UsageStore
 from nexaro_api.deps import (
-    ApiKeyAuth,
+    ChatKey,
     Ctx,
     OrgAccess,
+    ReadKey,
     client_ip,
     require_permission,
     validate_origin,
@@ -48,7 +49,12 @@ def create(
         begin_write(db)
         try:
             created = create_api_key(
-                db, organization_id, body.name.strip(), access.user["id"], body.expires_in_days
+                db,
+                organization_id,
+                body.name.strip(),
+                access.user["id"],
+                body.expires_in_days,
+                body.scopes,
             )
         except KeyLimitError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -62,7 +68,11 @@ def create(
             target_type="api_key",
             target_id=created["id"],
             ip=client_ip(request),
-            details={"organization": organization_id, "name": created["name"]},
+            details={
+                "organization": organization_id,
+                "name": created["name"],
+                "scopes": created["scopes"],
+            },
         )
     return created
 
@@ -97,7 +107,7 @@ def usage(organization_id: str, access: CanReadUsage, ctx: Ctx, days: int = 30) 
 
 
 @router.post("/api/v1/chat")
-async def public_chat(body: ChatRequest, key: ApiKeyAuth, ctx: Ctx) -> dict[str, Any]:
+async def public_chat(body: ChatRequest, key: ChatKey, ctx: Ctx) -> dict[str, Any]:
     try:
         outcome = await ctx.personal_ai.chat(
             key.user_id,
@@ -113,3 +123,23 @@ async def public_chat(body: ChatRequest, key: ApiKeyAuth, ctx: Ctx) -> dict[str,
     except ProviderError as exc:
         raise HTTPException(status_code=502, detail="Error al consultar el servicio de IA") from exc
     return {"conversation_id": outcome.conversation_id, "answer": outcome.answer}
+
+
+@router.get("/api/v1/conversations")
+def public_conversations(key: ReadKey, ctx: Ctx, limit: int = 50) -> dict[str, Any]:
+    """Conversaciones creadas con claves de la organización de esta clave (no el chat web)."""
+    limit = min(max(limit, 1), 100)
+    rows = ctx.personal_ai.list_conversations(
+        key.user_id, limit=limit, organization_id=key.organization_id
+    )
+    return {"conversations": rows}
+
+
+@router.get("/api/v1/conversations/{conversation_id}")
+def public_conversation(conversation_id: str, key: ReadKey, ctx: Ctx) -> dict[str, Any]:
+    try:
+        return ctx.personal_ai.get_conversation(
+            key.user_id, conversation_id, organization_id=key.organization_id
+        )
+    except ConversationNotFoundError:
+        raise HTTPException(status_code=404, detail="Conversación no encontrada") from None

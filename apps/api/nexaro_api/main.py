@@ -57,6 +57,9 @@ def create_app(
             settings.login_window_seconds,
             settings.login_max_tracked_keys,
         ),
+        key_limiter=RateLimiter(
+            settings.api_key_requests_per_minute, 60, settings.login_max_tracked_keys
+        ),
         provider=provider,
         personal_ai=PersonalAIService(database, provider, model),
     )

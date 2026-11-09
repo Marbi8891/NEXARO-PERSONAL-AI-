@@ -124,4 +124,25 @@ def get_api_key_identity(request: Request, ctx: Ctx) -> ApiKeyIdentity:
     return identity
 
 
-ApiKeyAuth = Annotated[ApiKeyIdentity, Depends(get_api_key_identity)]
+def require_scope(scope: str) -> Callable[..., ApiKeyIdentity]:
+    """Clave válida con el permiso indicado y dentro de su límite por minuto (429 si lo supera)."""
+
+    def dependency(
+        ctx: Ctx, identity: Annotated[ApiKeyIdentity, Depends(get_api_key_identity)]
+    ) -> ApiKeyIdentity:
+        if not identity.allows(scope):
+            raise HTTPException(status_code=403, detail=f"La clave no tiene el permiso {scope}")
+        if ctx.key_limiter.is_limited(identity.key_id):
+            raise HTTPException(
+                status_code=429,
+                detail="Límite de peticiones por minuto superado",
+                headers={"Retry-After": "60"},
+            )
+        ctx.key_limiter.record(identity.key_id)
+        return identity
+
+    return dependency
+
+
+ChatKey = Annotated[ApiKeyIdentity, Depends(require_scope("chat:write"))]
+ReadKey = Annotated[ApiKeyIdentity, Depends(require_scope("conversations:read"))]

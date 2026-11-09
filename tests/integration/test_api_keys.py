@@ -267,3 +267,100 @@ def test_usage_cannot_reference_a_key_of_another_organization(
             assert "api_key_id" in str(exc)
         else:
             raise AssertionError("se aceptó una clave de otra organización")
+
+
+def test_scopes_default_to_chat_and_reject_unknown_ones(logged_in: Factory) -> None:
+    admin, org = setup_org(logged_in)
+    assert make_key(admin, org)["scopes"] == ["chat:write"]
+    both = make_key(admin, org, "lector", scopes=["conversations:read", "chat:write"])
+    assert both["scopes"] == ["chat:write", "conversations:read"]
+    path = f"/api/organizations/{org}/api-keys"
+    for bad in ([], ["admin"], ["chat:write", "otro"]):
+        response = admin.post(path, json={"name": "x", "scopes": bad}, headers=HEADERS)
+        assert response.status_code in (400, 422), bad
+    listed = admin.get(path).json()["api_keys"]
+    assert {tuple(k["scopes"]) for k in listed} == {
+        ("chat:write",),
+        ("chat:write", "conversations:read"),
+    }
+
+
+def test_a_key_only_does_what_its_scopes_allow(logged_in: Factory, app: object) -> None:
+    admin, org = setup_org(logged_in)
+    chat_only = make_key(admin, org, "chat", scopes=["chat:write"])["secret"]
+    read_only = make_key(admin, org, "lectura", scopes=["conversations:read"])["secret"]
+    anonymous = TestClient(app)
+
+    assert call(anonymous, chat_only).status_code == 200
+    assert call(anonymous, read_only).status_code == 403
+    assert anonymous.get("/api/v1/conversations", headers=bearer(chat_only)).status_code == 403
+    assert anonymous.get("/api/v1/conversations", headers=bearer(read_only)).status_code == 200
+    assert anonymous.get("/api/v1/conversations").status_code == 401
+
+
+def test_api_reads_only_conversations_made_through_keys_of_its_organization(
+    logged_in: Factory, app: object
+) -> None:
+    admin, org = setup_org(logged_in)
+    secret = make_key(admin, org, "todo", scopes=["chat:write", "conversations:read"])["secret"]
+    other = make_key(admin, org, "otra", scopes=["conversations:read"])["secret"]
+    web = admin.post("/api/chat", json={"message": "privado web"}, headers=HEADERS).json()
+    anonymous = TestClient(app)
+    made = call(anonymous, secret, "desde la api").json()
+
+    listed = anonymous.get("/api/v1/conversations", headers=bearer(other)).json()["conversations"]
+    assert [c["id"] for c in listed] == [made["conversation_id"]]
+    detail = anonymous.get(
+        f"/api/v1/conversations/{made['conversation_id']}", headers=bearer(other)
+    )
+    assert detail.status_code == 200
+    assert next(m["content"] for m in detail.json()["messages"]) == "desde la api"
+    # el chat web del mismo usuario no es visible ni continuable con una clave
+    hidden = anonymous.get(f"/api/v1/conversations/{web['conversation_id']}", headers=bearer(other))
+    assert hidden.status_code == 404
+    resumed = anonymous.post(
+        "/api/v1/chat",
+        json={"message": "hola", "conversation_id": web["conversation_id"]},
+        headers=bearer(secret),
+    )
+    assert resumed.status_code == 404
+    # y la clave puede continuar la suya
+    again = anonymous.post(
+        "/api/v1/chat",
+        json={"message": "sigue", "conversation_id": made["conversation_id"]},
+        headers=bearer(secret),
+    )
+    assert again.status_code == 200
+
+
+def test_conversations_of_another_organization_are_invisible(
+    logged_in: Factory, app: object
+) -> None:
+    admin, org = setup_org(logged_in)
+    second = admin.post(
+        "/api/organizations", json={"name": "Beta", "slug": "beta"}, headers=HEADERS
+    ).json()["id"]
+    key_a = make_key(admin, org, "a", scopes=["chat:write", "conversations:read"])["secret"]
+    key_b = make_key(admin, str(second), "b", scopes=["conversations:read"])["secret"]
+    anonymous = TestClient(app)
+    made = call(anonymous, key_a).json()
+
+    assert anonymous.get("/api/v1/conversations", headers=bearer(key_b)).json() == {
+        "conversations": []
+    }
+    path = f"/api/v1/conversations/{made['conversation_id']}"
+    assert anonymous.get(path, headers=bearer(key_b)).status_code == 404
+
+
+def test_each_key_has_its_own_requests_per_minute_limit(logged_in: Factory, app: object) -> None:
+    admin, org = setup_org(logged_in)
+    first = make_key(admin, org, "uno")["secret"]
+    second = make_key(admin, org, "dos")["secret"]
+    anonymous = TestClient(app)
+    limit = app.state.ctx.settings.api_key_requests_per_minute  # type: ignore[attr-defined]
+
+    for _ in range(limit):
+        assert call(anonymous, first).status_code == 200
+    blocked = call(anonymous, first)
+    assert blocked.status_code == 429 and blocked.headers["retry-after"] == "60"
+    assert call(anonymous, second).status_code == 200  # otra clave no se ve afectada

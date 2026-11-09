@@ -61,6 +61,7 @@ def platform_migrations() -> list[Migration]:
     return [
         sql_migration(2, "platform", MIGRATIONS_DIR / "sqlite" / "0002_platform.sql"),
         sql_migration(3, "api_keys", MIGRATIONS_DIR / "sqlite" / "0003_api_keys.sql"),
+        sql_migration(4, "api_key_scopes", MIGRATIONS_DIR / "sqlite" / "0004_api_key_scopes.sql"),
     ]
 
 

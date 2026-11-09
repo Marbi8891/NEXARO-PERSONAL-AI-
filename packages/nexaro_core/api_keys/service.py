@@ -16,6 +16,8 @@ from typing import Any
 KEY_PREFIX = "nxr_"
 PREFIX_LENGTH = len(KEY_PREFIX) + 6  # lo mostrado en el listado: «nxr_» + 6 caracteres
 MAX_ACTIVE_KEYS = 25
+SCOPES = ("chat:write", "conversations:read")
+DEFAULT_SCOPES = ("chat:write",)
 LAST_USED_GRANULARITY_SECONDS = 60  # evita convertir cada lectura en una escritura
 _NOW = "strftime('%Y-%m-%d %H:%M:%S', 'now')"
 
@@ -33,6 +35,10 @@ class ApiKeyIdentity:
     key_id: str
     organization_id: str
     user_id: str
+    scopes: frozenset[str] = frozenset()
+
+    def allows(self, scope: str) -> bool:
+        return scope in self.scopes
 
 
 def _hash(secret: str) -> str:
@@ -45,8 +51,13 @@ def create_api_key(
     name: str,
     created_by: str,
     expires_in_days: int | None = None,
+    scopes: tuple[str, ...] | list[str] | None = None,
 ) -> dict[str, Any]:
     """Crea una clave. Debe llamarse dentro de una transacción de escritura."""
+    chosen = sorted(set(scopes or DEFAULT_SCOPES))
+    unknown = [s for s in chosen if s not in SCOPES]
+    if unknown:
+        raise ApiKeyError(f"Permiso desconocido: {unknown[0]}")
     active = db.execute(
         f"""
         SELECT COUNT(*) AS total FROM api_keys
@@ -62,8 +73,9 @@ def create_api_key(
     key_id = str(uuid.uuid4())
     db.execute(
         """
-        INSERT INTO api_keys (id, organization_id, name, prefix, key_hash, created_by, expires_at)
-        VALUES (?, ?, ?, ?, ?, ?,
+        INSERT INTO api_keys
+            (id, organization_id, name, prefix, key_hash, created_by, scopes, expires_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?,
                 CASE WHEN ? IS NULL THEN NULL ELSE strftime('%Y-%m-%d %H:%M:%S', 'now', ?) END)
         """,
         (
@@ -73,6 +85,7 @@ def create_api_key(
             secret[:PREFIX_LENGTH],
             _hash(secret),
             created_by,
+            ",".join(chosen),
             expires_in_days,
             f"+{expires_in_days} days",
         ),
@@ -88,6 +101,7 @@ def _public(row: sqlite3.Row) -> dict[str, Any]:
         "name": row["name"],
         "prefix": row["prefix"],
         "created_by": row["created_by"],
+        "scopes": row["scopes"].split(","),
         "created_at": row["created_at"],
         "expires_at": row["expires_at"],
         "last_used_at": row["last_used_at"],
@@ -135,7 +149,7 @@ def authenticate_api_key(db: sqlite3.Connection, secret: str) -> ApiKeyIdentity 
         return None
     row = db.execute(
         f"""
-        SELECT k.id, k.organization_id, k.created_by, k.last_used_at
+        SELECT k.id, k.organization_id, k.created_by, k.scopes
         FROM api_keys k
         JOIN organizations o ON o.id = k.organization_id AND o.status = 'active'
         JOIN users u ON u.id = k.created_by AND u.is_active = 1 AND u.approval_status = 'approved'
@@ -156,4 +170,6 @@ def authenticate_api_key(db: sqlite3.Connection, secret: str) -> ApiKeyIdentity 
         """,  # noqa: S608
         (row["id"], f"-{LAST_USED_GRANULARITY_SECONDS} seconds"),
     )
-    return ApiKeyIdentity(row["id"], row["organization_id"], row["created_by"])
+    return ApiKeyIdentity(
+        row["id"], row["organization_id"], row["created_by"], frozenset(row["scopes"].split(","))
+    )

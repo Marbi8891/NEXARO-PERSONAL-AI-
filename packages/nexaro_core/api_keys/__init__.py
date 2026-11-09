@@ -1,6 +1,8 @@
 from nexaro_core.api_keys.service import (
+    DEFAULT_SCOPES,
     KEY_PREFIX,
     MAX_ACTIVE_KEYS,
+    SCOPES,
     ApiKeyError,
     ApiKeyIdentity,
     KeyLimitError,
@@ -11,8 +13,10 @@ from nexaro_core.api_keys.service import (
 )
 
 __all__ = [
+    "DEFAULT_SCOPES",
     "KEY_PREFIX",
     "MAX_ACTIVE_KEYS",
+    "SCOPES",
     "ApiKeyError",
     "ApiKeyIdentity",
     "KeyLimitError",

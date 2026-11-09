@@ -10,6 +10,12 @@ import { append, clear, formatDate, h } from "../dom.js";
 
 const STATUS = { active: ["ok", "Activa"], expired: ["warn", "Caducada"], revoked: ["bad", "Revocada"] };
 const EXPIRY = [["", "Nunca"], ["30", "30 días"], ["90", "90 días"], ["365", "1 año"]];
+const SCOPE_LABEL = { "chat:write": "Chat", "conversations:read": "Leer conversaciones" };
+const SCOPE_CHOICES = [
+  ["chat:write", "Solo chat"],
+  ["chat:write,conversations:read", "Chat y lectura de conversaciones"],
+  ["conversations:read", "Solo lectura de conversaciones"],
+];
 const canManage = (org) => org.role === "owner" || org.role === "admin";
 
 export async function developerView({ container, shell }) {
@@ -50,6 +56,7 @@ export async function developerView({ container, shell }) {
 
       const name = field({ id: "key-name", label: "Nombre de la clave", required: true, maxlength: "80", hint: "Para reconocerla: «CI», «Producción»..." });
       const expiry = field({ id: "key-expiry", label: "Caduca", options: EXPIRY, value: "" });
+      const scopes = field({ id: "key-scopes", label: "Permisos", options: SCOPE_CHOICES, value: SCOPE_CHOICES[0][0], hint: "Qué puede hacer la clave en /api/v1." });
       const form = h(
         "form",
         {
@@ -58,7 +65,7 @@ export async function developerView({ container, shell }) {
             event.preventDefault();
             try {
               const days = expiry.input.value ? Number(expiry.input.value) : null;
-              const created = await api.createApiKey(org.id, name.input.value.trim(), days);
+              const created = await api.createApiKey(org.id, name.input.value.trim(), days, scopes.input.value.split(","));
               await reload();
               clear(content.querySelector("[data-secret]")).append(revealSecret(created));
               content.querySelector("[data-secret] input")?.focus();
@@ -68,6 +75,7 @@ export async function developerView({ container, shell }) {
           },
         },
         name.element,
+        scopes.element,
         expiry.element,
         h("button", { class: "button", type: "submit" }, "Crear clave"),
       );
@@ -80,6 +88,7 @@ export async function developerView({ container, shell }) {
         columns: [
           { key: "name", label: "Nombre" },
           { key: "prefix", label: "Clave", className: "mono", render: (k) => h("code", {}, `${k.prefix}…`) },
+          { key: "scopes", label: "Permisos", value: (k) => k.scopes.map((s) => SCOPE_LABEL[s] ?? s).join(", ") },
           { key: "status", label: "Estado", value: (k) => STATUS[k.status][1], render: (k) => h("span", { class: `badge ${STATUS[k.status][0]}` }, STATUS[k.status][1]) },
           { key: "created_at", label: "Creada", value: (k) => formatDate(k.created_at) },
           { key: "last_used_at", label: "Último uso", value: (k) => (k.last_used_at ? formatDate(k.last_used_at) : "Nunca") },
@@ -127,7 +136,7 @@ export async function developerView({ container, shell }) {
         h("div", { "data-secret": "" }),
         keysTable.element,
         usageTable.element,
-        h("section", { class: "card" }, h("h2", {}, "Cómo usarla"), h("p", { class: "hint" }, "Envía la clave en la cabecera Authorization. La respuesta incluye conversation_id para continuar la conversación."), h("pre", { class: "code-block" }, h("code", {}, example))),
+        h("section", { class: "card" }, h("h2", {}, "Cómo usarla"), h("p", { class: "hint" }, "Envía la clave en la cabecera Authorization. La respuesta incluye conversation_id para continuar la conversación. Con el permiso de lectura puedes listar tus conversaciones de API en GET /api/v1/conversations. Cada clave admite hasta 60 peticiones por minuto."), h("pre", { class: "code-block" }, h("code", {}, example))),
       ]);
     } catch (error) {
       clear(content).append(errorState(error.message, { onRetry: () => show(org) }));

@@ -50,10 +50,14 @@ En producción `/docs` está desactivado. En desarrollo, la referencia generada 
 | Método | Ruta | Acceso | Notas |
 |---|---|---|---|
 | GET | `/organizations/{id}/api-keys` | `api_keys:manage` | sin secreto ni hash; incluye `status` (`active`, `expired`, `revoked`) |
-| POST | `/organizations/{id}/api-keys` | `api_keys:manage` | `{name, expires_in_days?}` (1–365). La respuesta incluye `secret`: **única vez que se muestra**. 409 con 25 claves activas |
+| POST | `/organizations/{id}/api-keys` | `api_keys:manage` | `{name, expires_in_days?, scopes?}` (1–365; `scopes` entre `chat:write` y `conversations:read`, por defecto `chat:write`). La respuesta incluye `secret`: **única vez que se muestra**. 409 con 25 claves activas |
 | DELETE | `/organizations/{id}/api-keys/{key_id}` | `api_keys:manage` | 204; revocación lógica e idempotente; 404 si la clave no es de esa organización |
 | GET | `/organizations/{id}/usage?days=30` | `usage:read` | `days` 1–90. Por clave: peticiones, errores, tokens y coste. Solo cuenta lo que pasó por una clave |
-| POST | `/v1/chat` | clave de API | mismo cuerpo y respuesta que `/chat`; las conversaciones pertenecen al creador de la clave |
+| POST | `/v1/chat` | clave con `chat:write` | mismo cuerpo y respuesta que `/chat`; las conversaciones quedan marcadas con la organización de la clave |
+| GET | `/v1/conversations?limit=50` | clave con `conversations:read` | solo conversaciones creadas con claves de la organización (1–100) |
+| GET | `/v1/conversations/{id}` | clave con `conversations:read` | 404 si no es de esa organización (incluye el chat web) |
+
+Sin el permiso: 403. Cada clave admite 60 peticiones por minuto (`API_KEY_REQUESTS_PER_MINUTE`); al superarlo, 429 con `Retry-After`. Ver [ADR-0011](docs/decisions/0011-api-key-scopes-and-read-api.md).
 
 Permisos: `api_keys:manage` y `usage:read` los tienen propietario y administrador de la organización.
 

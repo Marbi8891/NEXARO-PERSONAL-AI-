@@ -42,7 +42,7 @@ class PersonalAIService:
         conversation_id = conversation_id or str(uuid.uuid4())
 
         with self._database.connect() as db:
-            self._claim_conversation(db, user_id, conversation_id)
+            self._claim_conversation(db, user_id, conversation_id, organization_id)
             history = self._recent_history(db, conversation_id)
             db.execute(
                 "INSERT INTO messages (conversation_id, role, content) VALUES (?, 'user', ?)",
@@ -78,10 +78,17 @@ class PersonalAIService:
         return ChatOutcome(conversation_id=conversation_id, answer=result.content)
 
     @staticmethod
-    def _claim_conversation(db: sqlite3.Connection, user_id: str, conversation_id: str) -> None:
+    def _claim_conversation(
+        db: sqlite3.Connection,
+        user_id: str,
+        conversation_id: str,
+        organization_id: str | None = None,
+    ) -> None:
+        """Una conversación pertenece a su usuario y a su origen: las creadas con una clave de API
+        quedan marcadas con la organización de la clave y solo se continúan con claves de ella."""
         owned = db.execute(
-            "SELECT id FROM conversations WHERE id = ? AND user_id = ?",
-            (conversation_id, user_id),
+            "SELECT id FROM conversations WHERE id = ? AND user_id = ? AND organization_id IS ?",
+            (conversation_id, user_id, organization_id),
         ).fetchone()
         if owned is not None:
             return
@@ -94,7 +101,8 @@ class PersonalAIService:
             raise ConversationNotFoundError
 
         db.execute(
-            "INSERT INTO conversations (id, user_id) VALUES (?, ?)", (conversation_id, user_id)
+            "INSERT INTO conversations (id, user_id, organization_id) VALUES (?, ?, ?)",
+            (conversation_id, user_id, organization_id),
         )
 
     @staticmethod
@@ -110,7 +118,10 @@ class PersonalAIService:
         ).fetchall()
         return [ChatMessage(role=row["role"], content=row["content"]) for row in reversed(rows)]
 
-    def list_conversations(self, user_id: str, limit: int | None = None) -> list[dict[str, Any]]:
+    def list_conversations(
+        self, user_id: str, limit: int | None = None, organization_id: str | None = None
+    ) -> list[dict[str, Any]]:
+        """Con `organization_id`, solo las creadas mediante claves de esa organización."""
         with self._database.connect() as db:
             rows = db.execute(
                 """
@@ -127,13 +138,18 @@ class PersonalAIService:
                       ORDER BY id DESC LIMIT 1) AS preview
                 FROM conversations c
                 LEFT JOIN messages m ON m.conversation_id = c.id
-                WHERE c.user_id = ?
+                WHERE c.user_id = ? AND (? IS NULL OR c.organization_id = ?)
                 GROUP BY c.id
                 ORDER BY COALESCE(MAX(m.created_at), c.created_at) DESC,
                          COALESCE(MAX(m.id), 0) DESC
                 LIMIT ?
                 """,
-                (user_id, -1 if limit is None else limit),  # LIMIT -1 = sin límite en SQLite
+                (
+                    user_id,
+                    organization_id,
+                    organization_id,
+                    -1 if limit is None else limit,
+                ),  # LIMIT -1 = sin límite en SQLite
             ).fetchall()
         return [dict(row) for row in rows]
 
@@ -167,11 +183,16 @@ class PersonalAIService:
             "recent": self.list_conversations(user_id, limit=recent),
         }
 
-    def get_conversation(self, user_id: str, conversation_id: str) -> dict[str, Any]:
+    def get_conversation(
+        self, user_id: str, conversation_id: str, organization_id: str | None = None
+    ) -> dict[str, Any]:
         with self._database.connect() as db:
             conversation = db.execute(
-                "SELECT id, created_at FROM conversations WHERE id = ? AND user_id = ?",
-                (conversation_id, user_id),
+                """
+                SELECT id, created_at FROM conversations
+                WHERE id = ? AND user_id = ? AND (? IS NULL OR organization_id = ?)
+                """,
+                (conversation_id, user_id, organization_id, organization_id),
             ).fetchone()
             if conversation is None:
                 raise ConversationNotFoundError

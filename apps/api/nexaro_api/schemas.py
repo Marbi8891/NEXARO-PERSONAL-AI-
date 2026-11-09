@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
 
+from nexaro_core.api_keys import DEFAULT_SCOPES
+
 
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=12000)
@@ -45,3 +47,6 @@ class MemberRoleRequest(BaseModel):
 class ApiKeyCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=80)
     expires_in_days: int | None = Field(default=None, ge=1, le=365)
+    scopes: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_SCOPES), min_length=1, max_length=5
+    )

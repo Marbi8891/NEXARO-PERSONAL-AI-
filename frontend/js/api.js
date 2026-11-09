@@ -68,7 +68,7 @@ export const api = {
   adminUsage: () => request("/api/admin/usage"),
 
   apiKeys: (orgId) => request(`/api/organizations/${id(orgId)}/api-keys`),
-  createApiKey: (orgId, name, expiresInDays) => request(`/api/organizations/${id(orgId)}/api-keys`, { method: "POST", body: { name, expires_in_days: expiresInDays } }),
+  createApiKey: (orgId, name, expiresInDays, scopes) => request(`/api/organizations/${id(orgId)}/api-keys`, { method: "POST", body: { name, expires_in_days: expiresInDays, scopes } }),
   revokeApiKey: (orgId, keyId) => request(`/api/organizations/${id(orgId)}/api-keys/${id(keyId)}`, { method: "DELETE" }),
   organizationUsage: (orgId, days = 30) => request(`/api/organizations/${id(orgId)}/usage?days=${days}`),
 

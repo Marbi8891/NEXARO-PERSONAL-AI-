@@ -58,6 +58,8 @@ class Settings(BaseSettings):
     login_window_seconds: int = Field(default=900, gt=0)
     login_max_tracked_keys: int = Field(default=10_000, gt=0)
 
+    api_key_requests_per_minute: int = Field(default=60, gt=0)
+
     @field_validator("allowed_origins", mode="before")
     @classmethod
     def _split_origins(cls, value: object) -> object:
