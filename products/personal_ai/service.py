@@ -13,7 +13,7 @@ from ai_gateway.errors import PolicyError, ProviderError
 from ai_gateway.providers.base import ChatProvider
 from ai_gateway.schemas import ChatMessage, CompletionRequest
 from ai_gateway.streaming import stream_completion
-from nexaro_core.database import Database
+from nexaro_core.database import Database, begin_write
 from nexaro_core.timeseries import fill_days, last_days
 from products.personal_ai.prompts import build_system_prompt
 
@@ -43,6 +43,15 @@ class ConversationNotFoundError(Exception):
 class ChatOutcome:
     conversation_id: str
     answer: str
+
+
+@dataclass(frozen=True)
+class _Turn:
+    """Un turno abierto: el historial enviado al modelo y lo que hay que deshacer si falla."""
+
+    history: list[ChatMessage]
+    user_message_id: int
+    created_conversation: bool
 
 
 class PersonalAIService:
@@ -75,41 +84,18 @@ class PersonalAIService:
         api_key_id: str | None = None,
     ) -> ChatOutcome:
         conversation_id = conversation_id or str(uuid.uuid4())
-
-        with self._database.connect() as db:
-            self._claim_conversation(db, user_id, conversation_id, organization_id)
-            history = self._recent_history(db, conversation_id)
-            db.execute(
-                "INSERT INTO messages (conversation_id, role, content) VALUES (?, 'user', ?)",
-                (conversation_id, message),
-            )
-
-        messages = [
-            ChatMessage(
-                role="system",
-                content=build_system_prompt(
-                    provider=self._provider.name.capitalize(), model=self._model
-                ),
-            ),
-            *history,
-            ChatMessage(role="user", content=message),
-        ]
-        result = await self._provider.complete(
-            CompletionRequest(
-                model=self._model,
-                messages=messages,
-                user_id=user_id,
-                organization_id=organization_id,
-                api_key_id=api_key_id,
-            )
+        turn = await asyncio.to_thread(
+            self._begin_turn, user_id, message, conversation_id, organization_id
         )
+        request = self._build_request(user_id, message, turn.history, organization_id, api_key_id)
+        try:
+            result = await self._provider.complete(request)
+        except BaseException:
+            # Sin respuesta no queda un mensaje del usuario huérfano en la conversación.
+            self._discard_turn(conversation_id, turn)
+            raise
 
-        with self._database.connect() as db:
-            db.execute(
-                "INSERT INTO messages (conversation_id, role, content) VALUES (?, 'assistant', ?)",
-                (conversation_id, result.content),
-            )
-
+        await asyncio.to_thread(self._save_answer, conversation_id, result.content)
         return ChatOutcome(conversation_id=conversation_id, answer=result.content)
 
     async def open_stream(
@@ -124,18 +110,25 @@ class PersonalAIService:
         """Prepara el turno (lanza ConversationNotFoundError antes de emitir nada) y devuelve
         el id de la conversación y el flujo de eventos: token, done o error."""
         conversation_id = conversation_id or str(uuid.uuid4())
-        history = await asyncio.to_thread(
+        turn = await asyncio.to_thread(
             self._begin_turn, user_id, message, conversation_id, organization_id
         )
-        request = CompletionRequest(
+        request = self._build_request(user_id, message, turn.history, organization_id, api_key_id)
+        return conversation_id, self._events(conversation_id, request, turn)
+
+    def _build_request(
+        self,
+        user_id: str,
+        message: str,
+        history: list[ChatMessage],
+        organization_id: str | None,
+        api_key_id: str | None,
+    ) -> CompletionRequest:
+        system = build_system_prompt(provider=self._provider.name.capitalize(), model=self._model)
+        return CompletionRequest(
             model=self._model,
             messages=[
-                ChatMessage(
-                    role="system",
-                    content=build_system_prompt(
-                        provider=self._provider.name.capitalize(), model=self._model
-                    ),
-                ),
+                ChatMessage(role="system", content=system),
                 *history,
                 ChatMessage(role="user", content=message),
             ],
@@ -144,30 +137,55 @@ class PersonalAIService:
             organization_id=organization_id,
             api_key_id=api_key_id,
         )
-        return conversation_id, self._events(conversation_id, request)
 
     def _begin_turn(
         self, user_id: str, message: str, conversation_id: str, organization_id: str | None
-    ) -> list[ChatMessage]:
+    ) -> _Turn:
         with self._database.connect() as db:
-            self._claim_conversation(db, user_id, conversation_id, organization_id)
+            created = self._claim_conversation(db, user_id, conversation_id, organization_id)
             history = self._recent_history(db, conversation_id, self._history_max_chars)
-            db.execute(
+            cursor = db.execute(
                 "INSERT INTO messages (conversation_id, role, content) VALUES (?, 'user', ?)",
                 (conversation_id, message),
             )
-        return history
+            user_message_id = int(cursor.lastrowid or 0)
+        return _Turn(history, user_message_id, created)
+
+    def _save_answer(self, conversation_id: str, content: str) -> None:
+        with self._database.connect() as db:
+            db.execute(
+                "INSERT INTO messages (conversation_id, role, content) VALUES (?, 'assistant', ?)",
+                (conversation_id, content),
+            )
+
+    def _discard_turn(self, conversation_id: str, turn: _Turn) -> None:
+        """Deshace un turno que no produjo respuesta: quita su mensaje de usuario y, si la
+        conversación se creó en este turno y quedó vacía, la conversación. Escritura breve y
+        síncrona: vale también cuando la tarea se está cancelando."""
+        with self._database.connect() as db:
+            db.execute("DELETE FROM messages WHERE id = ?", (turn.user_message_id,))
+            if turn.created_conversation:
+                db.execute(
+                    "DELETE FROM conversations WHERE id = ? AND NOT EXISTS"
+                    " (SELECT 1 FROM messages WHERE conversation_id = ?)",
+                    (conversation_id, conversation_id),
+                )
 
     async def _events(
-        self, conversation_id: str, request: CompletionRequest
+        self, conversation_id: str, request: CompletionRequest, turn: _Turn
     ) -> AsyncIterator[dict[str, Any]]:
         parts: list[str] = []
+        completed = False  # el proveedor terminó con `chunk.done`
+        cancelled = False  # el cliente cerró el flujo o la tarea se canceló
         try:
             async for chunk in stream_completion(self._provider, request):
                 if chunk.content:
                     parts.append(chunk.content)
                     yield {"event": "token", "content": chunk.content}
                 if chunk.done:
+                    completed = (
+                        True  # antes de emitir: si el cliente se va aquí, la respuesta está entera
+                    )
                     metrics = chunk.metrics
                     yield {
                         "event": "done",
@@ -184,21 +202,27 @@ class PersonalAIService:
                             metrics.tokens_per_second,
                             metrics.total_ms,
                         )
+            if not completed:
+                # El flujo se cortó sin `done`: no es una respuesta completa.
+                yield {"event": "error", "message": "Error al consultar el servicio de IA"}
+        except (asyncio.CancelledError, GeneratorExit):
+            cancelled = True
+            raise  # la cancelación se propaga siempre
         except PolicyError as exc:
             yield {"event": "error", "message": str(exc)}
         except ProviderError:
             # El detalle del proveedor (URLs internas, etc.) no se devuelve al cliente.
             yield {"event": "error", "message": "Error al consultar el servicio de IA"}
         finally:
-            # También al cancelarse (el cliente pulsa «Detener» o se desconecta): se conserva
-            # lo generado. Es una escritura breve y síncrona, válida aunque la tarea se cancele.
-            if parts:
-                with self._database.connect() as db:
-                    db.execute(
-                        "INSERT INTO messages (conversation_id, role, content)"
-                        " VALUES (?, 'assistant', ?)",
-                        (conversation_id, "".join(parts)),
-                    )
+            # Escritura SÍNCRONA a propósito: durante una cancelación, el ámbito cancelado de
+            # anyio vuelve a interrumpir cada `await`, y `asyncio.to_thread` dejaría el hilo
+            # escribiendo sin que nadie lo espere (escritura huérfana). Es una operación breve.
+            if parts and (completed or cancelled):
+                # Completa, o parcial por cancelación del cliente («Detener», desconexión).
+                self._save_answer(conversation_id, "".join(parts))
+            else:
+                # Fallo del proveedor, flujo sin `done` o cancelación sin contenido.
+                self._discard_turn(conversation_id, turn)
 
     @staticmethod
     def _claim_conversation(
@@ -206,15 +230,16 @@ class PersonalAIService:
         user_id: str,
         conversation_id: str,
         organization_id: str | None = None,
-    ) -> None:
-        """Una conversación pertenece a su usuario y a su origen: las creadas con una clave de API
-        quedan marcadas con la organización de la clave y solo se continúan con claves de ella."""
+    ) -> bool:
+        """Devuelve True si la crea. Una conversación pertenece a su usuario y a su origen: las
+        creadas con una clave de API quedan marcadas con la organización de la clave y solo se
+        continúan con claves de ella."""
         owned = db.execute(
             "SELECT id FROM conversations WHERE id = ? AND user_id = ? AND organization_id IS ?",
             (conversation_id, user_id, organization_id),
         ).fetchone()
         if owned is not None:
-            return
+            return False
 
         exists = db.execute(
             "SELECT id FROM conversations WHERE id = ?", (conversation_id,)
@@ -227,6 +252,7 @@ class PersonalAIService:
             "INSERT INTO conversations (id, user_id, organization_id) VALUES (?, ?, ?)",
             (conversation_id, user_id, organization_id),
         )
+        return True
 
     @staticmethod
     def _recent_history(
@@ -341,3 +367,17 @@ class PersonalAIService:
             ).fetchall()
 
         return {"conversation": dict(conversation), "messages": [dict(r) for r in rows]}
+
+    def delete_conversation(self, user_id: str, conversation_id: str) -> None:
+        """Borra una conversación propia y todos sus mensajes. Misma respuesta (no encontrada)
+        si no existe o es de otro usuario."""
+        with self._database.connect() as db:
+            begin_write(db)
+            owned = db.execute(
+                "SELECT id FROM conversations WHERE id = ? AND user_id = ?",
+                (conversation_id, user_id),
+            ).fetchone()
+            if owned is None:
+                raise ConversationNotFoundError
+            db.execute("DELETE FROM messages WHERE conversation_id = ?", (conversation_id,))
+            db.execute("DELETE FROM conversations WHERE id = ?", (conversation_id,))

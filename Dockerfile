@@ -21,6 +21,8 @@ RUN pip install --no-cache-dir -r requirements/base.txt \
 COPY packages ./packages
 COPY products ./products
 COPY apps/api ./apps/api
+# La imagen es autosuficiente: en desarrollo, compose.yaml la sustituye por un bind mount de solo lectura.
+COPY frontend ./frontend
 
 # El contenedor corre como uid 10001: el código debe ser legible aunque en el host tenga permisos 600.
 RUN chmod -R a+rX /app

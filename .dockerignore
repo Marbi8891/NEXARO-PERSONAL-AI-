@@ -13,7 +13,6 @@ data
 _to_delete
 tests
 docs
-frontend
 infrastructure
 *.db
 .env

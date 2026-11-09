@@ -115,6 +115,19 @@ td.mono, .mono { font-family: var(--font-mono); font-size: var(--fs-xs); }
   color: var(--sidebar-text);
   text-align: left;
 }
+.history-row { display: flex; align-items: stretch; gap: var(--space-1); }
+.history-row .history-item { flex: 1; min-width: 0; width: auto; }
+.history-delete {
+  flex: none;
+  padding: 0 var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--sidebar-muted);
+  font-size: var(--fs-md, 1rem);
+  cursor: pointer;
+}
+.history-delete:hover, .history-delete:focus-visible { background: var(--sidebar-active); color: var(--sidebar-text); }
 .history-item:hover { background: var(--sidebar-active); }
 .history-item.active { background: var(--sidebar-active); border-color: var(--sidebar-muted); }
 .history-title { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); }

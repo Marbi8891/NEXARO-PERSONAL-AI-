@@ -65,12 +65,13 @@ s.backup(d); d.close(); s.close()"
   docker cp "$CONTAINER:/data/$LIVE_NAME" "backups/$LIVE_NAME"
 else
   # Contenedor parado o en bucle de reinicio: nadie escribe en la base. Se copia con un contenedor
-  # temporal de la misma imagen (solo lectura sobre la base; la escritura va a backups/).
+  # temporal de la misma imagen. Con WAL el volumen se monta sin :ro (SQLite necesita crear -shm);
+  # la base solo se lee con la API de backup y la copia se escribe en backups/.
   echo "El contenedor no está en marcha: copia con contenedor temporal"
-  docker run --rm --user root -v "$VOLUME":/data:ro -v "$PWD/backups":/backup \
+  docker run --rm --user root -v "$VOLUME":/data -v "$PWD/backups":/backup \
     --entrypoint python "$(docker inspect -f '{{.Image}}' "$CONTAINER")" -c "
 import sqlite3
-s = sqlite3.connect('file:/data/nexaro.db?mode=ro', uri=True)
+s = sqlite3.connect('/data/nexaro.db')
 d = sqlite3.connect('/backup/$LIVE_NAME')
 s.backup(d); d.close(); s.close()"
 fi

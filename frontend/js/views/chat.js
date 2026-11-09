@@ -1,4 +1,6 @@
 import { api } from "../api.js";
+import { confirmDialog } from "../components/dialog.js";
+import { toast } from "../components/toast.js";
 import { clear, formatDate, h } from "../dom.js";
 import { renderMarkdown } from "../markdown.js";
 import { navigate } from "../router.js";
@@ -82,18 +84,45 @@ export async function chatView({ container, sidebar, params, shell }) {
       if (!conversations.length) list.append(h("div", { class: "history-empty" }, "Aún no hay conversaciones."));
       for (const item of conversations) {
         const active = item.id === conversationId;
+        const title = item.title || item.preview || "Conversación";
         list.append(
           h(
-            "button",
-            { class: `history-item${active ? " active" : ""}`, type: "button", "aria-current": active ? "true" : null, onclick: () => navigate(`/chat/${encodeURIComponent(item.id)}`) },
-            h("span", { class: "history-title" }, item.title || item.preview || "Conversación"),
-            h("span", { class: "history-meta" }, `${item.message_count} mensajes · ${formatDate(item.last_activity)}`),
+            "div",
+            { class: "history-row" },
+            h(
+              "button",
+              { class: `history-item${active ? " active" : ""}`, type: "button", "aria-current": active ? "true" : null, onclick: () => navigate(`/chat/${encodeURIComponent(item.id)}`) },
+              h("span", { class: "history-title" }, title),
+              h("span", { class: "history-meta" }, `${item.message_count} mensajes · ${formatDate(item.last_activity)}`),
+            ),
+            h("button", { class: "history-delete", type: "button", "aria-label": `Eliminar la conversación: ${title}`, title: "Eliminar", onclick: () => removeConversation(item.id) }, "×"),
           ),
         );
       }
     } catch (error) {
       clear(list).append(h("div", { class: "history-empty" }, error.message));
     }
+  }
+
+  async function removeConversation(id) {
+    const confirmed = await confirmDialog({
+      title: "Eliminar conversación",
+      message: "Se borrarán la conversación y todos sus mensajes. No se puede deshacer.",
+      confirmLabel: "Eliminar",
+      danger: true,
+    });
+    if (!confirmed) return;
+    try {
+      await api.deleteConversation(id);
+    } catch (error) {
+      if (error.status !== 404) {
+        toast(error.message, { error: true });
+        return;
+      }
+    }
+    toast("Conversación eliminada.");
+    if (id === conversationId) startNew();
+    else await loadHistory();
   }
 
   async function openConversation(id) {

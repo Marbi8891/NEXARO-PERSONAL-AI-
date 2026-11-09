@@ -80,3 +80,10 @@ class SQLiteConnectionTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_connections_use_wal_and_wait_for_locks(tmp_path) -> None:
+    database = Database(tmp_path / "wal.db")
+    with database.connect() as db:
+        assert db.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
+        assert db.execute("PRAGMA busy_timeout").fetchone()[0] >= 10_000

@@ -6,8 +6,9 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from ai_gateway.errors import PolicyError, ProviderError
-from nexaro_api.deps import Ctx, CurrentUser, acquire_generation, validate_origin
+from nexaro_api.deps import Ctx, CurrentUser, acquire_generation, client_ip, validate_origin
 from nexaro_api.schemas import ChatRequest
+from nexaro_core.audit import record_event
 from products.personal_ai.service import ConversationNotFoundError
 
 router = APIRouter(prefix="/api", tags=["personal-ai"])
@@ -84,3 +85,29 @@ def get_conversation(conversation_id: str, user: CurrentUser, ctx: Ctx) -> dict[
         return ctx.personal_ai.get_conversation(user["id"], conversation_id)
     except ConversationNotFoundError:
         raise NOT_FOUND from None
+
+
+@router.delete("/conversations/{conversation_id}", status_code=204)
+def delete_conversation(
+    conversation_id: str, request: Request, user: CurrentUser, ctx: Ctx
+) -> None:
+    validate_origin(request, ctx)
+    # Mismo tope de operaciones simultáneas por usuario que el chat, sin gastar su ritmo por minuto.
+    lease = acquire_generation(ctx, f"user:{user['id']}", rate_limit=False)
+    try:
+        try:
+            ctx.personal_ai.delete_conversation(user["id"], conversation_id)
+        except ConversationNotFoundError:
+            raise NOT_FOUND from None
+        with ctx.database.connect() as db:
+            record_event(
+                db,
+                "conversation.delete",
+                "success",
+                actor_user_id=user["id"],
+                target_type="conversation",
+                target_id=conversation_id,
+                ip=client_ip(request),
+            )
+    finally:
+        lease.release()

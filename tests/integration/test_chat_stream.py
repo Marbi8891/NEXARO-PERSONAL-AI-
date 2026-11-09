@@ -114,7 +114,7 @@ def test_stream_cannot_continue_someone_elses_conversation(
     assert response.status_code == 404
 
 
-def test_stream_provider_error_mid_stream_is_generic_and_keeps_partial(
+def test_stream_provider_error_mid_stream_is_generic_and_discards_the_turn(
     logged_in: Callable[..., TestClient], database: Database, provider: StreamProvider
 ) -> None:
     provider.fail_after = 1
@@ -124,7 +124,8 @@ def test_stream_provider_error_mid_stream_is_generic_and_keeps_partial(
     events = events_of(response)
     assert events[-1] == {"event": "error", "message": "Error al consultar el servicio de IA"}
     assert "ollama" not in response.text and "11434" not in response.text
-    assert stored(database, events[0]["conversation_id"])[-1] == ("assistant", "Hola")
+    # Un parcial de un proveedor fallido no queda como respuesta normal del asistente.
+    assert stored(database, events[0]["conversation_id"]) == []
 
 
 def test_stream_continues_conversation_with_history(

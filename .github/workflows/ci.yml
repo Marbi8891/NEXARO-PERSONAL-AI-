@@ -103,9 +103,12 @@ jobs:
       - name: Arranque y healthcheck
         run: |
           docker run -d --name api -p 8000:8000 \
-            -e DATABASE_PATH=/tmp/ci.db -e FRONTEND_PATH=/nonexistent nexaro-api:ci
+            -e DATABASE_PATH=/tmp/ci.db nexaro-api:ci
           for i in $(seq 1 20); do
-            curl -fsS http://127.0.0.1:8000/api/health/live && exit 0
+            if curl -fsS http://127.0.0.1:8000/api/health/live; then
+              # La imagen debe servir la interfaz sin bind mount.
+              curl -fsS http://127.0.0.1:8000/ | grep -qi '<html' && exit 0
+            fi
             sleep 1
           done
           docker logs api

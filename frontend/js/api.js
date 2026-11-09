@@ -110,6 +110,7 @@ export const api = {
 
   conversations: () => request("/api/conversations"),
   conversation: (conversationId) => request(`/api/conversations/${id(conversationId)}`),
+  deleteConversation: (conversationId) => request(`/api/conversations/${id(conversationId)}`, { method: "DELETE" }),
   chatStream,
   chat: (message, conversationId) => request("/api/chat", { method: "POST", body: { message, conversation_id: conversationId } }),
 
@@ -122,6 +123,7 @@ export const api = {
   adminAudit: (action) => request(`/api/admin/audit?limit=100${action ? `&action=${id(action)}` : ""}`),
   adminSecurity: (days = 14) => request(`/api/admin/security?days=${days}`),
   adminUsage: () => request("/api/admin/usage"),
+  adminModels: () => request("/api/admin/models"),
 
   apiKeys: (orgId) => request(`/api/organizations/${id(orgId)}/api-keys`),
   createApiKey: (orgId, name, expiresInDays, scopes) => request(`/api/organizations/${id(orgId)}/api-keys`, { method: "POST", body: { name, expires_in_days: expiresInDays, scopes } }),
