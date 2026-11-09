@@ -283,3 +283,9 @@ def test_real_gateway_streams_from_ollama_and_records_inference_metrics(
     (row,) = UsageStore(database).inference(days=1)
     assert row["cold_loads"] == 1 and row["requests"] == 1
     assert row["avg_load_ms"] == 2500.0
+
+
+def test_admin_usage_exposes_inference_section(logged_in: Callable[..., TestClient]) -> None:
+    admin = logged_in("admin@example.com", role="admin")
+    body = admin.get("/api/admin/usage").json()
+    assert body["inference"] == []

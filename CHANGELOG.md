@@ -3,6 +3,7 @@
 ## [Sin publicar] — rama `refactor/nexaro-platform`
 
 ### Añadido
+- Rendimiento de inferencia (F19): streaming real Ollama→cliente (`POST /api/chat/stream`, SSE), cliente HTTP único, `keep_alive`/`num_ctx`/`num_thread` configurables, tope de salida adaptativo, historial acotado, métricas de TTFT/carga/tokens por segundo (migración 6, panel de Administración), botón «Detener», Markdown seguro en el chat, `scripts/ollama_benchmark.py`, ADR-0014.
 - Estructura de monolito modular: `apps/api`, `packages/{nexaro_core,ai_gateway}`, `products/personal_ai`.
 - Auditoría append-only, `/api/admin/audit`, endpoint `/api/health/live`.
 - Tests unit/integration/security (96) con cobertura ~94 %; ruff y mypy limpios.

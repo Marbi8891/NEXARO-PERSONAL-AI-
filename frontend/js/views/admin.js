@@ -169,7 +169,24 @@ async function auditPanel(panel) {
 }
 
 async function usagePanel(panel) {
-  const { usage, month_cost_usd: cost } = await api.adminUsage();
+  const { usage, month_cost_usd: cost, inference = [] } = await api.adminUsage();
+  const ms = (value) => (value === null || value === undefined ? "—" : `${Math.round(value)} ms`);
+  const speed = dataTable({
+    caption: "Rendimiento de inferencia (medias de los últimos días)",
+    empty: { title: "Sin métricas todavía", text: "Se registran con las respuestas en streaming." },
+    search: false,
+    columns: [
+      { key: "model", label: "Modelo", className: "mono" },
+      { key: "requests", label: "Peticiones" },
+      { key: "avg_ttft_ms", label: "Primer token", render: (r) => ms(r.avg_ttft_ms) },
+      { key: "avg_load_ms", label: "Carga del modelo", render: (r) => ms(r.avg_load_ms) },
+      { key: "avg_prompt_eval_ms", label: "Lectura del prompt", render: (r) => ms(r.avg_prompt_eval_ms) },
+      { key: "avg_total_ms", label: "Total", render: (r) => ms(r.avg_total_ms) },
+      { key: "avg_tokens_per_second", label: "Tokens/s", render: (r) => (r.avg_tokens_per_second ?? "—") },
+      { key: "cold_loads", label: "Cargas en frío" },
+    ],
+    rows: inference,
+  });
   const table = dataTable({
     caption: "Uso por modelo",
     empty: { title: "Sin uso registrado", text: "Aparecerá aquí cuando se use el modelo." },
@@ -184,5 +201,5 @@ async function usagePanel(panel) {
     ],
     rows: usage,
   });
-  clear(panel).append(h("section", { class: "card" }, h("h2", {}, "Coste del mes (USD)"), h("p", { class: "metric mono" }, Number(cost ?? 0).toFixed(4))), table.element);
+  clear(panel).append(h("section", { class: "card" }, h("h2", {}, "Coste del mes (USD)"), h("p", { class: "metric mono" }, Number(cost ?? 0).toFixed(4))), table.element, speed.element);
 }

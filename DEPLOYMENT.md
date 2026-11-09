@@ -34,7 +34,7 @@ sí está probada la aplicación, la migración y la interfaz. La primera vez, r
 - La base es un único archivo SQLite en el volumen `nexaro-personal-ai_nexaro_data`. Copia con
   `sqlite3 nexaro.db ".backup copia.db"` (o `scripts/rebuild_backend.sh`, que la hace antes de actualizar).
   Guarda las copias fuera del repositorio: contienen datos de usuarios.
-- Actualizar = reconstruir **solo** `backend` conservando el volumen. Las migraciones pendientes (hoy hasta la 5)
+- Actualizar = reconstruir **solo** `backend` conservando el volumen. Las migraciones pendientes (hoy hasta la 6)
   se aplican al arrancar en una transacción; si fallan, el arranque aborta sin dejar estado parcial.
 - Revertir código: la imagen anterior queda etiquetada `rollback-<fecha>`. Las migraciones no tienen
   «bajada»: para volver atrás de verdad se restaura la copia previa.
@@ -55,6 +55,23 @@ Volumen persistente `nexaro-personal-ai_nexaro_data` (SQLite en `/data/nexaro.db
 una copia fresca de la base viva, etiqueta la imagen anterior como `rollback-<fecha>`,
 reconstruye solo `backend` y comprueba el resultado. Necesita un entorno Python con
 `requirements/dev.txt` (variable `PYTHON`).
+
+### Rendimiento de Ollama
+
+Variables del backend (`compose.yaml` / `.env.example`): `OLLAMA_KEEP_ALIVE` (30m: el modelo sigue cargado
+entre mensajes y no se paga la carga de nuevo), `OLLAMA_NUM_CTX` (4096, **constante**: si cambia entre
+peticiones, Ollama recarga el modelo), `OLLAMA_NUM_THREAD` (vacío = decide Ollama),
+`OUTPUT_TOKENS_SHORT/DEFAULT/CODE` y `CHAT_HISTORY_MAX_CHARS`. Mantener el modelo cargado ocupa RAM
+(~2 GB para `qwen2.5:3b`); Docker Desktop reparte la suya entre todos los contenedores. Para medir antes y
+después, sin instalar nada:
+
+```bash
+docker run --rm --network ollama-local_default -v "$PWD/scripts:/s:ro" python:3.12-slim \
+    python /s/ollama_benchmark.py --base-url http://ollama:11434 --model qwen2.5:3b --profile actual --runs 3
+```
+
+Repite con `--profile optimizado` (y `--num-ctx 8192` para comparar). Con el equipo en reposo: otros
+contenedores consumiendo CPU distorsionan los tiempos.
 
 ### Primer administrador
 

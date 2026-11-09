@@ -10,6 +10,8 @@ services:
     environment:
       OLLAMA_BASE_URL: "http://ollama:11434"
       OLLAMA_MODEL: "qwen2.5:3b"
+      OLLAMA_KEEP_ALIVE: "30m"
+      OLLAMA_NUM_CTX: "4096"
       ALLOWED_ORIGINS: "http://127.0.0.1:8001,http://localhost:8001"
       DATABASE_PATH: "/data/nexaro.db"
     volumes:

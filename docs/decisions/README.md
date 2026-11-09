@@ -13,3 +13,4 @@ Una decisión aceptada no se cambia en silencio: se propone un *DECISION REVIEW*
 | [0006](0006-aws-infrastructure.md) | Infraestructura AWS como Terraform (no aplicada) | Propuesta implementada |
 | [0007](0007-frontend-es-modules.md) | Frontend con ES Modules nativos bajo CSP estricta | Aceptada |
 | [0008](0008-design-system.md) | Sistema de diseño con tokens, tema claro/oscuro y módulos solo si existen | Aceptada |
+| [0014](0014-streaming-and-ollama-tuning.md) | Streaming real y parámetros de Ollama configurables | Aceptada |
