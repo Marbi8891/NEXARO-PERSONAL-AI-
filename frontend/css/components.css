@@ -178,6 +178,12 @@ td.mono, .mono { font-family: var(--font-mono); font-size: var(--fs-xs); }
   border-radius: var(--radius);
 }
 .composer .button { padding: 0 var(--space-5); }
+.docs-toggle { display: flex; align-items: center; gap: var(--space-2); max-width: 850px; margin: var(--space-2) auto 0; color: var(--muted); font-size: var(--fs-xs); }
+.docs-toggle[hidden], .docs-toggle select[hidden] { display: none; }
+.docs-toggle select { font-size: var(--fs-xs); max-width: 14rem; }
+.message-sources { margin-top: var(--space-3); font-size: var(--fs-xs); color: var(--muted); }
+.message-sources summary { cursor: pointer; }
+.message-sources .sources { margin-top: var(--space-2); }
 .composer-hint { max-width: 850px; margin: var(--space-2) auto 0; color: var(--muted); font-size: var(--fs-xs); }
 
 @media (max-width: 760px) {

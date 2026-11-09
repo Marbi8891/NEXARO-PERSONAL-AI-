@@ -24,8 +24,8 @@ En producción `/docs` está desactivado. En desarrollo, la referencia generada 
 
 | Método | Ruta | Acceso | Notas |
 |---|---|---|---|
-| POST | `/chat` | sesión | `{message, conversation_id?}` → `{conversation_id, answer}` |
-| POST | `/chat/stream` | sesión | mismo cuerpo; respuesta `text/event-stream` con eventos JSON `start` (`conversation_id`), `token` (`content`), `done` (`truncated`, `metrics`) o `error` (`message`). 404 antes de emitir si la conversación es ajena. Cerrar la conexión cancela la generación y se guarda lo generado |
+| POST | `/chat` | sesión | `{message, conversation_id?, document_organization_id?}` → `{conversation_id, answer, sources?}`. Con `document_organization_id` se consultan los documentos de esa organización (requiere `documents:read`; 404 si no eres miembro, 403 sin permiso) y `sources` lista los fragmentos usados |
+| POST | `/chat/stream` | sesión | mismo cuerpo; respuesta `text/event-stream` con eventos JSON `start` (`conversation_id`), `sources` (solo con documentos; `sources`), `token` (`content`), `done` (`truncated`, `metrics`) o `error` (`message`). 404 antes de emitir si la conversación es ajena. Cerrar la conexión cancela la generación y se guarda lo generado |
 | GET | `/conversations` | sesión | solo las del usuario |
 | GET | `/conversations/{id}` | sesión | 404 si no es del usuario |
 | DELETE | `/conversations/{id}` | sesión + `Origin` | 204. Borra la conversación y todos sus mensajes (incluidas las creadas con claves de API); 404 si no es del usuario. Queda `conversation.delete` en la auditoría |

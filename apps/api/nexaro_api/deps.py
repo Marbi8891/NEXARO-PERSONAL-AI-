@@ -98,33 +98,40 @@ class OrgAccess:
     membership: Membership
 
 
+def check_org_permission(
+    ctx: AppContext, request: Request, user: dict[str, Any], organization_id: str, permission: str
+) -> OrgAccess:
+    """Membresía activa + permiso. No ser miembro es un 404 (no se revela que la organización
+    existe). Ser administrador de la plataforma NO da acceso."""
+    denied = False
+    with ctx.database.connect() as db:
+        membership = get_membership(db, user["id"], organization_id)
+        if membership is not None and not has_permission(db, membership, permission):
+            denied = True  # se lanza fuera del `with`: la auditoría no debe revertirse
+            record_event(
+                db,
+                "authz.permission_denied",
+                "denied",
+                actor_user_id=user["id"],
+                target_type="organization",
+                target_id=organization_id,
+                ip=client_ip(request),
+                details={"permission": permission, "path": request.url.path},
+            )
+    if membership is None:
+        raise HTTPException(status_code=404, detail="Organización no encontrada")
+    if denied:
+        raise HTTPException(status_code=403, detail="Permiso insuficiente")
+    return OrgAccess(user=user, membership=membership)
+
+
 def require_permission(permission: str) -> Callable[..., OrgAccess]:
-    """Acceso a una organización: membresía activa + permiso. No ser miembro es un 404 (no se
-    revela que la organización existe). Ser administrador de la plataforma NO da acceso."""
+    """Dependencia de FastAPI para rutas /organizations/{organization_id}/..."""
 
     def dependency(
         organization_id: str, request: Request, ctx: Ctx, user: CurrentUser
     ) -> OrgAccess:
-        denied = False
-        with ctx.database.connect() as db:
-            membership = get_membership(db, user["id"], organization_id)
-            if membership is not None and not has_permission(db, membership, permission):
-                denied = True  # se lanza fuera del `with`: la auditoría no debe revertirse
-                record_event(
-                    db,
-                    "authz.permission_denied",
-                    "denied",
-                    actor_user_id=user["id"],
-                    target_type="organization",
-                    target_id=organization_id,
-                    ip=client_ip(request),
-                    details={"permission": permission, "path": request.url.path},
-                )
-        if membership is None:
-            raise HTTPException(status_code=404, detail="Organización no encontrada")
-        if denied:
-            raise HTTPException(status_code=403, detail="Permiso insuficiente")
-        return OrgAccess(user=user, membership=membership)
+        return check_org_permission(ctx, request, user, organization_id, permission)
 
     return dependency
 

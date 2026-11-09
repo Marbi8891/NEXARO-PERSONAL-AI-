@@ -3,6 +3,7 @@
 ## [Sin publicar] — rama `refactor/nexaro-platform`
 
 ### Añadido
+- Documentos en el chat (Fase 4): interruptor «Consultar mis documentos» (opt-in por mensaje) que añade al modelo los mejores fragmentos BM25 de la organización elegida y muestra las fuentes; exige `documents:read` (ADR-0017).
 - Gateway (Fase 2): cortacircuitos por proveedor (`AI_BREAKER_THRESHOLD`, `AI_BREAKER_COOLDOWN_SECONDS`) que falla en el acto si Ollama está caído y lo vuelve a probar tras el enfriamiento, `GET /api/admin/models` (salud, modelo configurado, instalado o no, modelos instalados) y pestaña «Modelos» en Administración (ADR-0016).
 - Estabilización (Fase 1): `DELETE /api/conversations/{id}` (con botón en el historial), imagen Docker con el frontend incluido, SQLite en modo WAL con espera de bloqueos (ADR-0015), `/api/chat` con el mismo historial acotado y tope de salida que el streaming, y un turno sin respuesta ya no deja mensajes huérfanos.
 - Endurecimiento de seguridad (F20): límites de ritmo y concurrencia del modelo, cuerpo máximo, umbral de login por IP configurable, cabeceras adicionales, Swagger cerrable, delimitadores de documentos a prueba de inyección, logs JSON con `request_id`, contenedor con privilegios mínimos e imagen por digest, tests de inyección SQL, Bandit y SBOM en CI, `scripts/prune_backups.sh` y `docs/security/`.

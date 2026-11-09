@@ -60,7 +60,7 @@ de paridad contra un PostgreSQL real.
 ## Límites conocidos
 
 - La aplicación solo ejecuta sobre SQLite: el DDL de PostgreSQL está validado, pero falta la capa de acceso (ADR-0005).
-- Organizaciones, miembros, claves de API, documentos (búsqueda BM25, ADR-0012) y gastos tienen API; agentes, tareas y embeddings son solo esquema.
+- Organizaciones, miembros, claves de API, documentos (búsqueda BM25, ADR-0012; consultables desde el chat, ADR-0017) y gastos tienen API; agentes, tareas y embeddings son solo esquema.
 - Las conversaciones siguen siendo personales (`organization_id` solo se rellena en el uso por clave de API).
 - Con funcionalidad: Personal AI, Developer (claves de API con scopes `chat:write` y `conversations:read`), documentos, gastos (Finance) y el resumen de Security. Business es solo identidad de marca.
 - El modelo se fija por variable de entorno (`OLLAMA_MODEL`): no hay selección de modelo ni de agente en tiempo de ejecución.

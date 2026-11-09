@@ -15,6 +15,10 @@ export async function chatView({ container, sidebar, params, shell }) {
   const messages = h("div", { class: "messages", role: "log", "aria-live": "polite" });
   const input = h("textarea", { id: "message", rows: "2", placeholder: "Escribe tu mensaje...", "aria-label": "Mensaje", maxlength: "8000" });
   const send = h("button", { class: "button primary", type: "submit" }, "Enviar");
+  // Documentos: opt-in. Solo se muestra si el usuario pertenece a alguna organización.
+  const useDocuments = h("input", { id: "use-documents", type: "checkbox" });
+  const documentsOrg = h("select", { id: "documents-org", "aria-label": "Organización de los documentos", hidden: true });
+  const documentsBar = h("label", { class: "docs-toggle", hidden: true }, useDocuments, h("span", {}, "Consultar mis documentos"), documentsOrg);
   const list = h("div", { class: "conversation-list" });
   const startNew = () => {
     rememberConversation(null);
@@ -43,6 +47,30 @@ export async function chatView({ container, sidebar, params, shell }) {
 
   function addNote(parent, text, kind = "note") {
     parent.append(h("div", { class: `message-note ${kind}` }, text));
+  }
+
+  function addSources(parent, sources) {
+    if (!sources.length) return addNote(parent, "No hay fragmentos relevantes en tus documentos para este mensaje.");
+    parent.append(
+      h(
+        "details",
+        { class: "message-sources" },
+        h("summary", {}, `Fuentes (${sources.length})`),
+        h("ol", { class: "sources" }, sources.map((s) => h("li", {}, h("strong", {}, s.title), h("span", { class: "hint" }, ` · fragmento ${s.ordinal + 1}`), h("p", {}, s.snippet)))),
+      ),
+    );
+  }
+
+  async function loadOrganizations() {
+    try {
+      const { organizations } = await api.organizations();
+      if (!organizations.length) return;
+      documentsOrg.replaceChildren(...organizations.map((o) => h("option", { value: o.id }, o.name)));
+      documentsOrg.hidden = organizations.length < 2;
+      documentsBar.hidden = false;
+    } catch {
+      // Sin organizaciones o sin permiso: el chat funciona igual, sin documentos.
+    }
   }
 
   // Solo se repinta el mensaje en curso, como mucho cada ~60 ms, no todo el historial.
@@ -160,17 +188,21 @@ export async function chatView({ container, sidebar, params, shell }) {
     let failure = null;
     let truncated = false;
     let aborted = false;
+    let sources = null;
+    const documentOrganizationId = !documentsBar.hidden && useDocuments.checked ? documentsOrg.value : null;
     controller = new AbortController();
     try {
       await api.chatStream(text, conversationId, {
         signal: controller.signal,
+        documentOrganizationId,
         onEvent(item) {
           if (item.event === "start") {
             const isNew = item.conversation_id !== conversationId;
             conversationId = item.conversation_id;
             rememberConversation(conversationId);
             if (isNew) history.replaceState(null, "", `#/chat/${encodeURIComponent(conversationId)}`);
-          } else if (item.event === "token") {
+          } else if (item.event === "sources") sources = item.sources;
+          else if (item.event === "token") {
             if (!started) {
               started = true;
               pending.replaceChildren();
@@ -198,6 +230,7 @@ export async function chatView({ container, sidebar, params, shell }) {
         pending.textContent = failure;
       } else addNote(pending, failure, "error");
     } else if (truncated) addNote(pending, "Respuesta cortada por el límite de longitud. Pídeme que continúe.");
+    if (sources && !failure) addSources(pending, sources);
     setSending(false);
     input.focus();
     await loadHistory();
@@ -223,6 +256,7 @@ export async function chatView({ container, sidebar, params, shell }) {
         "div",
         { class: "composer-wrap" },
         h("form", { class: "composer", onsubmit: onSubmit }, input, send),
+        documentsBar,
         h("div", { class: "composer-hint" }, "Enter envía · Mayús+Enter salta de línea"),
       ),
     ),
@@ -237,5 +271,6 @@ export async function chatView({ container, sidebar, params, shell }) {
     } else welcome();
   } else await openConversation(conversationId);
   await loadHistory();
+  await loadOrganizations();
   input.focus();
 }

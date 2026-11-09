@@ -15,11 +15,13 @@ from ai_gateway.schemas import ChatMessage, CompletionRequest
 from ai_gateway.streaming import stream_completion
 from nexaro_core.database import Database, begin_write
 from nexaro_core.timeseries import fill_days, last_days
+from products.personal_ai import documents as docs
 from products.personal_ai.prompts import build_system_prompt
 
 logger = logging.getLogger("nexaro.chat")
 
 HISTORY_LIMIT = 12
+DOCUMENT_FRAGMENTS = 4  # fragmentos que se pasan al modelo cuando el usuario activa documentos
 SHORT_QUERY_CHARS = 80
 _CODE_HINTS = re.compile(
     r"```|\b(c[oó]digo|funci[oó]n|programa|script|clase|bug|error|python|javascript|"
@@ -35,6 +37,16 @@ def classify_query(message: str) -> str:
     return "short" if len(message.strip()) <= SHORT_QUERY_CHARS else "default"
 
 
+def _source(hit: docs.Hit) -> dict[str, Any]:
+    return {
+        "document_id": hit.document_id,
+        "title": hit.title,
+        "ordinal": hit.ordinal,
+        "snippet": hit.snippet,
+        "score": hit.score,
+    }
+
+
 class ConversationNotFoundError(Exception):
     pass
 
@@ -43,6 +55,7 @@ class ConversationNotFoundError(Exception):
 class ChatOutcome:
     conversation_id: str
     answer: str
+    sources: list[dict[str, Any]] | None = None  # None: no se consultaron documentos
 
 
 @dataclass(frozen=True)
@@ -82,12 +95,16 @@ class PersonalAIService:
         *,
         organization_id: str | None = None,
         api_key_id: str | None = None,
+        document_organization_id: str | None = None,
     ) -> ChatOutcome:
         conversation_id = conversation_id or str(uuid.uuid4())
+        hits = await asyncio.to_thread(self._retrieve, document_organization_id, message)
         turn = await asyncio.to_thread(
             self._begin_turn, user_id, message, conversation_id, organization_id
         )
-        request = self._build_request(user_id, message, turn.history, organization_id, api_key_id)
+        request = self._build_request(
+            user_id, message, turn.history, organization_id, api_key_id, hits
+        )
         try:
             result = await self._provider.complete(request)
         except BaseException:
@@ -96,7 +113,8 @@ class PersonalAIService:
             raise
 
         await asyncio.to_thread(self._save_answer, conversation_id, result.content)
-        return ChatOutcome(conversation_id=conversation_id, answer=result.content)
+        sources = None if hits is None else [_source(h) for h in hits]
+        return ChatOutcome(conversation_id, result.content, sources)
 
     async def open_stream(
         self,
@@ -106,15 +124,20 @@ class PersonalAIService:
         *,
         organization_id: str | None = None,
         api_key_id: str | None = None,
+        document_organization_id: str | None = None,
     ) -> tuple[str, AsyncIterator[dict[str, Any]]]:
         """Prepara el turno (lanza ConversationNotFoundError antes de emitir nada) y devuelve
-        el id de la conversación y el flujo de eventos: token, done o error."""
+        el id de la conversación y el flujo de eventos: [sources], token*, done o error."""
         conversation_id = conversation_id or str(uuid.uuid4())
+        hits = await asyncio.to_thread(self._retrieve, document_organization_id, message)
         turn = await asyncio.to_thread(
             self._begin_turn, user_id, message, conversation_id, organization_id
         )
-        request = self._build_request(user_id, message, turn.history, organization_id, api_key_id)
-        return conversation_id, self._events(conversation_id, request, turn)
+        request = self._build_request(
+            user_id, message, turn.history, organization_id, api_key_id, hits
+        )
+        sources = None if hits is None else [_source(h) for h in hits]
+        return conversation_id, self._events(conversation_id, request, turn, sources)
 
     def _build_request(
         self,
@@ -123,20 +146,39 @@ class PersonalAIService:
         history: list[ChatMessage],
         organization_id: str | None,
         api_key_id: str | None,
+        hits: list[docs.Hit] | None = None,
     ) -> CompletionRequest:
+        """`hits` None: documentos desactivados. Lista (aunque vacía): activados. Los fragmentos
+        solo viajan al modelo en este mensaje; en la base se guarda el texto tal cual lo escribió
+        el usuario."""
         system = build_system_prompt(provider=self._provider.name.capitalize(), model=self._model)
+        content = message
+        if hits is not None:
+            if hits:
+                system += docs.DOCUMENT_RULES
+                content = f"{docs.build_context(hits)}\n\nPregunta: {message}"
+            else:
+                system += docs.NO_FRAGMENTS_RULES
         return CompletionRequest(
             model=self._model,
             messages=[
                 ChatMessage(role="system", content=system),
                 *history,
-                ChatMessage(role="user", content=message),
+                ChatMessage(role="user", content=content),
             ],
             max_output_tokens=self._output_tokens.get(classify_query(message)),
             user_id=user_id,
             organization_id=organization_id,
             api_key_id=api_key_id,
         )
+
+    def _retrieve(self, organization_id: str | None, message: str) -> list[docs.Hit] | None:
+        """Lectura previa al turno: si falla no queda nada que deshacer. El permiso sobre la
+        organización lo comprueba el router; aquí solo se busca."""
+        if organization_id is None:
+            return None
+        with self._database.connect() as db:
+            return docs.search(db, organization_id, message, DOCUMENT_FRAGMENTS)
 
     def _begin_turn(
         self, user_id: str, message: str, conversation_id: str, organization_id: str | None
@@ -172,12 +214,18 @@ class PersonalAIService:
                 )
 
     async def _events(
-        self, conversation_id: str, request: CompletionRequest, turn: _Turn
+        self,
+        conversation_id: str,
+        request: CompletionRequest,
+        turn: _Turn,
+        sources: list[dict[str, Any]] | None = None,
     ) -> AsyncIterator[dict[str, Any]]:
         parts: list[str] = []
         completed = False  # el proveedor terminó con `chunk.done`
         cancelled = False  # el cliente cerró el flujo o la tarea se canceló
         try:
+            if sources is not None:
+                yield {"event": "sources", "sources": sources}
             async for chunk in stream_completion(self._provider, request):
                 if chunk.content:
                     parts.append(chunk.content)

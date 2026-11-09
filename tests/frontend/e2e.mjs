@@ -322,6 +322,38 @@ await check("chat en streaming: Markdown y bloques de código como nodos seguros
   assert.ok(text().includes("<b>x</b>"));
   assert.equal($(".composer button").textContent, "Enviar");
 });
+await check("chat con documentos: opt-in, envía la organización y muestra las fuentes", async () => {
+  const { api } = await import(pathToFileURL(`${REPO}/frontend/js/api.js`).href);
+  const { organizations } = await api.organizations();
+  await api.createDocument(organizations[0].id, { title: "Contrato", content: "La fianza equivale a dos mensualidades." });
+  location.hash = "#/chat";
+  await until(() => $("#message"), "chat");
+  [...document.querySelectorAll("button")].find((b) => b.textContent.includes("Nueva")).click();
+  await until(() => $(".welcome"), "welcome");
+  await until(() => !$(".docs-toggle").hidden, "interruptor de documentos");
+  let sent = null;
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    if (String(url).includes("/api/chat/stream")) sent = JSON.parse(init.body);
+    return realFetch(url, init);
+  };
+  try {
+    $("#message").value = "hola sin documentos";
+    submit($(".composer"));
+    await until(() => !$(".message.generating") && $(".composer button").textContent === "Enviar", "respuesta sin documentos");
+    assert.equal(sent.document_organization_id, null, "sin marcar no se consultan documentos");
+    assert.ok(!$(".message-sources"));
+    $("#use-documents").checked = true;
+    $("#message").value = "fianza";
+    submit($(".composer"));
+    await until(() => $(".message-sources"), "fuentes");
+    assert.equal(sent.document_organization_id, organizations[0].id);
+    assert.ok($(".message-sources").textContent.includes("Contrato"));
+    assert.ok($(".message-sources").textContent.includes("dos mensualidades"));
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
 await check("botón Detener corta la respuesta, conserva lo generado y deja enviar de nuevo", async () => {
   $("#message").value = "algo lento";
   submit($(".composer"));

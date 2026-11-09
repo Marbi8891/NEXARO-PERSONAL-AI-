@@ -6,7 +6,14 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from ai_gateway.errors import PolicyError, ProviderError
-from nexaro_api.deps import Ctx, CurrentUser, acquire_generation, client_ip, validate_origin
+from nexaro_api.deps import (
+    Ctx,
+    CurrentUser,
+    acquire_generation,
+    check_org_permission,
+    client_ip,
+    validate_origin,
+)
 from nexaro_api.schemas import ChatRequest
 from nexaro_core.audit import record_event
 from products.personal_ai.service import ConversationNotFoundError
@@ -19,10 +26,13 @@ NOT_FOUND = HTTPException(status_code=404, detail="Conversación no encontrada")
 @router.post("/chat")
 async def chat(request: Request, body: ChatRequest, user: CurrentUser, ctx: Ctx) -> dict[str, Any]:
     validate_origin(request, ctx)
+    document_org = _document_scope(request, ctx, user, body)
     lease = acquire_generation(ctx, f"user:{user['id']}")
 
     try:
-        outcome = await ctx.personal_ai.chat(user["id"], body.message, body.conversation_id)
+        outcome = await ctx.personal_ai.chat(
+            user["id"], body.message, body.conversation_id, document_organization_id=document_org
+        )
     except ConversationNotFoundError:
         raise NOT_FOUND from None
     except PolicyError as exc:
@@ -33,7 +43,23 @@ async def chat(request: Request, body: ChatRequest, user: CurrentUser, ctx: Ctx)
     finally:
         lease.release()
 
-    return {"conversation_id": outcome.conversation_id, "answer": outcome.answer}
+    response: dict[str, Any] = {
+        "conversation_id": outcome.conversation_id,
+        "answer": outcome.answer,
+    }
+    if outcome.sources is not None:
+        response["sources"] = outcome.sources
+    return response
+
+
+def _document_scope(
+    request: Request, ctx: Ctx, user: dict[str, Any], body: ChatRequest
+) -> str | None:
+    """Documentos solo si el usuario los pide y es miembro con permiso de lectura."""
+    if body.document_organization_id is None:
+        return None
+    check_org_permission(ctx, request, user, body.document_organization_id, "documents:read")
+    return body.document_organization_id
 
 
 def _sse(payload: dict[str, Any]) -> str:
@@ -46,10 +72,14 @@ async def chat_stream(
 ) -> StreamingResponse:
     """Respuesta en streaming (SSE): start, token*, done | error."""
     validate_origin(request, ctx)
+    document_org = _document_scope(request, ctx, user, body)
     lease = acquire_generation(ctx, f"user:{user['id']}")
     try:
         conversation_id, events = await ctx.personal_ai.open_stream(
-            user["id"], body.message, body.conversation_id
+            user["id"],
+            body.message,
+            body.conversation_id,
+            document_organization_id=document_org,
         )
     except BaseException as exc:
         lease.release()
