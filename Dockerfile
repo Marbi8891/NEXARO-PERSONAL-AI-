@@ -19,6 +19,9 @@ COPY packages ./packages
 COPY products ./products
 COPY apps/api ./apps/api
 
+# El contenedor corre como uid 10001: el código debe ser legible aunque en el host tenga permisos 600.
+RUN chmod -R a+rX /app
+
 USER 10001:10001
 
 EXPOSE 8000

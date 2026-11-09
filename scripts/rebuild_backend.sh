@@ -56,12 +56,24 @@ docker container inspect "$CONTAINER" >/dev/null || fail "no existe $CONTAINER"
 
 step "4/8 Copia fresca de la base VIVA (API de backup de SQLite)"
 LIVE_NAME="nexaro.pre-rebuild-$STAMP.db"
-docker exec "$CONTAINER" python -c "
+if [[ "$(docker inspect -f '{{.State.Running}} {{.State.Restarting}}' "$CONTAINER")" == "true false" ]]; then
+  docker exec "$CONTAINER" python -c "
 import sqlite3
 s = sqlite3.connect('/data/nexaro.db')
 d = sqlite3.connect('/data/$LIVE_NAME')
 s.backup(d); d.close(); s.close()"
-docker cp "$CONTAINER:/data/$LIVE_NAME" "backups/$LIVE_NAME"
+  docker cp "$CONTAINER:/data/$LIVE_NAME" "backups/$LIVE_NAME"
+else
+  # Contenedor parado o en bucle de reinicio: nadie escribe en la base. Se copia con un contenedor
+  # temporal de la misma imagen (solo lectura sobre la base; la escritura va a backups/).
+  echo "El contenedor no está en marcha: copia con contenedor temporal"
+  docker run --rm --user root -v "$VOLUME":/data:ro -v "$PWD/backups":/backup \
+    --entrypoint python "$(docker inspect -f '{{.Image}}' "$CONTAINER")" -c "
+import sqlite3
+s = sqlite3.connect('file:/data/nexaro.db?mode=ro', uri=True)
+d = sqlite3.connect('/backup/$LIVE_NAME')
+s.backup(d); d.close(); s.close()"
+fi
 db_report "backups/$LIVE_NAME" | tee "/tmp/nexaro-before-$STAMP.json"
 grep -q '"integrity": "ok"' "/tmp/nexaro-before-$STAMP.json" || fail "copia viva corrupta"
 
