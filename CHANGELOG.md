@@ -3,6 +3,7 @@
 ## [Sin publicar] — rama `refactor/nexaro-platform`
 
 ### Añadido
+- Endurecimiento de seguridad (F20): límites de ritmo y concurrencia del modelo, cuerpo máximo, umbral de login por IP configurable, cabeceras adicionales, Swagger cerrable, delimitadores de documentos a prueba de inyección, logs JSON con `request_id`, contenedor con privilegios mínimos e imagen por digest, tests de inyección SQL, Bandit y SBOM en CI, `scripts/prune_backups.sh` y `docs/security/`.
 - Rendimiento de inferencia (F19): streaming real Ollama→cliente (`POST /api/chat/stream`, SSE), cliente HTTP único, `keep_alive`/`num_ctx`/`num_thread` configurables, tope de salida adaptativo, historial acotado, métricas de TTFT/carga/tokens por segundo (migración 6, panel de Administración), botón «Detener», Markdown seguro en el chat, `scripts/ollama_benchmark.py`, ADR-0014.
 - Estructura de monolito modular: `apps/api`, `packages/{nexaro_core,ai_gateway}`, `products/personal_ai`.
 - Auditoría append-only, `/api/admin/audit`, endpoint `/api/health/live`.

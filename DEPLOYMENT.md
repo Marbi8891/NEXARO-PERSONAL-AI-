@@ -73,6 +73,12 @@ docker run --rm --network ollama-local_default -v "$PWD/scripts:/s:ro" python:3.
 Repite con `--profile optimizado` (y `--num-ctx 8192` para comparar). Con el equipo en reposo: otros
 contenedores consumiendo CPU distorsionan los tiempos.
 
+### Seguridad y retención
+
+El detalle está en `docs/security/` (`SECURITY_BASELINE.md` tiene la lista de comprobación del despliegue).
+Las copias de `backups/` se podan a mano: `scripts/prune_backups.sh --keep 10` simula y `--apply` borra;
+nunca toca `nexaro-pre-auth-migration-*`. Los logs rotan en Docker (`10m × 5`).
+
 ### Primer administrador
 
 ```bash
