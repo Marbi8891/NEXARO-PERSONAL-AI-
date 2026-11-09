@@ -1,8 +1,9 @@
 """Documentos de una organización: carga de texto, búsqueda y preguntas con fuentes (ADR-0012)."""
 
+import asyncio
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from ai_gateway.errors import PolicyError, ProviderError
 from ai_gateway.schemas import ChatMessage, CompletionRequest
@@ -18,6 +19,7 @@ from nexaro_api.schemas import DocumentAskRequest, DocumentCreateRequest
 from nexaro_core.audit import record_event
 from nexaro_core.database import begin_write
 from products.personal_ai import documents as docs
+from products.personal_ai import pdf
 from products.personal_ai.prompts import build_system_prompt
 
 router = APIRouter(prefix="/api/organizations/{organization_id}/documents", tags=["documents"])
@@ -31,6 +33,10 @@ _ERRORS = {
     docs.DocumentTooLargeError: 413,
     docs.DocumentLimitError: 409,
     docs.DuplicateDocumentError: 409,
+    pdf.InvalidPdfError: 422,
+    pdf.EncryptedPdfError: 422,
+    pdf.NoTextError: 422,
+    pdf.TooManyPagesError: 413,
 }
 
 
@@ -53,15 +59,17 @@ def list_all(organization_id: str, access: CanRead, ctx: Ctx) -> dict[str, Any]:
         }
 
 
-@router.post("", status_code=201)
-def create(
-    organization_id: str,
-    body: DocumentCreateRequest,
-    request: Request,
-    access: CanWrite,
+def _store(
     ctx: Ctx,
+    request: Request,
+    access: OrgAccess,
+    organization_id: str,
+    *,
+    title: str,
+    content: str,
+    source: str | None,
+    mime_type: str | None,
 ) -> dict[str, Any]:
-    validate_origin(request, ctx)
     with ctx.database.connect() as db:
         begin_write(db)
         try:
@@ -69,10 +77,10 @@ def create(
                 db,
                 organization_id,
                 access.user["id"],
-                body.title.strip(),
-                body.content,
-                source=body.source,
-                mime_type=body.mime_type,
+                title,
+                content,
+                source=source,
+                mime_type=mime_type,
             )
         except docs.DocumentError as exc:
             raise HTTPException(status_code=_ERRORS[type(exc)], detail=str(exc)) from exc
@@ -87,6 +95,61 @@ def create(
             details={"organization": organization_id, "chunks": created["chunk_count"]},
         )
     return created
+
+
+@router.post("", status_code=201)
+def create(
+    organization_id: str,
+    body: DocumentCreateRequest,
+    request: Request,
+    access: CanWrite,
+    ctx: Ctx,
+) -> dict[str, Any]:
+    validate_origin(request, ctx)
+    return _store(
+        ctx,
+        request,
+        access,
+        organization_id,
+        title=body.title.strip(),
+        content=body.content,
+        source=body.source,
+        mime_type=body.mime_type,
+    )
+
+
+@router.post("/pdf", status_code=201)
+async def create_from_pdf(
+    organization_id: str,
+    request: Request,
+    access: CanWrite,
+    ctx: Ctx,
+    title: Annotated[str, Query(min_length=1, max_length=200)],
+    source: Annotated[str | None, Query(max_length=255)] = None,
+) -> dict[str, Any]:
+    """PDF con texto como cuerpo binario crudo (`Content-Type: application/pdf`). El tamaño lo
+    limita `MAX_BODY_BYTES`; la extracción corre en un hilo para no bloquear el servidor."""
+    validate_origin(request, ctx)
+    if request.headers.get("content-type", "").split(";")[0].strip().lower() != "application/pdf":
+        raise HTTPException(status_code=415, detail="Se esperaba un PDF (application/pdf)")
+    if not title.strip():
+        raise HTTPException(status_code=422, detail="El título no puede estar vacío")
+    data = await request.body()
+    try:
+        text = await asyncio.to_thread(pdf.extract_text, data)
+    except docs.DocumentError as exc:
+        raise HTTPException(status_code=_ERRORS[type(exc)], detail=str(exc)) from exc
+    return await asyncio.to_thread(
+        _store,
+        ctx,
+        request,
+        access,
+        organization_id,
+        title=title.strip(),
+        content=text,
+        source=source,
+        mime_type="application/pdf",
+    )
 
 
 @router.delete("/{document_id}", status_code=204)

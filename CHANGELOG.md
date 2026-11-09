@@ -3,6 +3,7 @@
 ## [Sin publicar] — rama `refactor/nexaro-platform`
 
 ### Añadido
+- Documentos PDF con texto: `POST /api/organizations/{id}/documents/pdf` (cuerpo binario) y subida desde Documentos; extracción con `pypdf==7.0.0`, sin OCR, con límites de tamaño, páginas y texto (ADR-0018).
 - Documentos en el chat (Fase 4): interruptor «Consultar mis documentos» (opt-in por mensaje) que añade al modelo los mejores fragmentos BM25 de la organización elegida y muestra las fuentes; exige `documents:read` (ADR-0017).
 - Gateway (Fase 2): cortacircuitos por proveedor (`AI_BREAKER_THRESHOLD`, `AI_BREAKER_COOLDOWN_SECONDS`) que falla en el acto si Ollama está caído y lo vuelve a probar tras el enfriamiento, `GET /api/admin/models` (salud, modelo configurado, instalado o no, modelos instalados) y pestaña «Modelos» en Administración (ADR-0016).
 - Estabilización (Fase 1): `DELETE /api/conversations/{id}` (con botón en el historial), imagen Docker con el frontend incluido, SQLite en modo WAL con espera de bloqueos (ADR-0015), `/api/chat` con el mismo historial acotado y tope de salida que el streaming, y un turno sin respuesta ya no deja mensajes huérfanos.

@@ -99,6 +99,27 @@ export async function chatStream(message, conversationId, { signal, onEvent, doc
 
 const id = encodeURIComponent;
 
+// PDF como cuerpo binario crudo (el servidor extrae el texto). Mismos errores que `request`.
+async function uploadPdf(orgId, file, title) {
+  let response;
+  try {
+    response = await fetch(`/api/organizations/${id(orgId)}/documents/pdf?title=${id(title)}&source=${id(file.name)}`, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/pdf" },
+      body: file,
+    });
+  } catch {
+    throw new ApiError(0, "No se ha podido conectar con el servidor.");
+  }
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    if (response.status === 401) unauthorizedHandler();
+    throw new ApiError(response.status, messageFrom(data, response.status));
+  }
+  return data;
+}
+
 export const api = {
   me: () => request("/api/auth/me", { session: false }),
   login: (email, password) => request("/api/auth/login", { method: "POST", body: { email, password }, session: false }),
@@ -132,6 +153,7 @@ export const api = {
   organizationUsage: (orgId, days = 30) => request(`/api/organizations/${id(orgId)}/usage?days=${days}`),
 
   documents: (orgId) => request(`/api/organizations/${id(orgId)}/documents`),
+  uploadPdf,
   createDocument: (orgId, body) => request(`/api/organizations/${id(orgId)}/documents`, { method: "POST", body }),
   deleteDocument: (orgId, docId) => request(`/api/organizations/${id(orgId)}/documents/${id(docId)}`, { method: "DELETE" }),
   searchDocuments: (orgId, q) => request(`/api/organizations/${id(orgId)}/documents/search?q=${encodeURIComponent(q)}`),

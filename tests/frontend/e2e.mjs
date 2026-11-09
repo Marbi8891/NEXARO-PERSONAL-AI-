@@ -273,6 +273,31 @@ await check("documentos: subir, buscar, preguntar con fuentes y borrar", async (
   [...document.querySelectorAll("dialog button")].find((b) => b.textContent === "Borrar").click();
   await until(() => !$(".data-table") || !$(".data-table").textContent.includes("contrato.txt"), "borrado");
 });
+await check("documentos: un PDF se sube como binario a /documents/pdf con su nombre", async () => {
+  location.hash = "#/documents";
+  await until(() => $("#doc-file"), "formulario de documentos");
+  const pdf = { name: "Contrato final.pdf", type: "application/pdf" };
+  Object.defineProperty($("#doc-file"), "files", { value: [pdf], configurable: true });
+  fill("#doc-title", "Contrato PDF");
+  let sent = null;
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    if (String(url).includes("/documents/pdf")) {
+      sent = { url: String(url), init };
+      return new Response(JSON.stringify({ id: "x", chunk_count: 3 }), { status: 201 });
+    }
+    return realFetch(url, init);
+  };
+  try {
+    submit([...document.querySelectorAll("form.inline-form")].find((f) => f.querySelector("#doc-file")));
+    await until(() => sent, "petición de PDF");
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+  assert.match(sent.url, /\/documents\/pdf\?title=Contrato%20PDF&source=Contrato%20final\.pdf$/);
+  assert.equal(sent.init.headers["Content-Type"], "application/pdf");
+  assert.equal(sent.init.body, pdf, "el archivo viaja tal cual, sin leerlo como texto");
+});
 await check("finanzas: alta con importes exactos, resumen, edición, borrado y exportación", async () => {
   const { parseEuros } = await import(pathToFileURL(`${REPO}/frontend/js/views/finance.js`).href);
   assert.equal(parseEuros("12,50"), 1250); assert.equal(parseEuros("12.5"), 1250); assert.equal(parseEuros("0,05"), 5);

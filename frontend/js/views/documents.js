@@ -8,7 +8,8 @@ import { dataTable } from "../components/table.js";
 import { toast } from "../components/toast.js";
 import { append, clear, formatDate, h } from "../dom.js";
 
-const ACCEPT = ".txt,.md,.markdown,.csv,.json,.log,text/plain,text/markdown,text/csv,application/json";
+const ACCEPT = ".pdf,.txt,.md,.markdown,.csv,.json,.log,application/pdf,text/plain,text/markdown,text/csv,application/json";
+const isPdf = (file) => file.type === "application/pdf" || /\.pdf$/i.test(file.name);
 const canWrite = (org) => ["owner", "admin", "member"].includes(org.role);
 const kb = (bytes) => (bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KB`);
 
@@ -89,7 +90,7 @@ export async function documentsView({ container, shell }) {
   }
 
   function uploadCard(org, count, limits, reload) {
-    const file = field({ id: "doc-file", label: "Archivo de texto", type: "file", accept: ACCEPT, hint: `.txt, .md, .csv, .json o .log. Máximo ${limits.max_chars.toLocaleString("es-ES")} caracteres; ${count} de ${limits.max_documents} documentos.` });
+    const file = field({ id: "doc-file", label: "Archivo", type: "file", accept: ACCEPT, hint: `PDF con texto (no escaneado), .txt, .md, .csv, .json o .log. Máximo ${limits.max_chars.toLocaleString("es-ES")} caracteres; ${count} de ${limits.max_documents} documentos.` });
     const title = field({ id: "doc-title", label: "Título", required: true, maxlength: "200" });
     file.input.addEventListener("change", () => {
       const chosen = file.input.files[0];
@@ -108,8 +109,10 @@ export async function documentsView({ container, shell }) {
             const chosen = file.input.files[0];
             if (!chosen) return toast("Elige un archivo.", { error: true });
             try {
-              const text = await chosen.text();
-              const created = await api.createDocument(org.id, { title: title.input.value.trim(), content: text, source: chosen.name, mime_type: chosen.type || null });
+              const name = title.input.value.trim();
+              const created = isPdf(chosen)
+                ? await api.uploadPdf(org.id, chosen, name)
+                : await api.createDocument(org.id, { title: name, content: await chosen.text(), source: chosen.name, mime_type: chosen.type || null });
               toast(`Documento subido (${created.chunk_count} fragmentos).`);
               await reload();
             } catch (error) {

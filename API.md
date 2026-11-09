@@ -71,12 +71,13 @@ curl -X POST http://127.0.0.1:8001/api/v1/chat \
 
 ## Documentos
 
-Bajo `/organizations/{id}/documents`. Lectura: `documents:read` (todos los roles); escritura: `documents:write` (propietario, administrador, miembro). Solo texto plano. Ver [ADR-0012](docs/decisions/0012-documents-lexical-search.md).
+Bajo `/organizations/{id}/documents`. Lectura: `documents:read` (todos los roles); escritura: `documents:write` (propietario, administrador, miembro). Texto plano y PDF con texto. Ver [ADR-0012](docs/decisions/0012-documents-lexical-search.md).
 
 | Método | Ruta | Notas |
 |---|---|---|
 | GET | `/documents` | lista con `chunk_count` y `limits` |
 | POST | `/documents` | `{title, content, source?, mime_type?}`. 422 vacío, 413 más de 200 000 caracteres, 409 duplicado o 100 documentos |
+| POST | `/documents/pdf?title=&source=` | cuerpo binario `Content-Type: application/pdf` (límite `MAX_BODY_BYTES`, 2 MiB por defecto). 415 otro tipo, 413 más de 300 páginas o 200 000 caracteres, 422 PDF no válido, cifrado o sin texto (escaneado; no hay OCR), 409 duplicado. Ver [ADR-0018](docs/decisions/0018-pdf-documents.md) |
 | DELETE | `/documents/{doc_id}` | 204; borrado lógico, elimina sus fragmentos; 404 si no es de esa organización |
 | GET | `/documents/search?q=&limit=5` | fragmentos por relevancia (BM25): `document_id, title, ordinal, snippet, score` |
 | POST | `/documents/ask` | `{question}` → `{answer, sources}`. Sin fragmentos relevantes no consulta al modelo |

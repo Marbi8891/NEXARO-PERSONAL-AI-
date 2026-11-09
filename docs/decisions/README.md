@@ -22,3 +22,4 @@ Una decisión aceptada no se cambia en silencio: se propone un *DECISION REVIEW*
 | [0015](0015-sqlite-wal.md) | SQLite en modo WAL | Aceptada |
 | [0016](0016-gateway-circuit-breaker-and-model-status.md) | Cortacircuitos del gateway y estado de modelos | Aceptada |
 | [0017](0017-documents-in-chat.md) | Documentos en el chat (opt-in) | Aceptada |
+| [0018](0018-pdf-documents.md) | Documentos PDF con texto | Aceptada |
