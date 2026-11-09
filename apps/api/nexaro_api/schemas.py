@@ -1,3 +1,5 @@
+from datetime import date
+
 from pydantic import BaseModel, Field
 
 from nexaro_core.api_keys import DEFAULT_SCOPES
@@ -61,3 +63,21 @@ class DocumentCreateRequest(BaseModel):
 
 class DocumentAskRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
+
+
+class ExpenseCreateRequest(BaseModel):
+    spent_on: date
+    description: str = Field(min_length=1, max_length=200)
+    amount_cents: int = Field(gt=0, le=100_000_000)
+    category: str = Field(min_length=1, max_length=40)
+    vat_cents: int = Field(default=0, ge=0, le=100_000_000)
+    vendor: str | None = Field(default=None, max_length=120)
+
+
+class ExpenseUpdateRequest(BaseModel):
+    spent_on: date | None = None
+    description: str | None = Field(default=None, min_length=1, max_length=200)
+    amount_cents: int | None = Field(default=None, gt=0, le=100_000_000)
+    category: str | None = Field(default=None, min_length=1, max_length=40)
+    vat_cents: int | None = Field(default=None, ge=0, le=100_000_000)
+    vendor: str | None = Field(default=None, max_length=120)

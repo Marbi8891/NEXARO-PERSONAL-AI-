@@ -273,6 +273,38 @@ await check("documentos: subir, buscar, preguntar con fuentes y borrar", async (
   [...document.querySelectorAll("dialog button")].find((b) => b.textContent === "Borrar").click();
   await until(() => !$(".data-table") || !$(".data-table").textContent.includes("contrato.txt"), "borrado");
 });
+await check("finanzas: alta con importes exactos, resumen, edición, borrado y exportación", async () => {
+  const { parseEuros } = await import(pathToFileURL(`${REPO}/frontend/js/views/finance.js`).href);
+  assert.equal(parseEuros("12,50"), 1250); assert.equal(parseEuros("12.5"), 1250); assert.equal(parseEuros("0,05"), 5);
+  assert.equal(parseEuros("1.234,56"), null); assert.equal(parseEuros("-3"), null); assert.equal(parseEuros("abc"), null);
+
+  location.hash = "#/finance";
+  await until(() => $("#exp-desc"), "formulario de gastos");
+  fill("#exp-desc", "Hosting VPS"); fill("#exp-cat", "Software"); fill("#exp-amount", "12,10"); fill("#exp-vat", "2,10");
+  submit($("#expense-form"));
+  const tables = () => [...document.querySelectorAll(".data-table")].map((t) => t.textContent).join(" ");
+  await until(() => tables().includes("Hosting VPS"), "gasto listado");
+  assert.ok(text().includes("Gasto del mes") && text().includes("12,10"), "el resumen refleja el importe exacto");
+  assert.ok(text().includes("software"), "categoría normalizada");
+  assert.ok($(".chart-figure"), "gráfico de meses");
+
+  fill("#exp-desc", "x"); fill("#exp-amount", "1.234,56");
+  submit($("#expense-form"));
+  await until(() => text().includes("Importe no válido"), "importe rechazado en cliente");
+
+  location.hash = "#/finance";
+  await until(() => tables().includes("Hosting VPS"), "recarga");
+  [...document.querySelectorAll("button")].find((b) => b.getAttribute("aria-label") === "Editar Hosting VPS").click();
+  assert.equal($("#exp-amount").value, "12,10");
+  fill("#exp-amount", "20"); fill("#exp-vat", "3,47");
+  submit($("#expense-form"));
+  await until(() => tables().includes("20,00"), "editado");
+  assert.match($("a[download]").getAttribute("href"), /\/expenses\/export\.csv\?start=\d{4}-\d{2}-01&end=/);
+  [...document.querySelectorAll("button")].find((b) => b.getAttribute("aria-label") === "Borrar Hosting VPS").click();
+  await until(() => document.querySelector("dialog"), "confirmación");
+  [...document.querySelectorAll("dialog button")].find((b) => b.textContent === "Borrar").click();
+  await until(() => text().includes("Sin gastos este mes"), "borrado");
+});
 await check("sesión caducada (cookie borrada) devuelve a login con aviso", async () => {
   globalThis.fetch = async () => new Response(JSON.stringify({ detail: "No autenticado" }), { status: 401 });
   location.hash = "#/chat";

@@ -16,6 +16,7 @@ export function createShell({ user }) {
     { nav: "dashboard", href: "#/dashboard", label: "Panel" },
     { nav: "chat", href: "#/chat", label: "Chat" },
     { nav: "documents", href: "#/documents", label: "Documentos" },
+    { nav: "finance", href: "#/finance", label: "Finanzas" },
     { nav: "organizations", href: "#/organizations", label: "Organizaciones" },
     { nav: "developer", href: "#/developer", label: "Developer" },
     ...(user.role === "admin"

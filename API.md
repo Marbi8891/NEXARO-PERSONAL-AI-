@@ -79,6 +79,19 @@ Bajo `/organizations/{id}/documents`. Lectura: `documents:read` (todos los roles
 | GET | `/documents/search?q=&limit=5` | fragmentos por relevancia (BM25): `document_id, title, ordinal, snippet, score` |
 | POST | `/documents/ask` | `{question}` → `{answer, sources}`. Sin fragmentos relevantes no consulta al modelo |
 
+## Finanzas: gastos
+
+Bajo `/organizations/{id}/expenses`. Solo propietario y administrador (`expenses:read` / `expenses:write`); otros roles reciben 403 y quien no es miembro, 404. Importes en **céntimos** (`amount_cents` incluye IVA; `vat_cents` es la parte de IVA). Ver [ADR-0013](docs/decisions/0013-finance-expenses.md).
+
+| Método | Ruta | Notas |
+|---|---|---|
+| GET | `/expenses?start=&end=&category=&q=&limit=100&offset=0` | `expenses`, `total`, `total_cents`, `total_vat_cents` y `categories` usadas. Más reciente primero; `limit` ≤ 200 |
+| POST | `/expenses` | `{spent_on, description, amount_cents, category, vat_cents?, vendor?}`. 422 si importe ≤ 0, IVA > importe o fecha fuera de 2000-01-01…mañana |
+| PATCH | `/expenses/{id}` | cambios parciales; `vendor: null` lo borra; 404 si no es de esa organización |
+| DELETE | `/expenses/{id}` | 204; borrado lógico |
+| GET | `/expenses/summary?month=AAAA-MM` | total, IVA, número, `by_category` y `history` de 6 meses |
+| GET | `/expenses/export.csv?start=&end=&category=` | CSV `;` con coma decimal y BOM; auditado |
+
 ## Administración de plataforma
 
 | Método | Ruta | Acceso | Notas |

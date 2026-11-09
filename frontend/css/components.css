@@ -326,3 +326,4 @@ code { font-family: var(--font-mono); }
 .answer { white-space: pre-wrap; margin: 0; }
 .sources { margin: 0; padding-left: var(--space-5); display: grid; gap: var(--space-3); }
 .sources p { margin: var(--space-1) 0 0; color: var(--muted); }
+.row-actions { display: inline-flex; gap: var(--space-2); }

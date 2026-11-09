@@ -78,6 +78,12 @@ export const api = {
   searchDocuments: (orgId, q) => request(`/api/organizations/${id(orgId)}/documents/search?q=${encodeURIComponent(q)}`),
   askDocuments: (orgId, question) => request(`/api/organizations/${id(orgId)}/documents/ask`, { method: "POST", body: { question } }),
 
+  expenses: (orgId, query = "") => request(`/api/organizations/${id(orgId)}/expenses?${query}`),
+  expenseSummary: (orgId, month) => request(`/api/organizations/${id(orgId)}/expenses/summary?month=${encodeURIComponent(month)}`),
+  createExpense: (orgId, body) => request(`/api/organizations/${id(orgId)}/expenses`, { method: "POST", body }),
+  updateExpense: (orgId, expenseId, body) => request(`/api/organizations/${id(orgId)}/expenses/${id(expenseId)}`, { method: "PATCH", body }),
+  deleteExpense: (orgId, expenseId) => request(`/api/organizations/${id(orgId)}/expenses/${id(expenseId)}`, { method: "DELETE" }),
+
   organizations: () => request("/api/organizations"),
   createOrganization: (name, slug) => request("/api/organizations", { method: "POST", body: { name, slug } }),
   members: (orgId) => request(`/api/organizations/${id(orgId)}/members`),

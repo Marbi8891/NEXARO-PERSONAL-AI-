@@ -17,6 +17,7 @@ from nexaro_api.routers import (
     chat,
     dashboard,
     documents,
+    expenses,
     health,
     organizations,
 )
@@ -106,7 +107,17 @@ def create_app(
             response.headers.setdefault("Content-Security-Policy", CONTENT_SECURITY_POLICY)
         return response
 
-    for module in (auth, admin, api_keys, chat, dashboard, documents, health, organizations):
+    for module in (
+        auth,
+        admin,
+        api_keys,
+        chat,
+        dashboard,
+        documents,
+        expenses,
+        health,
+        organizations,
+    ):
         app.include_router(module.router)
 
     if settings.frontend_path.is_dir():

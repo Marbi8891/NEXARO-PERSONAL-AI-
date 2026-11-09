@@ -141,6 +141,27 @@ await scenario("documentos: subida, pregunta con fuentes", { scheme: "light", vi
   assert.ok(overflow <= 0);
 });
 
+await scenario("finanzas: gastos, resumen y gráfico", { scheme: "light", viewport: { width: 1280, height: 800 } }, async (page) => {
+  await login(page, "admin@x.io");
+  const hoy = new Date();
+  const mes = (atras) => { const d = new Date(hoy.getFullYear(), hoy.getMonth() - atras, 1, 12); return d.toISOString().slice(0, 10); };
+  await page.evaluate(async (fechas) => {
+    const created = await fetch("/api/organizations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: "Demo Fin", slug: "demo-fin" }) });
+    const org = (await created.json()).id;
+    const gastos = [[fechas[0], "Hosting", "software", 1210, 210], [fechas[0], "Tren a cliente", "viajes", 4560, 0], [fechas[1], "Licencias", "software", 9900, 1718], [fechas[2], "Publicidad", "marketing", 15000, 2603]];
+    for (const [spent_on, description, category, amount_cents, vat_cents] of gastos)
+      await fetch(`/api/organizations/${org}/expenses`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ spent_on, description, category, amount_cents, vat_cents }) });
+  }, [mes(0), mes(1), mes(3)]);
+  await page.goto("/#/finance");
+  await page.waitForSelector("#fin-org");
+  await page.selectOption("#fin-org", { label: "Demo Fin" });
+  await page.waitForSelector(".data-table");
+  await page.waitForSelector(".chart-figure");
+  await page.screenshot({ path: `${OUT}d-light-finance.png`, fullPage: true });
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  assert.ok(overflow <= 0);
+});
+
 await scenario("developer: clave creada con secreto visible una vez", { scheme: "light", viewport: { width: 1280, height: 800 } }, async (page) => {
   await login(page, "admin@x.io");
   const status = await page.evaluate(async () => (await fetch("/api/organizations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: "Demo Dev", slug: "demo-dev" }) })).status);

@@ -17,7 +17,9 @@ function svg(tag, attrs = {}, ...children) {
 
 const shortDate = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 
-export function barChart({ data, valueKey, label, unit }) {
+// Por defecto, una barra por día (`date`, «dd/mm»). Para otras series: `labelKey`, `formatLabel`,
+// `formatValue` (p. ej. céntimos a euros), `periodNoun`/`maxWord` y `keyHeader`.
+export function barChart({ data, valueKey, label, unit, labelKey = "date", formatLabel = shortDate, formatValue = String, periodNoun = "días", maxWord = "diario", keyHeader = "Día" }) {
   const max = Math.max(1, ...data.map((d) => d[valueKey]));
   const total = data.reduce((sum, d) => sum + d[valueKey], 0);
   const slot = W / data.length;
@@ -25,23 +27,23 @@ export function barChart({ data, valueKey, label, unit }) {
 
   const bars = data.map((d, i) => {
     const height = Math.round((d[valueKey] / max) * plot);
-    const bar = svg("rect", { class: "bar", x: i * slot + slot * 0.15, y: PAD_TOP + plot - height, width: slot * 0.7, height, rx: 2 }, svg("title", {}, `${shortDate(d.date)}: ${d[valueKey]} ${unit}`));
+    const bar = svg("rect", { class: "bar", x: i * slot + slot * 0.15, y: PAD_TOP + plot - height, width: slot * 0.7, height, rx: 2 }, svg("title", {}, `${formatLabel(d[labelKey])}: ${formatValue(d[valueKey])} ${unit}`));
     return bar;
   });
   const chart = svg(
     "svg",
-    { viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: "none", role: "img", "aria-label": `${label}: ${total} ${unit} en ${data.length} días, máximo diario ${max}.`, class: "chart" },
+    { viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: "none", role: "img", "aria-label": `${label}: ${formatValue(total)} ${unit} en ${data.length} ${periodNoun}, máximo ${maxWord} ${formatValue(max)}.`, class: "chart" },
     svg("line", { class: "baseline", x1: 0, x2: W, y1: PAD_TOP + plot, y2: PAD_TOP + plot }),
     ...bars,
   );
 
-  const rows = data.map((d) => h("tr", {}, h("td", {}, d.date), h("td", {}, String(d[valueKey]))));
+  const rows = data.map((d) => h("tr", {}, h("td", {}, d[labelKey]), h("td", {}, formatValue(d[valueKey]))));
   return h(
     "figure",
     { class: "chart-figure" },
     h("figcaption", {}, label),
     chart,
-    h("div", { class: "chart-axis", "aria-hidden": "true" }, h("span", {}, shortDate(data[0].date)), h("span", {}, shortDate(data[data.length - 1].date))),
-    h("details", { class: "chart-data" }, h("summary", {}, "Ver datos"), h("table", { class: "table compact" }, h("thead", {}, h("tr", {}, h("th", { scope: "col" }, "Día"), h("th", { scope: "col" }, unit))), h("tbody", {}, rows))),
+    h("div", { class: "chart-axis", "aria-hidden": "true" }, h("span", {}, formatLabel(data[0][labelKey])), h("span", {}, formatLabel(data[data.length - 1][labelKey]))),
+    h("details", { class: "chart-data" }, h("summary", {}, "Ver datos"), h("table", { class: "table compact" }, h("thead", {}, h("tr", {}, h("th", { scope: "col" }, keyHeader), h("th", { scope: "col" }, unit))), h("tbody", {}, rows))),
   );
 }
