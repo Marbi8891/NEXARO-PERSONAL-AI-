@@ -71,7 +71,17 @@ def create_app(
             settings.api_key_requests_per_minute, 60, settings.login_max_tracked_keys
         ),
         provider=provider,
-        personal_ai=PersonalAIService(database, provider, model),
+        personal_ai=PersonalAIService(
+            database,
+            provider,
+            model,
+            output_tokens={
+                "short": settings.output_tokens_short,
+                "default": settings.output_tokens_default,
+                "code": settings.output_tokens_code,
+            },
+            history_max_chars=settings.chat_history_max_chars,
+        ),
     )
 
     @asynccontextmanager
@@ -84,6 +94,9 @@ def create_app(
             logger.exception("Fallo en la migración; se aborta el arranque")
             raise
         yield
+        close = getattr(provider, "aclose", None)
+        if close is not None:  # cierra el cliente HTTP único hacia Ollama
+            await close()
 
     production = settings.environment == "production"
     app = FastAPI(

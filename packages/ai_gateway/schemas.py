@@ -21,6 +21,33 @@ class CompletionRequest(BaseModel):
     api_key_id: str | None = None
 
 
+class InferenceMetrics(BaseModel):
+    """Tiempos de una inferencia en milisegundos. Lo que el proveedor no informa queda en None."""
+
+    ttft_ms: float | None = None  # hasta el primer contenido (medido por NEXARO)
+    load_ms: float | None = None  # carga del modelo en memoria (informa Ollama)
+    prompt_eval_ms: float | None = None
+    generation_ms: float | None = None
+    total_ms: float | None = None
+    prompt_tokens: int | None = None
+    tokens: int | None = None
+    done_reason: str | None = None  # «stop», «length» (cortada por num_predict)...
+
+    @property
+    def tokens_per_second(self) -> float | None:
+        if self.tokens and self.generation_ms:
+            return round(self.tokens / (self.generation_ms / 1000), 2)
+        return None
+
+
+class StreamChunk(BaseModel):
+    """Fragmento de una respuesta en streaming. El último trae `done=True` y las métricas."""
+
+    content: str = ""
+    done: bool = False
+    metrics: InferenceMetrics | None = None
+
+
 class CompletionResult(BaseModel):
     content: str
     model: str
@@ -28,3 +55,4 @@ class CompletionResult(BaseModel):
     input_tokens: int | None = None
     output_tokens: int | None = None
     latency_ms: float = 0.0
+    metrics: InferenceMetrics | None = None

@@ -1,6 +1,9 @@
+import json
+from collections.abc import AsyncIterator
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import StreamingResponse
 
 from ai_gateway.errors import PolicyError, ProviderError
 from nexaro_api.deps import Ctx, CurrentUser, validate_origin
@@ -27,6 +30,39 @@ async def chat(request: Request, body: ChatRequest, user: CurrentUser, ctx: Ctx)
         raise HTTPException(status_code=502, detail="Error al consultar el servicio de IA") from exc
 
     return {"conversation_id": outcome.conversation_id, "answer": outcome.answer}
+
+
+def _sse(payload: dict[str, Any]) -> str:
+    return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+
+@router.post("/chat/stream")
+async def chat_stream(
+    request: Request, body: ChatRequest, user: CurrentUser, ctx: Ctx
+) -> StreamingResponse:
+    """Respuesta en streaming (SSE): start, token*, done | error."""
+    validate_origin(request, ctx)
+    try:
+        conversation_id, events = await ctx.personal_ai.open_stream(
+            user["id"], body.message, body.conversation_id
+        )
+    except ConversationNotFoundError:
+        raise NOT_FOUND from None
+
+    async def body_iter() -> AsyncIterator[str]:
+        yield _sse({"event": "start", "conversation_id": conversation_id})
+        try:
+            async for event in events:
+                yield _sse(event)
+        finally:
+            # Cierra el flujo del modelo (y con él la conexión con Ollama) si el cliente se va.
+            await events.aclose()  # type: ignore[attr-defined]
+
+    return StreamingResponse(
+        body_iter(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.get("/conversations")

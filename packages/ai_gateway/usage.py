@@ -4,6 +4,7 @@ import sqlite3
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from ai_gateway.schemas import InferenceMetrics
 from nexaro_core.database import Database
 
 Status = Literal["ok", "error", "denied"]
@@ -68,6 +69,7 @@ class UsageStore:
         error_kind: str | None = None,
         organization_id: str | None = None,
         api_key_id: str | None = None,
+        metrics: InferenceMetrics | None = None,
     ) -> None:
         columns = {
             "user_id": user_id, "provider": provider, "model": model, "status": status,
@@ -79,6 +81,13 @@ class UsageStore:
             columns["organization_id"] = organization_id
         if api_key_id is not None:
             columns["api_key_id"] = api_key_id
+        if metrics is not None:  # columnas de la migración 6
+            columns.update(
+                ttft_ms=metrics.ttft_ms,
+                load_ms=metrics.load_ms,
+                prompt_eval_ms=metrics.prompt_eval_ms,
+                generation_ms=metrics.generation_ms,
+            )
         marks = ", ".join("?" for _ in columns)
         with self._database.connect() as db:
             db.execute(
@@ -112,6 +121,32 @@ class UsageStore:
                 (f"-{int(days)} days",),
             ).fetchall()
         return [dict(row) for row in rows]
+
+    def inference(self, days: int) -> list[dict[str, Any]]:
+        """Rendimiento medio por modelo (solo peticiones correctas con métricas): TTFT, carga y
+        tokens/s. Medias, no medianas: SQLite no tiene mediana; sirven para ver tendencias."""
+        with self._database.connect() as db:
+            rows = db.execute(
+                """
+                SELECT provider, model, COUNT(*) AS requests,
+                       AVG(ttft_ms) AS avg_ttft_ms, AVG(load_ms) AS avg_load_ms,
+                       AVG(prompt_eval_ms) AS avg_prompt_eval_ms,
+                       AVG(latency_ms) AS avg_total_ms,
+                       AVG(CASE WHEN generation_ms > 0 THEN output_tokens * 1000.0 / generation_ms
+                           END) AS avg_tokens_per_second,
+                       SUM(load_ms > 1000) AS cold_loads
+                FROM model_usage
+                WHERE status = 'ok' AND ttft_ms IS NOT NULL
+                  AND created_at >= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', ?)
+                GROUP BY provider, model
+                ORDER BY provider, model
+                """,
+                (f"-{int(days)} days",),
+            ).fetchall()
+        return [
+            {k: (round(v, 1) if isinstance(v, float) else v) for k, v in dict(row).items()}
+            for row in rows
+        ]
 
     def daily(self, days: int) -> list[dict[str, Any]]:
         """Peticiones y errores por día en los últimos `days` días (sin rellenar huecos)."""

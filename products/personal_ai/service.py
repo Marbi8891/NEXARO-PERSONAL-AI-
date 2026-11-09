@@ -1,17 +1,38 @@
 """Casos de uso de NEXARO Personal AI: conversaciones y chat. No conoce HTTP."""
 
+import asyncio
+import logging
+import re
 import sqlite3
 import uuid
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any
 
+from ai_gateway.errors import PolicyError, ProviderError
 from ai_gateway.providers.base import ChatProvider
 from ai_gateway.schemas import ChatMessage, CompletionRequest
+from ai_gateway.streaming import stream_completion
 from nexaro_core.database import Database
 from nexaro_core.timeseries import fill_days, last_days
 from products.personal_ai.prompts import build_system_prompt
 
+logger = logging.getLogger("nexaro.chat")
+
 HISTORY_LIMIT = 12
+SHORT_QUERY_CHARS = 80
+_CODE_HINTS = re.compile(
+    r"```|\b(c[oó]digo|funci[oó]n|programa|script|clase|bug|error|python|javascript|"
+    r"typescript|java|sql|html|css|docker|regex|algoritmo|implementa|refactoriza)\b",
+    re.IGNORECASE,
+)
+
+
+def classify_query(message: str) -> str:
+    """«code» (respuestas largas), «short» (saludos y preguntas breves) o «default»."""
+    if _CODE_HINTS.search(message):
+        return "code"
+    return "short" if len(message.strip()) <= SHORT_QUERY_CHARS else "default"
 
 
 class ConversationNotFoundError(Exception):
@@ -25,10 +46,20 @@ class ChatOutcome:
 
 
 class PersonalAIService:
-    def __init__(self, database: Database, provider: ChatProvider, model: str) -> None:
+    def __init__(
+        self,
+        database: Database,
+        provider: ChatProvider,
+        model: str,
+        *,
+        output_tokens: dict[str, int] | None = None,
+        history_max_chars: int | None = None,
+    ) -> None:
         self._database = database
         self._provider = provider
         self._model = model
+        self._output_tokens = output_tokens or {}
+        self._history_max_chars = history_max_chars
 
     @property
     def model(self) -> str:
@@ -81,6 +112,94 @@ class PersonalAIService:
 
         return ChatOutcome(conversation_id=conversation_id, answer=result.content)
 
+    async def open_stream(
+        self,
+        user_id: str,
+        message: str,
+        conversation_id: str | None,
+        *,
+        organization_id: str | None = None,
+        api_key_id: str | None = None,
+    ) -> tuple[str, AsyncIterator[dict[str, Any]]]:
+        """Prepara el turno (lanza ConversationNotFoundError antes de emitir nada) y devuelve
+        el id de la conversación y el flujo de eventos: token, done o error."""
+        conversation_id = conversation_id or str(uuid.uuid4())
+        history = await asyncio.to_thread(
+            self._begin_turn, user_id, message, conversation_id, organization_id
+        )
+        request = CompletionRequest(
+            model=self._model,
+            messages=[
+                ChatMessage(
+                    role="system",
+                    content=build_system_prompt(
+                        provider=self._provider.name.capitalize(), model=self._model
+                    ),
+                ),
+                *history,
+                ChatMessage(role="user", content=message),
+            ],
+            max_output_tokens=self._output_tokens.get(classify_query(message)),
+            user_id=user_id,
+            organization_id=organization_id,
+            api_key_id=api_key_id,
+        )
+        return conversation_id, self._events(conversation_id, request)
+
+    def _begin_turn(
+        self, user_id: str, message: str, conversation_id: str, organization_id: str | None
+    ) -> list[ChatMessage]:
+        with self._database.connect() as db:
+            self._claim_conversation(db, user_id, conversation_id, organization_id)
+            history = self._recent_history(db, conversation_id, self._history_max_chars)
+            db.execute(
+                "INSERT INTO messages (conversation_id, role, content) VALUES (?, 'user', ?)",
+                (conversation_id, message),
+            )
+        return history
+
+    async def _events(
+        self, conversation_id: str, request: CompletionRequest
+    ) -> AsyncIterator[dict[str, Any]]:
+        parts: list[str] = []
+        try:
+            async for chunk in stream_completion(self._provider, request):
+                if chunk.content:
+                    parts.append(chunk.content)
+                    yield {"event": "token", "content": chunk.content}
+                if chunk.done:
+                    metrics = chunk.metrics
+                    yield {
+                        "event": "done",
+                        "truncated": bool(metrics and metrics.done_reason == "length"),
+                        "metrics": metrics.model_dump() if metrics else None,
+                    }
+                    if metrics:
+                        logger.info(
+                            "chat model=%s ttft_ms=%s load_ms=%s tokens=%s tps=%s total_ms=%s",
+                            self._model,
+                            metrics.ttft_ms,
+                            metrics.load_ms,
+                            metrics.tokens,
+                            metrics.tokens_per_second,
+                            metrics.total_ms,
+                        )
+        except PolicyError as exc:
+            yield {"event": "error", "message": str(exc)}
+        except ProviderError:
+            # El detalle del proveedor (URLs internas, etc.) no se devuelve al cliente.
+            yield {"event": "error", "message": "Error al consultar el servicio de IA"}
+        finally:
+            # También al cancelarse (el cliente pulsa «Detener» o se desconecta): se conserva
+            # lo generado. Es una escritura breve y síncrona, válida aunque la tarea se cancele.
+            if parts:
+                with self._database.connect() as db:
+                    db.execute(
+                        "INSERT INTO messages (conversation_id, role, content)"
+                        " VALUES (?, 'assistant', ?)",
+                        (conversation_id, "".join(parts)),
+                    )
+
     @staticmethod
     def _claim_conversation(
         db: sqlite3.Connection,
@@ -110,7 +229,9 @@ class PersonalAIService:
         )
 
     @staticmethod
-    def _recent_history(db: sqlite3.Connection, conversation_id: str) -> list[ChatMessage]:
+    def _recent_history(
+        db: sqlite3.Connection, conversation_id: str, max_chars: int | None = None
+    ) -> list[ChatMessage]:
         rows = db.execute(
             """
             SELECT role, content FROM messages
@@ -120,7 +241,17 @@ class PersonalAIService:
             """,
             (conversation_id, HISTORY_LIMIT),
         ).fetchall()
-        return [ChatMessage(role=row["role"], content=row["content"]) for row in reversed(rows)]
+        history = [ChatMessage(role=row["role"], content=row["content"]) for row in rows]
+        if max_chars is not None:  # de los más recientes hacia atrás, hasta el presupuesto
+            kept: list[ChatMessage] = []
+            used = 0
+            for item in history:
+                used += len(item.content)
+                if used > max_chars and kept:
+                    break
+                kept.append(item)
+            history = kept
+        return list(reversed(history))
 
     def list_conversations(
         self, user_id: str, limit: int | None = None, organization_id: str | None = None

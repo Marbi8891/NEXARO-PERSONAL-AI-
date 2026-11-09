@@ -197,5 +197,6 @@ def admin_usage(admin: AdminUser, ctx: Ctx, days: int = 30) -> dict[str, Any]:
     store = UsageStore(ctx.database)
     return {
         "usage": store.summary(min(max(days, 1), 365)),
+        "inference": store.inference(min(max(days, 1), 365)),
         "month_cost_usd": store.month_cost_usd(),
     }

@@ -23,6 +23,16 @@ class Settings(BaseSettings):
 
     ollama_base_url: str = Field(default="http://localhost:11434", alias="OLLAMA_BASE_URL")
     ollama_model: str = Field(default="qwen2.5:3b", alias="OLLAMA_MODEL")
+    # Rendimiento de Ollama. num_ctx debe ser constante entre peticiones
+    # (si cambia, Ollama recarga el modelo).
+    ollama_keep_alive: str = Field(default="30m", alias="OLLAMA_KEEP_ALIVE")
+    ollama_num_ctx: int | None = Field(default=4096, gt=0, alias="OLLAMA_NUM_CTX")
+    ollama_num_thread: int | None = Field(default=None, gt=0, alias="OLLAMA_NUM_THREAD")
+    # Tope de tokens de salida según el tipo de consulta (heurística sin medir; ver ADR-0014).
+    output_tokens_short: int = Field(default=512, gt=0, alias="OUTPUT_TOKENS_SHORT")
+    output_tokens_default: int = Field(default=1024, gt=0, alias="OUTPUT_TOKENS_DEFAULT")
+    output_tokens_code: int = Field(default=2048, gt=0, alias="OUTPUT_TOKENS_CODE")
+    chat_history_max_chars: int = Field(default=8000, gt=0, alias="CHAT_HISTORY_MAX_CHARS")
 
     # AI Gateway. Nube desactivada por defecto; activarla exige región, presupuesto y precios.
     ai_provider_order: Annotated[tuple[str, ...], NoDecode] = Field(

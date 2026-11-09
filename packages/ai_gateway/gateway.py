@@ -7,13 +7,14 @@ no saben si hablan con un modelo local, con Bedrock o con una cadena de respaldo
 import asyncio
 import logging
 import time
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
 from dataclasses import dataclass
 
 from ai_gateway.errors import PolicyError, ProviderError, ProviderUnavailableError
 from ai_gateway.policy import GatewayPolicy
 from ai_gateway.providers.base import ChatProvider
-from ai_gateway.schemas import CompletionRequest, CompletionResult
+from ai_gateway.schemas import CompletionRequest, CompletionResult, InferenceMetrics, StreamChunk
+from ai_gateway.streaming import stream_completion
 from ai_gateway.usage import ModelPrice, Status, UsageStore, estimate_cost
 
 logger = logging.getLogger(__name__)
@@ -67,6 +68,102 @@ class Gateway:
 
     async def health(self) -> bool:
         return await self._providers[self.name].health()
+
+    async def aclose(self) -> None:
+        """Cierra los clientes HTTP de los proveedores que los mantienen abiertos."""
+        for provider in self._providers.values():
+            close = getattr(provider, "aclose", None)
+            if close is not None:
+                await close()
+
+    def _check_input(self, request: CompletionRequest) -> None:
+        chars = sum(len(m.content) for m in request.messages)
+        if chars > self._policy.max_input_chars:
+            raise PolicyError("La entrada supera el límite permitido")
+
+    def _routed(self, route: Route, request: CompletionRequest) -> CompletionRequest:
+        policy = self._policy
+        return request.model_copy(
+            update={
+                "model": route.model,
+                "max_output_tokens": min(
+                    request.max_output_tokens or policy.max_output_tokens,
+                    policy.max_output_tokens,
+                ),
+                "timeout_seconds": request.timeout_seconds or policy.timeout_seconds,
+            }
+        )
+
+    async def stream(self, request: CompletionRequest) -> AsyncIterator[StreamChunk]:
+        """Como `complete`, pero entregando fragmentos. Reintentos y rutas de respaldo solo valen
+        mientras no se haya emitido contenido: una vez empezada la respuesta, un fallo se propaga.
+        El uso se registra al terminar, fallar o cancelarse (cancelado = `ok` con error_kind)."""
+        self._check_input(request)
+        last_error: ProviderError | None = None
+        for route in self._routes:
+            denial = await self._denial(route)
+            if denial is not None:
+                await self._record(request, route, "denied", error_kind=denial)
+                continue
+            routed = self._routed(route, request)
+            provider = self._providers[route.provider]
+            for attempt in range(self._policy.max_retries + 1):
+                started = time.perf_counter()
+                emitted = False
+                final: InferenceMetrics | None = None
+                try:
+                    async for chunk in stream_completion(provider, routed):
+                        if chunk.done:
+                            final = chunk.metrics
+                        else:
+                            emitted = True
+                        yield chunk
+                except ProviderError as exc:
+                    latency = (time.perf_counter() - started) * 1000
+                    await self._record(
+                        request, route, "error", latency_ms=latency, error_kind=type(exc).__name__
+                    )
+                    if emitted:
+                        raise
+                    last_error = exc
+                    if isinstance(exc, ProviderUnavailableError) and attempt < (
+                        self._policy.max_retries
+                    ):
+                        await self._sleep(self._policy.retry_backoff_seconds * 2**attempt)
+                        continue
+                    break
+                except (asyncio.CancelledError, GeneratorExit):
+                    # El cliente se fue o pulsó Detener: la generación parcial también costó tiempo.
+                    await asyncio.shield(
+                        self._record_stream(request, route, started, final, "cancelled")
+                    )
+                    raise
+                else:
+                    await self._record_stream(request, route, started, final, None)
+                    return
+        if last_error is not None:
+            raise last_error
+        raise PolicyError("Ningún proveedor permitido por la política")
+
+    async def _record_stream(
+        self,
+        request: CompletionRequest,
+        route: Route,
+        started: float,
+        metrics: InferenceMetrics | None,
+        error_kind: str | None,
+    ) -> None:
+        latency = (time.perf_counter() - started) * 1000
+        result = CompletionResult(
+            content="",
+            model=route.model,
+            provider=route.provider,
+            input_tokens=metrics.prompt_tokens if metrics else None,
+            output_tokens=metrics.tokens if metrics else None,
+            latency_ms=metrics.total_ms if metrics and metrics.total_ms else latency,
+            metrics=metrics,
+        )
+        await self._record(request, route, "ok", result=result, error_kind=error_kind)
 
     async def complete(self, request: CompletionRequest) -> CompletionResult:
         chars = sum(len(m.content) for m in request.messages)
@@ -170,6 +267,7 @@ class Gateway:
                 input_tokens=result.input_tokens if result else None,
                 output_tokens=result.output_tokens if result else None,
                 latency_ms=result.latency_ms if result else latency_ms,
+                metrics=result.metrics if result else None,
                 cost_usd=self._cost(route, result) if status == "ok" else None,
                 error_kind=error_kind,
             )

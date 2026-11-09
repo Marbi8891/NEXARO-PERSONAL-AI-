@@ -16,7 +16,12 @@ def build_gateway(settings: Settings, database: Database) -> Gateway:
 
     for name in settings.ai_provider_order:
         if name == "ollama":
-            providers[name] = OllamaProvider(settings.ollama_base_url)
+            providers[name] = OllamaProvider(
+                settings.ollama_base_url,
+                keep_alive=settings.ollama_keep_alive,
+                num_ctx=settings.ollama_num_ctx,
+                num_thread=settings.ollama_num_thread,
+            )
             routes.append(Route(name, settings.ollama_model))
         elif name == "bedrock":
             from ai_gateway.providers.bedrock import BedrockProvider  # boto3 solo si se usa
