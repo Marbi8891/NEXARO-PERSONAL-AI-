@@ -62,23 +62,34 @@ del sistema para identificadores y fechas técnicas.
 ## Espacio y forma
 Escala de 4 px (`--space-1 … --space-6`), radios 6 / 10 / 14 px y una única sombra (`--shadow`).
 
-## Componentes (`frontend/css/components.css`)
-| Componente | Clases | Notas |
+## Componentes
+CSS en `frontend/css/components.css`; lógica en `frontend/js/components/`. Todos construyen el DOM con `h()` (sin `innerHTML`).
+
+| Componente | Módulo / clases | Comportamiento |
 |---|---|---|
 | Botón | `.button`, `.secondary`, `.danger`, `.small` | Alto mínimo 40 px (32 px en `.small`) |
-| Campo | `.field`, `.inline-form` | Etiqueta siempre visible; borde ≥3:1 |
+| Campo | `form.js` → `field()` | Etiqueta visible, ayuda enlazada con `aria-describedby`; también `select` |
 | Tarjeta | `.card` | Un `h2` por tarjeta |
-| Tabla | `.table-wrap` + `table` | `caption` y `th scope="col"` obligatorios |
+| Tabla de datos | `table.js` → `dataTable()` | Búsqueda, filtros, orden (`aria-sort`), filas por página y paginación; aviso de resultados con `aria-live`. Cliente: pensada para cientos de filas |
+| Estados | `states.js` → `loadingState`, `emptyState`, `errorState` | Siempre con texto; el error ofrece «Reintentar» |
+| Avisos | `toast.js` → `toast()` | Región `aria-live`; éxito se cierra a los 5 s, error espera al usuario |
+| Confirmación | `dialog.js` → `confirmDialog()` | `<dialog>` modal nativo; el foco inicial es «Cancelar»; Escape cancela |
+| Menú de usuario | `user-menu.js` | Botón + panel (`aria-expanded`); Escape y clic fuera cierran; Escape devuelve el foco |
+| Marca | `brand.js` | Símbolo + logotipo |
 | Pestañas | `.tabs` + `role="tab"` | `aria-selected` |
 | Etiqueta de estado | `.badge.ok/.warn/.bad` | Color + texto |
-| Aviso | `.toast`, `.toast.error` | `role="status"` o `role="alert"` |
 | Apilado | `.stack` | Separación uniforme entre bloques |
 
-Pendientes, previstos en la fase 11: tabla de datos con búsqueda, filtros, orden y paginación; estados de carga,
-error y vacío unificados; diálogo de confirmación; cabecera con menú de usuario y avisos; menú móvil.
+### Marco de la aplicación (`js/shell.js`)
+Barra lateral oscura (marca, estado del modelo, navegación, hueco para contexto de la vista), cabecera con
+título de página y menú de usuario, y contenido. En pantallas de hasta 760 px la barra lateral pasa a **cajón**
+con botón de menú, botón de cierre, capa de fondo y cierre con Escape o al navegar. Cada vista fija su título con
+`shell.setTitle()`. Hueco previsto para los avisos: `shell.topbarActions`.
 
 ## Accesibilidad
 - Enlace «Saltar al contenido» como primer elemento enfocable; destino `main#view`.
+- Tablas con `caption` y `th scope="col"`; columnas ordenables con botón y `aria-sort`.
+- Diálogos y menús: foco inicial seguro, Escape, y devolución del foco.
 - Foco visible en todo control (`:focus-visible`, `--focus`, ≥3:1).
 - `prefers-reduced-motion` desactiva animaciones y transiciones.
 - Contraste AA validado automáticamente para cada par texto/fondo declarado.

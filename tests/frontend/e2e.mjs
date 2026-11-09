@@ -38,7 +38,8 @@ function fill(sel, v) { $(sel).value = v; }
 function submit(form) { form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true })); }
 
 const results = [];
-const check = async (name, fn) => { await fn(); results.push(name); console.log("ok -", name); };
+const noLeaks = () => assert.ok(!/null|undefined/.test(document.body.textContent), "texto null/undefined visible en pantalla");
+const check = async (name, fn) => { await fn(); noLeaks(); results.push(name); console.log("ok -", name); };
 
 // --- Usuario normal ---
 await session();
@@ -77,6 +78,7 @@ await check("nueva conversación vacía el chat", async () => {
   await until(() => $(".welcome"), "welcome");
 });
 await check("abrir conversación del historial restaura mensajes", async () => {
+  await until(() => $(".history-item"), "history item");
   $(".history-item").click();
   await until(() => document.querySelectorAll(".message").length === 2, "restore");
 });
@@ -86,7 +88,7 @@ await check("usuario normal no accede a #/admin", async () => {
 });
 await check("organizaciones: usuario normal no ve formulario de creación", async () => {
   location.hash = "#/organizations";
-  await until(() => text().includes("Tus organizaciones"), "orgs");
+  await until(() => text().includes("No perteneces a ninguna organización"), "orgs");
   assert.ok(!text().includes("Crear organización"));
 });
 await check("logout vuelve a login", async () => {
@@ -99,6 +101,36 @@ await check("registro: el servidor lo rechaza si está cerrado", async () => {
   fill("#email", "nuevo@x.io"); fill("#password", "otra-clave-larga-1");
   submit($("form.auth-card"));
   await until(() => $(".form-error").textContent.includes("cerrado"), "closed");
+});
+
+// --- Componente de tabla: búsqueda, orden y paginación ---
+await check("tabla: paginación, búsqueda, orden y filtro", async () => {
+  const { dataTable } = await import(pathToFileURL(`${REPO}/frontend/js/components/table.js`).href);
+  const rows = Array.from({ length: 25 }, (_, i) => ({ name: `fila-${String(i + 1).padStart(2, "0")}`, kind: i % 2 ? "par" : "impar" }));
+  const table = dataTable({ caption: "Prueba", rows, columns: [{ key: "name", label: "Nombre" }, { key: "kind", label: "Tipo" }], filters: [{ key: "kind", label: "Tipo", options: [["par", "Par"], ["impar", "Impar"]] }] });
+  document.body.append(table.element);
+  const names = () => [...table.element.querySelectorAll("tbody tr td:first-child")].map((td) => td.textContent);
+  const status = () => table.element.querySelector(".table-status").textContent;
+  assert.equal(names().length, 10);
+  assert.equal(status(), "1–10 de 25");
+  [...table.element.querySelectorAll("button")].find((b) => b.textContent === "Siguiente").click();
+  assert.equal(status(), "11–20 de 25");
+  assert.equal(names()[0], "fila-11");
+  const search = table.element.querySelector("input[type=search]");
+  search.value = "fila-2"; search.dispatchEvent(new window.Event("input"));
+  assert.equal(status(), "1–6 de 6"); // fila-02, fila-20..25
+  search.value = ""; search.dispatchEvent(new window.Event("input"));
+  const sortButton = [...table.element.querySelectorAll(".th-button")].find((b) => b.textContent.startsWith("Nombre"));
+  sortButton.click(); sortButton.click();
+  assert.equal(table.element.querySelector("th[aria-sort]").getAttribute("aria-sort"), "descending");
+  assert.equal(names()[0], "fila-25");
+  const select = table.element.querySelector("select#Prueba-kind");
+  select.value = "par"; select.dispatchEvent(new window.Event("change"));
+  assert.match(status(), /de 12$/);
+  search.value = "no-existe"; search.dispatchEvent(new window.Event("input"));
+  assert.equal(status(), "0 resultados");
+  assert.ok(table.element.textContent.includes("Ningún resultado"));
+  table.element.remove();
 });
 
 // --- Administrador (nueva sesión de navegador) ---

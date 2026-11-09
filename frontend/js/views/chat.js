@@ -4,6 +4,7 @@ import { navigate } from "../router.js";
 import { rememberConversation, rememberedConversation } from "../state.js";
 
 export async function chatView({ container, sidebar, params, shell }) {
+  shell.setTitle("Chat");
   let conversationId = params[0] || null;
   let sending = false;
 

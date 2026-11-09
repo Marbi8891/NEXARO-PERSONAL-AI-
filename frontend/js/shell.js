@@ -1,57 +1,54 @@
-// Marco de la aplicación: barra lateral con navegación, estado del modelo y cierre de sesión.
+// Marco de la aplicación: barra lateral (navegación y estado del modelo), cabecera y contenido.
 import { api } from "./api.js";
 import { brand } from "./components/brand.js";
+import { userMenu } from "./components/user-menu.js";
 import { clear, h } from "./dom.js";
-import { setNotice, setUser, rememberConversation } from "./state.js";
-import { LABELS, getTheme, nextTheme, setTheme } from "./theme.js";
+import { rememberConversation, setNotice, setUser } from "./state.js";
 
 const HEALTH_INTERVAL_MS = 60_000;
 
 export function createShell({ user }) {
   const dot = h("span", { class: "dot", "aria-hidden": "true" });
   const statusText = h("span", {}, "Comprobando conexión...");
-  let theme = getTheme();
-  const themeButton = h("button", { class: "button secondary small", type: "button", onclick: cycleTheme });
-  const themeLabel = () => {
-    themeButton.textContent = `Tema: ${LABELS[theme]}`;
-    themeButton.setAttribute("aria-label", `Cambiar tema (actual: ${LABELS[theme]})`);
-  };
-  themeLabel();
-  function cycleTheme() {
-    theme = nextTheme(theme);
-    setTheme(theme);
-    themeLabel();
-  }
-  const logoutError = h("span", { role: "alert", "aria-live": "polite" });
-  const logoutButton = h("button", { class: "button secondary small", type: "button", onclick: logout }, "Cerrar sesión");
 
   const links = [
     { nav: "chat", href: "#/chat", label: "Chat" },
     { nav: "organizations", href: "#/organizations", label: "Organizaciones" },
     ...(user.role === "admin" ? [{ nav: "admin", href: "#/admin", label: "Administración" }] : []),
-  ].map((link) => h("a", { href: link.href, dataset: undefined, "data-nav": link.nav }, link.label));
+  ].map((link) => h("a", { href: link.href, "data-nav": link.nav, onclick: () => setDrawer(false) }, link.label));
 
   const sidebarSlot = h("div", { class: "sidebar-slot" });
   const main = h("main", { class: "main", id: "view", tabindex: "-1" });
+  const title = h("h1", { id: "page-title" });
+  const topbarActions = h("div", { class: "topbar-actions" });
 
-  const element = h(
-    "div",
-    { class: "app" },
-    h(
-      "aside",
-      { class: "sidebar" },
-      h(
-        "div",
-        {},
-        brand(),
-        h("div", { class: "status", role: "status" }, dot, statusText),
-      ),
-      h("nav", { class: "nav", "aria-label": "Principal" }, links),
-      sidebarSlot,
-      h("div", { class: "sidebar-footer" }, h("span", { class: "who", title: user.email }, user.email), themeButton, logoutButton, logoutError),
-    ),
-    main,
+  const menu = userMenu({ user, onLogout: logout });
+  topbarActions.append(menu.element);
+
+  const menuButton = h("button", { class: "menu-button", type: "button", "aria-controls": "sidebar", "aria-expanded": "false", "aria-label": "Abrir navegación", onclick: () => setDrawer(app.dataset.navOpen !== "true") }, "☰");
+  const scrim = h("div", { class: "scrim", onclick: () => setDrawer(false) });
+  const sidebar = h(
+    "aside",
+    { class: "sidebar", id: "sidebar", "aria-label": "Navegación" },
+    h("div", { class: "sidebar-head" }, h("div", {}, brand(), h("div", { class: "status", role: "status" }, dot, statusText)), h("button", { class: "drawer-close", type: "button", "aria-label": "Cerrar navegación", onclick: () => { setDrawer(false); menuButton.focus(); } }, "✕")),
+    h("nav", { class: "nav", "aria-label": "Principal" }, links),
+    sidebarSlot,
   );
+  const app = h("div", { class: "app" }, scrim, sidebar, h("div", { class: "content" }, h("header", { class: "topbar" }, menuButton, title, topbarActions), main));
+
+  function setDrawer(open) {
+    app.dataset.navOpen = String(open);
+    menuButton.setAttribute("aria-expanded", String(open));
+    menuButton.setAttribute("aria-label", open ? "Cerrar navegación" : "Abrir navegación");
+  }
+  const onEscape = (event) => {
+    if (event.key === "Escape" && app.dataset.navOpen === "true") {
+      setDrawer(false);
+      menuButton.focus();
+    }
+  };
+  document.addEventListener("keydown", onEscape);
+  setDrawer(false);
 
   async function checkHealth() {
     try {
@@ -65,14 +62,12 @@ export function createShell({ user }) {
   }
 
   async function logout() {
-    logoutButton.disabled = true;
-    logoutError.textContent = "";
     try {
       await api.logout();
     } catch (error) {
       if (error.status !== 401) {
-        logoutError.textContent = "No se pudo cerrar la sesión. Inténtalo de nuevo.";
-        logoutButton.disabled = false;
+        const { toast } = await import("./components/toast.js");
+        toast("No se pudo cerrar la sesión. Inténtalo de nuevo.", { error: true });
         return;
       }
     }
@@ -86,11 +81,19 @@ export function createShell({ user }) {
   const timer = setInterval(checkHealth, HEALTH_INTERVAL_MS);
 
   return {
-    element,
+    element: app,
     main,
     sidebarSlot,
+    topbarActions,
     refreshHealth: checkHealth,
+    logout,
+    setTitle(text) {
+      title.textContent = text;
+      document.title = `${text} · NEXARO`;
+    },
     setActive(nav) {
+      setDrawer(false);
+      menu.close();
       for (const link of links) {
         if (link.dataset.nav === nav) link.setAttribute("aria-current", "page");
         else link.removeAttribute("aria-current");
@@ -98,7 +101,9 @@ export function createShell({ user }) {
     },
     destroy() {
       clearInterval(timer);
-      clear(element);
+      document.removeEventListener("keydown", onEscape);
+      menu.destroy();
+      clear(app);
     },
   };
 }

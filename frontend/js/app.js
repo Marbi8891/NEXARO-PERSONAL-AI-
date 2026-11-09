@@ -5,6 +5,7 @@ import { adminView } from "./views/admin.js";
 import { chatView } from "./views/chat.js";
 import { loginView } from "./views/login.js";
 import { organizationsView } from "./views/organizations.js";
+import { profileView } from "./views/profile.js";
 import { registerView } from "./views/register.js";
 
 export async function boot(root) {
@@ -14,6 +15,7 @@ export async function boot(root) {
     { pattern: /^\/chat(?:\/([^/]+))?$/, nav: "chat", view: chatView },
     { pattern: /^\/organizations$/, nav: "organizations", view: organizationsView },
     { pattern: /^\/admin$/, nav: "admin", admin: true, view: adminView },
+    { pattern: /^\/profile$/, nav: null, view: profileView },
   ]);
 
   // Sesión caducada en cualquier llamada autenticada: volver al acceso con un aviso.

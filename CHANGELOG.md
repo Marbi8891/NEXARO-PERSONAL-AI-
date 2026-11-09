@@ -17,6 +17,7 @@
 - Frontend modular (ES Modules, CSS por capas, router por hash, PWA): acceso, registro, chat con historial, administración (usuarios, auditoría, uso) y organizaciones; CSP estricta; prueba E2E con jsdom; ADR-0007.
 
 - Identidad visual y sistema de diseño (F10): tokens claro/oscuro, Inter autoalojada, símbolo y logotipo, iconos PWA, selector de tema, test de contraste WCAG AA, ADR-0008, `docs/design-system.md`.
+- Componentes y marco (F11): cabecera con menú de usuario y perfil, tabla de datos (búsqueda, filtros, orden, paginación), estados cargando/error/vacío, avisos, confirmación modal, formularios consistentes y cajón de navegación móvil.
 - Prueba en Chromium real (`BROWSER=1 tests/frontend/run.sh`) con capturas de referencia.
 
 ### Cambiado

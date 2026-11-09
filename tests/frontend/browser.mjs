@@ -67,16 +67,56 @@ for (const [tag, scheme, viewport] of shots) {
   });
 }
 
-await scenario("selector de tema persiste", { scheme: "light", viewport: { width: 1280, height: 800 } }, async (page) => {
+await scenario("menú de usuario, perfil y tema", { scheme: "light", viewport: { width: 1280, height: 800 } }, async (page) => {
   await login(page, "user@x.io");
-  const toggle = page.getByRole("button", { name: /Cambiar tema/ });
-  await toggle.click(); // sistema -> claro
-  await toggle.click(); // claro -> oscuro
+  const trigger = page.getByRole("button", { name: /Menú de usuario/ });
+  await trigger.click();
+  assert.equal(await trigger.getAttribute("aria-expanded"), "true");
+  await page.keyboard.press("Escape");
+  assert.equal(await trigger.getAttribute("aria-expanded"), "false");
+  assert.equal(await page.evaluate(() => document.activeElement?.className), "user-trigger", "Escape debe devolver el foco al botón");
+  await trigger.click();
+  await page.getByRole("link", { name: "Perfil" }).click();
+  await page.waitForSelector("fieldset.choices");
+  await page.getByLabel("Oscuro").check();
   assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "dark");
   assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), "rgb(10, 20, 36)");
   await page.reload();
   await page.waitForSelector(".app");
   assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "dark", "el tema no persistió");
+});
+
+await scenario("tabla y confirmación en administración", { scheme: "light", viewport: { width: 1280, height: 800 } }, async (page) => {
+  await login(page, "admin@x.io");
+  await page.goto("/#/admin");
+  await page.waitForSelector("table");
+  await page.getByLabel("Buscar").fill("pend");
+  assert.equal(await page.locator("tbody tr").count(), 1);
+  await page.getByRole("button", { name: "Correo" }).click();
+  assert.equal(await page.locator("th[aria-sort]").getAttribute("aria-sort"), "ascending");
+  await page.getByRole("button", { name: "Rechazar" }).click();
+  await page.waitForSelector("dialog[open]");
+  assert.equal(await page.evaluate(() => document.activeElement?.textContent), "Cancelar", "el foco inicial es la opción segura");
+  await page.keyboard.press("Escape");
+  await page.waitForSelector("dialog", { state: "detached" });
+  assert.ok((await page.locator("tbody tr").first().textContent()).includes("Pendiente"), "cancelar no debe cambiar nada");
+  await page.screenshot({ path: `${OUT}d-light-admin-table.png` });
+});
+
+await scenario("cajón de navegación en móvil", { scheme: "light", viewport: { width: 390, height: 780 } }, async (page) => {
+  await login(page, "user@x.io");
+  assert.equal(await page.locator("#sidebar").isVisible(), false, "la barra lateral empieza cerrada");
+  const open = page.getByRole("button", { name: "Abrir navegación" });
+  await open.click();
+  await page.locator("#sidebar").waitFor({ state: "visible" }); // la transición dura 200 ms
+  await page.screenshot({ path: `${OUT}m-light-drawer.png` });
+  await page.keyboard.press("Escape");
+  await page.locator("#sidebar").waitFor({ state: "hidden" });
+  await open.click();
+  await page.locator("#sidebar").waitFor({ state: "visible" });
+  await page.getByRole("link", { name: "Organizaciones" }).click();
+  await page.waitForSelector("#page-title:has-text('Organizaciones')");
+  await page.locator("#sidebar").waitFor({ state: "hidden" }); // navegar cierra el cajón
 });
 
 await scenario("navegación por teclado", { scheme: "light", viewport: { width: 1280, height: 800 } }, async (page) => {

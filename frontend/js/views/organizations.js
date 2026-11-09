@@ -1,75 +1,119 @@
 import { api } from "../api.js";
-import { clear, h } from "../dom.js";
+import { confirmDialog } from "../components/dialog.js";
+import { field } from "../components/form.js";
+import { errorState, loadingState } from "../components/states.js";
+import { dataTable } from "../components/table.js";
+import { toast } from "../components/toast.js";
+import { append, clear, h } from "../dom.js";
 import { getUser } from "../state.js";
 
 const ROLES = [["owner", "Propietario"], ["admin", "Administrador"], ["member", "Miembro"], ["viewer", "Lector"]];
+const roleLabel = (role) => ROLES.find(([key]) => key === role)?.[1] ?? role;
 
-function roleSelect(id, value) {
-  return h("select", { id }, ROLES.map(([key, label]) => h("option", { value: key, selected: key === value }, label)));
-}
-
-export async function organizationsView({ container }) {
-  const toast = h("p", { class: "toast", role: "status", hidden: true });
-  const list = h("div", { class: "card" });
-  const detail = h("div", {});
+export async function organizationsView({ container, shell }) {
+  shell.setTitle("Organizaciones");
   const isPlatformAdmin = getUser().role === "admin";
+  const listArea = h("div", {});
+  const detail = h("div", { class: "stack" });
 
-  function notify(message, isError = false) {
-    toast.hidden = !message;
-    toast.textContent = message;
-    toast.className = isError ? "toast error" : "toast";
-  }
   async function guarded(action, success) {
     try {
       await action();
-      notify(success);
+      toast(success);
     } catch (error) {
-      notify(error.message, true);
+      toast(error.message, { error: true });
     }
   }
 
   async function loadOrganizations() {
-    const { organizations } = await api.organizations();
-    clear(list).append(h("h2", {}, "Tus organizaciones"));
-    if (!organizations.length) list.append(h("p", { class: "empty" }, "No perteneces a ninguna organización."));
-    for (const org of organizations) {
-      list.append(h("button", { class: "button secondary", type: "button", onclick: () => showMembers(org) }, `${org.name} · ${ROLES.find(([k]) => k === org.role)?.[1] ?? org.role}`), " ");
+    clear(listArea).append(loadingState());
+    try {
+      const { organizations } = await api.organizations();
+      const table = dataTable({
+        caption: "Tus organizaciones",
+        rows: organizations,
+        empty: { title: "No perteneces a ninguna organización", text: isPlatformAdmin ? "Crea la primera con el formulario de arriba." : "Un administrador debe añadirte a una." },
+        columns: [
+          { key: "name", label: "Nombre", render: (org) => h("button", { class: "link-button", type: "button", onclick: () => showMembers(org) }, org.name) },
+          { key: "slug", label: "Identificador", className: "mono" },
+          { key: "role", label: "Tu rol", value: (org) => roleLabel(org.role) },
+        ],
+      });
+      clear(listArea).append(table.element);
+    } catch (error) {
+      clear(listArea).append(errorState(error.message, { onRetry: loadOrganizations }));
     }
   }
 
   async function showMembers(org) {
-    const reload = () => showMembers(org);
-    const { members } = await api.members(org.id);
-    const canManage = org.role === "owner" || org.role === "admin";
-    const email = h("input", { id: "member-email", type: "email", required: true });
-    const role = roleSelect("member-role", "member");
+    clear(detail).append(loadingState());
+    try {
+      const reload = () => showMembers(org);
+      const { members } = await api.members(org.id);
+      const canManage = org.role === "owner" || org.role === "admin";
 
-    const rows = members.map((m) => {
-      const select = roleSelect(`role-${m.user_id}`, m.role);
-      select.disabled = !canManage;
-      select.setAttribute("aria-label", `Rol de ${m.email}`);
-      select.addEventListener("change", () => guarded(async () => { await api.setMemberRole(org.id, m.user_id, select.value); await reload(); }, "Rol actualizado."));
-      return h("tr", {}, h("td", {}, m.email), h("td", {}, select), h("td", { class: "actions" }, canManage ? h("button", { class: "button danger small", type: "button", onclick: () => guarded(async () => { await api.removeMember(org.id, m.user_id); await reload(); }, "Miembro eliminado.") }, "Quitar") : null));
-    });
+      const email = field({ id: "member-email", label: "Correo de un usuario existente", type: "email", required: true });
+      const role = field({ id: "member-role", label: "Rol", options: ROLES, value: "member" });
+      const addForm = h(
+        "form",
+        { class: "inline-form", onsubmit: (event) => { event.preventDefault(); guarded(async () => { await api.addMember(org.id, email.input.value.trim(), role.input.value); await reload(); }, "Miembro añadido."); } },
+        email.element,
+        role.element,
+        h("button", { class: "button", type: "submit" }, "Añadir"),
+      );
 
-    clear(detail).append(
-      canManage
-        ? h("section", { class: "card" }, h("h2", {}, `Añadir miembro a ${org.name}`), h("form", { class: "inline-form", onsubmit: (event) => { event.preventDefault(); guarded(async () => { await api.addMember(org.id, email.value.trim(), role.value); await reload(); }, "Miembro añadido."); } }, h("div", {}, h("label", { for: "member-email" }, "Correo de un usuario existente"), email), h("div", {}, h("label", { for: "member-role" }, "Rol"), role), h("button", { class: "button primary", type: "submit" }, "Añadir")))
-        : null,
-      h("div", { class: "table-wrap" }, h("table", {}, h("caption", {}, `Miembros de ${org.name}`), h("thead", {}, h("tr", {}, ["Correo", "Rol", "Acciones"].map((t) => h("th", { scope: "col" }, t)))), h("tbody", {}, rows))),
-    );
+      const table = dataTable({
+        caption: `Miembros de ${org.name}`,
+        rows: members,
+        empty: { title: "Sin miembros" },
+        columns: [
+          { key: "email", label: "Correo" },
+          {
+            key: "role",
+            label: "Rol",
+            value: (m) => roleLabel(m.role),
+            render: (m) => {
+              const select = h("select", { "aria-label": `Rol de ${m.email}`, disabled: !canManage }, ROLES.map(([value, text]) => h("option", { value, selected: value === m.role }, text)));
+              select.addEventListener("change", () => guarded(async () => { await api.setMemberRole(org.id, m.user_id, select.value); await reload(); }, "Rol actualizado."));
+              return select;
+            },
+          },
+          {
+            key: "actions",
+            label: "Acciones",
+            sortable: false,
+            search: false,
+            className: "actions",
+            render: (m) =>
+              canManage
+                ? h("button", { class: "button danger small", type: "button", onclick: async () => { if (await confirmDialog({ title: "¿Quitar miembro?", message: `${m.email} perderá el acceso a ${org.name}.`, confirmLabel: "Quitar", danger: true })) guarded(async () => { await api.removeMember(org.id, m.user_id); await reload(); }, "Miembro eliminado."); } }, "Quitar")
+                : null,
+          },
+        ],
+      });
+      append(clear(detail), [canManage ? h("section", { class: "card" }, h("h2", {}, `Añadir miembro a ${org.name}`), addForm) : null, table.element]);
+    } catch (error) {
+      clear(detail).append(errorState(error.message));
+    }
   }
 
-  const name = h("input", { id: "org-name", type: "text", required: true, maxlength: "80" });
-  const slug = h("input", { id: "org-slug", type: "text", required: true, maxlength: "40", pattern: "[a-z0-9][a-z0-9-]*" });
+  const name = field({ id: "org-name", label: "Nombre", required: true, maxlength: "80" });
+  const slug = field({ id: "org-slug", label: "Identificador", required: true, maxlength: "40", pattern: "[a-z0-9][a-z0-9-]*", hint: "Solo a-z, 0-9 y guiones." });
   const create = isPlatformAdmin
-    ? h("section", { class: "card" }, h("h2", {}, "Crear organización"), h("form", { class: "inline-form", onsubmit: (event) => { event.preventDefault(); guarded(async () => { await api.createOrganization(name.value.trim(), slug.value.trim()); name.value = ""; slug.value = ""; await loadOrganizations(); }, "Organización creada."); } }, h("div", {}, h("label", { for: "org-name" }, "Nombre"), name), h("div", {}, h("label", { for: "org-slug" }, "Identificador (a-z, 0-9, -)"), slug), h("button", { class: "button primary", type: "submit" }, "Crear")))
+    ? h(
+        "section",
+        { class: "card" },
+        h("h2", {}, "Crear organización"),
+        h(
+          "form",
+          { class: "inline-form", onsubmit: (event) => { event.preventDefault(); guarded(async () => { await api.createOrganization(name.input.value.trim(), slug.input.value.trim()); name.input.value = ""; slug.input.value = ""; await loadOrganizations(); }, "Organización creada."); } },
+          name.element,
+          slug.element,
+          h("button", { class: "button", type: "submit" }, "Crear"),
+        ),
+      )
     : null;
 
-  container.append(h("header", { class: "page-header" }, h("h1", {}, "Organizaciones")), h("div", { class: "page-body" }, toast, create, list, detail));
-  try {
-    await loadOrganizations();
-  } catch (error) {
-    notify(error.message, true);
-  }
+  container.append(h("div", { class: "page-body" }, create, listArea, detail));
+  await loadOrganizations();
 }
