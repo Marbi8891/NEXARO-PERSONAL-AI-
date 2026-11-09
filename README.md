@@ -13,10 +13,13 @@ proveedores en la nube. Monolito modular en Python (FastAPI) con frontend HTML/C
 | AWS (Terraform: red, KMS, ECR, S3, ALB+Fargate, Aurora, alarmas, presupuesto) | Escrito, **no validado ni aplicado** (ADR-0006) |
 | AI Gateway: políticas, respaldo, registro de uso, proveedores Bedrock/SageMaker | Implementado; AWS probado solo con dobles (ADR-0004) |
 | Multiorganización: organizaciones, miembros, roles y permisos | Implementado y probado |
+| Interfaz (sistema de diseño, tema claro/oscuro, panel con datos reales, avisos, PWA) | Implementado; probado con jsdom y Chromium |
+| Developer: claves de API por organización, `/api/v1/chat`, uso por clave | Implementado y probado |
+| Finance, Business, Security | Solo identidad de marca; sin funcionalidad (no aparecen en la navegación) |
 | Documentos, agentes, tareas, embeddings | Solo esquema (sin API) |
-| Migraciones versionadas | Implementado (SQLite) |
+| Migraciones versionadas | Implementado (SQLite, hasta la 3) |
 | PostgreSQL | DDL validado con un servidor real; la app aún no ejecuta sobre él |
-| AWS (Terraform) | Pendiente; **no se crea nada en AWS sin autorización expresa** |
+| AWS (Terraform) | Aparcado por decisión del propietario; **no se crea nada en AWS sin autorización expresa** |
 
 ## Arranque rápido (Docker)
 
@@ -38,17 +41,17 @@ make run       # API local con recarga en 127.0.0.1:8001
 ```
 
 Detalles en [DEVELOPMENT.md](DEVELOPMENT.md). Arquitectura en [ARCHITECTURE.md](ARCHITECTURE.md),
-decisiones en [docs/decisions](docs/decisions), API en [API.md](API.md), despliegue en
+diseño en [docs/design-system.md](docs/design-system.md), decisiones en [docs/decisions](docs/decisions), API en [API.md](API.md), despliegue en
 [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## Estructura
 
 ```
 apps/api/nexaro_api/   FastAPI: app factory, rutas, dependencias, CLI bootstrap_admin
-packages/nexaro_core/  config, security, database, identity, audit
-packages/ai_gateway/   contrato de proveedores y proveedor Ollama
+packages/nexaro_core/  config, security, database, identity, audit, organizations, api_keys
+packages/ai_gateway/   gateway, políticas, registro de uso y proveedores (Ollama, Bedrock, SageMaker)
 products/personal_ai/  caso de uso de chat (sin FastAPI)
-frontend/              HTML/CSS/ES Modules (js/, css/, views/), PWA
+frontend/              HTML/CSS/ES Modules (js/, css/, views/), PWA; sistema de diseño en docs/design-system.md
 tests/                 unit, integration, security, frontend (E2E jsdom: tests/frontend/run.sh)
 docs/decisions/        ADRs
 ```

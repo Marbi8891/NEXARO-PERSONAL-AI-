@@ -18,13 +18,20 @@
   eres miembro, incluso siendo admin de plataforma) y, en PostgreSQL, Row Level Security.
   Un test inspecciona el esquema y falla si una tabla nueva no lo cumple.
 
+- Frontend: CSP estricta (`script-src 'self'`, sin estilos ni manejadores en línea), sin `innerHTML`/`eval`
+  (un test lo vigila) y fuentes autoalojadas.
+- Claves de API: solo se guarda el hash SHA-256 (clave de 256 bits), el secreto se muestra una vez, caducan
+  y se revocan, dejan de valer si su creador pierde cuenta o membresía, y los fallos se limitan por IP
+  con respuesta uniforme. Nunca se registran en auditoría (ADR-0009).
+- Avisos y panel: se calculan en servidor a partir de datos reales; no incluyen correos, IPs ni contenido.
 - Infraestructura (Terraform): rol de la tarea sin comodines, cifrado con KMS, buckets sin acceso
   público, HTTPS obligatorio, credenciales de base de datos gestionadas por AWS. Tests estáticos
   lo vigilan; `terraform validate` solo se ejecuta en CI.
 
 ## Pendiente / límites
 
-- CSP estricta: requiere sacar el JavaScript inline del frontend (fase de frontend).
+- El límite de intentos (login y claves de API) es en memoria del proceso; con varias instancias haría falta un almacén compartido. `client_ip` debe reflejar la IP real tras un proxy (VERIFY en el despliegue).
+- Sin scopes por clave de API: una clave puede lo mismo que su creador en `/api/v1/chat`.
 - Subir el coste de scrypt exige verificación versionada y rehash (no hecho).
 - RLS solo existe en el DDL de PostgreSQL y no protege frente a superusuarios; la aplicación aún no
   ejecuta sobre PostgreSQL (ADR-0005). En SQLite el aislamiento depende de claves compuestas y de la capa de aplicación.

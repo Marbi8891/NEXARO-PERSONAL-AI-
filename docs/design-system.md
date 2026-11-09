@@ -46,8 +46,9 @@ Solo se usa en icono, etiqueta y filete de cabecera; nunca como fondo grande.
 | NEXARO Security | `--module-security` | `#8e3a3a` |
 | NEXARO Developer | `--module-developer` | `#4f6a1f` |
 
-Un módulo aparece en la navegación **solo cuando tiene funcionalidad real** (ADR-0008). Hoy: Personal AI
-y la plataforma (organizaciones, administración).
+Un módulo aparece en la navegación **solo cuando tiene funcionalidad real** (ADR-0008). Hoy: Personal AI,
+Developer (claves de API y uso) y la plataforma (panel, organizaciones, administración). Finance, Business
+y Security solo existen como acento de marca.
 
 ## Tema
 Claro por defecto y oscuro opcional. Tres modos: *Sistema* (sigue `prefers-color-scheme`), *Claro* y

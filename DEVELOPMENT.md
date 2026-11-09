@@ -16,3 +16,16 @@ make check
 - No se modifican tests existentes para hacerlos pasar.
 - `pre-commit install` activa ruff y gitleaks.
 - Nunca ejecutes `docker compose down -v` ni borres el volumen `nexaro-personal-ai_nexaro_data`.
+
+## Frontend
+
+No hay paso de compilación: edita `frontend/` y recarga. Pruebas:
+
+```bash
+bash tests/frontend/run.sh            # E2E con jsdom contra la API real (no necesita navegador)
+BROWSER=1 bash tests/frontend/run.sh  # además, Chromium real: comportamiento, teclado, móvil y capturas
+```
+
+La primera vez ejecuta `npm install` en `tests/frontend` (jsdom; con `BROWSER=1`, Chromium ≈70 MB). Las
+capturas de `docs/design/screenshots/` se regeneran con `BROWSER=1` y usan datos de prueba. Antes de
+confirmar un cambio de interfaz: `ruff`, `mypy`, `pytest` y la E2E.
