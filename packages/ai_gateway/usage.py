@@ -105,3 +105,18 @@ class UsageStore:
                 (f"-{int(days)} days",),
             ).fetchall()
         return [dict(row) for row in rows]
+
+    def daily(self, days: int) -> list[dict[str, Any]]:
+        """Peticiones y errores por día en los últimos `days` días (sin rellenar huecos)."""
+        with self._database.connect() as db:
+            rows = db.execute(
+                """
+                SELECT date(created_at) AS day, COUNT(*) AS requests,
+                       COALESCE(SUM(status != 'ok'), 0) AS errors
+                FROM model_usage
+                WHERE created_at >= strftime('%Y-%m-%dT00:00:00Z', 'now', ?)
+                GROUP BY day
+                """,
+                (f"-{int(days) - 1} days",),
+            ).fetchall()
+        return [dict(row) for row in rows]

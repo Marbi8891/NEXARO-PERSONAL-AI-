@@ -227,6 +227,23 @@ def list_users(db: sqlite3.Connection) -> list[dict]:
     return [dict(row) for row in rows]
 
 
+def user_counts(db: sqlite3.Connection) -> dict[str, int]:
+    """Totales de cuentas en una consulta: total, pendientes e inactivas aprobadas."""
+    row = db.execute(
+        """
+        SELECT COUNT(*) AS total,
+               COALESCE(SUM(approval_status = 'pending'), 0) AS pending,
+               COALESCE(SUM(approval_status = 'approved' AND is_active = 0), 0) AS inactive
+        FROM users
+        """
+    ).fetchone()
+    return {
+        "total": int(row["total"]),
+        "pending": int(row["pending"]),
+        "inactive": int(row["inactive"]),
+    }
+
+
 def get_registration_enabled(db: sqlite3.Connection) -> bool:
     row = db.execute(
         """

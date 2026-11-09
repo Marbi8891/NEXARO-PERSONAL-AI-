@@ -103,6 +103,27 @@ await scenario("tabla y confirmación en administración", { scheme: "light", vi
   await page.screenshot({ path: `${OUT}d-light-admin-table.png` });
 });
 
+await scenario("panel y campana de avisos (escritorio)", { scheme: "light", viewport: { width: 1280, height: 800 } }, async (page) => {
+  await login(page, "admin@x.io");
+  await page.goto("/#/dashboard");
+  await page.waitForSelector(".stats");
+  await page.getByRole("button", { name: /^Avisos/ }).click();
+  await page.waitForSelector("#notifications-panel:not([hidden])");
+  assert.ok((await page.locator(".notice").count()) >= 1, "el admin con una solicitud pendiente debe ver un aviso real");
+  await page.screenshot({ path: `${OUT}d-light-dashboard.png` });
+  await page.keyboard.press("Escape");
+  assert.equal(await page.locator("#notifications-panel").isHidden(), true);
+});
+
+await scenario("panel sin desbordamiento horizontal (móvil)", { scheme: "dark", viewport: { width: 390, height: 780 } }, async (page) => {
+  await login(page, "admin@x.io");
+  await page.goto("/#/dashboard");
+  await page.waitForSelector(".stats");
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  assert.ok(overflow <= 0, `desbordamiento horizontal: ${overflow}px`);
+  await page.screenshot({ path: `${OUT}m-dark-dashboard.png` });
+});
+
 await scenario("cajón de navegación en móvil", { scheme: "light", viewport: { width: 390, height: 780 } }, async (page) => {
   await login(page, "user@x.io");
   assert.equal(await page.locator("#sidebar").isVisible(), false, "la barra lateral empieza cerrada");

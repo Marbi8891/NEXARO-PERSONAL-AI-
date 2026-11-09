@@ -8,6 +8,7 @@ from typing import Any
 from ai_gateway.providers.base import ChatProvider
 from ai_gateway.schemas import ChatMessage, CompletionRequest
 from nexaro_core.database import Database
+from nexaro_core.timeseries import fill_days, last_days
 from products.personal_ai.prompts import build_system_prompt
 
 HISTORY_LIMIT = 12
@@ -95,7 +96,7 @@ class PersonalAIService:
         ).fetchall()
         return [ChatMessage(role=row["role"], content=row["content"]) for row in reversed(rows)]
 
-    def list_conversations(self, user_id: str) -> list[dict[str, Any]]:
+    def list_conversations(self, user_id: str, limit: int | None = None) -> list[dict[str, Any]]:
         with self._database.connect() as db:
             rows = db.execute(
                 """
@@ -114,11 +115,43 @@ class PersonalAIService:
                 LEFT JOIN messages m ON m.conversation_id = c.id
                 WHERE c.user_id = ?
                 GROUP BY c.id
-                ORDER BY COALESCE(MAX(m.created_at), c.created_at) DESC
+                ORDER BY COALESCE(MAX(m.created_at), c.created_at) DESC,
+                         COALESCE(MAX(m.id), 0) DESC
+                LIMIT ?
                 """,
-                (user_id,),
+                (user_id, -1 if limit is None else limit),  # LIMIT -1 = sin límite en SQLite
             ).fetchall()
         return [dict(row) for row in rows]
+
+    def activity(self, user_id: str, days: int = 14, recent: int = 5) -> dict[str, Any]:
+        """Resumen de actividad del usuario: totales, mensajes por día y últimas conversaciones."""
+        window = last_days(days)
+        with self._database.connect() as db:
+            totals = db.execute(
+                """
+                SELECT (SELECT COUNT(*) FROM conversations WHERE user_id = ?) AS conversations,
+                       COUNT(m.id) AS messages, MAX(m.created_at) AS last_activity
+                FROM messages m JOIN conversations c ON c.id = m.conversation_id
+                WHERE c.user_id = ?
+                """,
+                (user_id, user_id),
+            ).fetchone()
+            per_day = db.execute(
+                """
+                SELECT date(m.created_at) AS day, COUNT(*) AS messages
+                FROM messages m JOIN conversations c ON c.id = m.conversation_id
+                WHERE c.user_id = ? AND date(m.created_at) >= ?
+                GROUP BY day
+                """,
+                (user_id, window[0]),
+            ).fetchall()
+        return {
+            "conversations": int(totals["conversations"]),
+            "messages": int(totals["messages"]),
+            "last_activity": totals["last_activity"],
+            "daily": fill_days(window, {r["day"]: int(r["messages"]) for r in per_day}, "messages"),
+            "recent": self.list_conversations(user_id, limit=recent),
+        }
 
     def get_conversation(self, user_id: str, conversation_id: str) -> dict[str, Any]:
         with self._database.connect() as db:

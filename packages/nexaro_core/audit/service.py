@@ -117,3 +117,18 @@ def list_events(
             "SELECT * FROM audit_events ORDER BY id DESC LIMIT ?", (limit,)
         ).fetchall()
     return [dict(row) for row in rows]
+
+
+def count_events(
+    db: sqlite3.Connection, *, action: str, outcome: Outcome, since_minutes: int
+) -> int:
+    """Eventos de una acción y resultado en la última ventana (usa idx_audit_action)."""
+    row = db.execute(
+        """
+        SELECT COUNT(*) AS total FROM audit_events
+        WHERE action = ? AND outcome = ?
+          AND occurred_at >= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', ?)
+        """,
+        (action, outcome, f"-{int(since_minutes)} minutes"),
+    ).fetchone()
+    return int(row["total"])

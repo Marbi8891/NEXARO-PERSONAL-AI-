@@ -16,6 +16,7 @@ from nexaro_core.identity.service import (
     set_registration_enabled,
     set_user_active,
     set_user_role,
+    user_counts,
 )
 
 __all__ = [
@@ -36,4 +37,5 @@ __all__ = [
     "set_registration_enabled",
     "set_user_active",
     "set_user_role",
+    "user_counts",
 ]

@@ -82,6 +82,27 @@ await check("abrir conversación del historial restaura mensajes", async () => {
   $(".history-item").click();
   await until(() => document.querySelectorAll(".message").length === 2, "restore");
 });
+await check("panel: cifras reales del usuario, sin sección de plataforma", async () => {
+  location.hash = "#/dashboard";
+  await until(() => $(".stats") && text().includes("Tu actividad"), "dashboard");
+  const stats = Object.fromEntries([...document.querySelectorAll(".stat")].map((s) => [s.querySelector("dt").textContent, s.querySelector("dd").textContent]));
+  assert.equal(stats["Conversaciones"], "1");
+  assert.equal(stats["Mensajes"], "2");
+  assert.ok($(".chart"), "gráfico de actividad");
+  assert.equal($(".chart").getAttribute("role"), "img");
+  assert.ok(!text().includes("solo administradores"));
+  assert.equal(document.querySelectorAll(".recent-list li").length, 1);
+});
+await check("campana de avisos: se abre, lista el estado real y cierra con Escape", async () => {
+  const bell = $(".bell-trigger");
+  assert.equal(bell.getAttribute("aria-expanded"), "false");
+  bell.click();
+  assert.equal(bell.getAttribute("aria-expanded"), "true");
+  await until(() => !$("#notifications-panel").hidden && $(".notice-list").children.length > 0, "avisos");
+  assert.ok($(".notice-list").textContent.length > 0);
+  document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  assert.equal(bell.getAttribute("aria-expanded"), "false");
+});
 await check("usuario normal no accede a #/admin", async () => {
   location.hash = "#/admin";
   await until(() => location.hash.startsWith("#/chat"), "redirect");
@@ -145,6 +166,15 @@ await until(() => $(".app"), "admin app");
 await check("admin ve Administración y la usa", async () => {
   assert.ok(text().includes("Administración"));
   location.hash = "#/admin";
+  await until(() => text().includes("pend@x.io"), "users");
+});
+await check("panel de admin: sección de plataforma con cifras reales", async () => {
+  location.hash = "#/dashboard";
+  await until(() => text().includes("solo administradores"), "admin dashboard");
+  assert.ok(text().includes("Cuentas"));
+  assert.ok(text().includes("Accesos fallidos"));
+  assert.ok(text().includes("Pendientes: 1"));
+  location.hash = "#/admin"; // las comprobaciones siguientes parten de Administración
   await until(() => text().includes("pend@x.io"), "users");
 });
 await check("admin aprueba un usuario pendiente", async () => {

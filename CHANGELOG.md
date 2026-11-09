@@ -19,6 +19,7 @@
 - Identidad visual y sistema de diseño (F10): tokens claro/oscuro, Inter autoalojada, símbolo y logotipo, iconos PWA, selector de tema, test de contraste WCAG AA, ADR-0008, `docs/design-system.md`.
 - Componentes y marco (F11): cabecera con menú de usuario y perfil, tabla de datos (búsqueda, filtros, orden, paginación), estados cargando/error/vacío, avisos, confirmación modal, formularios consistentes y cajón de navegación móvil.
 - Prueba en Chromium real (`BROWSER=1 tests/frontend/run.sh`) con capturas de referencia.
+- Panel y avisos (F12): `GET /api/dashboard` (actividad del usuario y, solo para administradores, cuentas, uso del modelo y contadores de seguridad) y `GET /api/notifications` (avisos derivados del estado real, sin persistencia ni datos personales); vista `#/dashboard`, gráfico de barras SVG accesible y campana en la cabecera. Sin cifras inventadas: lo que no hay se muestra como 0 o vacío.
 
 ### Cambiado
 - La app pasa a `create_app()` (factory); el comando de admin es `python -m nexaro_api.bootstrap_admin`.

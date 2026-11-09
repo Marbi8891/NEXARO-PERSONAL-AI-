@@ -50,6 +50,9 @@ export const api = {
   logout: () => request("/api/auth/logout", { method: "POST" }),
   health: () => request("/api/health", { session: false }),
 
+  dashboard: (days = 14) => request(`/api/dashboard?days=${days}`),
+  notifications: () => request("/api/notifications"),
+
   conversations: () => request("/api/conversations"),
   conversation: (conversationId) => request(`/api/conversations/${id(conversationId)}`),
   chat: (message, conversationId) => request("/api/chat", { method: "POST", body: { message, conversation_id: conversationId } }),

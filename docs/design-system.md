@@ -75,6 +75,9 @@ CSS en `frontend/css/components.css`; lógica en `frontend/js/components/`. Todo
 | Avisos | `toast.js` → `toast()` | Región `aria-live`; éxito se cierra a los 5 s, error espera al usuario |
 | Confirmación | `dialog.js` → `confirmDialog()` | `<dialog>` modal nativo; el foco inicial es «Cancelar»; Escape cancela |
 | Menú de usuario | `user-menu.js` | Botón + panel (`aria-expanded`); Escape y clic fuera cierran; Escape devuelve el foco |
+| Campana de avisos | `notifications.js` | Avisos derivados del estado real (`GET /api/notifications`); contador solo si hay avisos; sin avisos, el panel lo dice. Icono SVG, nunca emoji |
+| Cifras | `.stats` / `.stat` | Valor grande, etiqueta y nota opcional; el valor se lee primero |
+| Gráfico de barras | `chart.js` → `barChart()` | Una serie, color `--accent`, eje desde cero; `role="img"` con resumen y `<details>` con la tabla de datos. Solo donde informa (series diarias) |
 | Marca | `brand.js` | Símbolo + logotipo |
 | Pestañas | `.tabs` + `role="tab"` | `aria-selected` |
 | Etiqueta de estado | `.badge.ok/.warn/.bad` | Color + texto |
@@ -84,7 +87,7 @@ CSS en `frontend/css/components.css`; lógica en `frontend/js/components/`. Todo
 Barra lateral oscura (marca, estado del modelo, navegación, hueco para contexto de la vista), cabecera con
 título de página y menú de usuario, y contenido. En pantallas de hasta 760 px la barra lateral pasa a **cajón**
 con botón de menú, botón de cierre, capa de fondo y cierre con Escape o al navegar. Cada vista fija su título con
-`shell.setTitle()`. Hueco previsto para los avisos: `shell.topbarActions`.
+`shell.setTitle()`. La cabecera aloja la campana de avisos y el menú de usuario (`shell.topbarActions`). La navegación empieza en «Panel» (`#/dashboard`); la entrada por defecto tras iniciar sesión sigue siendo el chat.
 
 ## Accesibilidad
 - Enlace «Saltar al contenido» como primer elemento enfocable; destino `main#view`.
@@ -103,4 +106,4 @@ con botón de menú, botón de cierre, capa de fondo y cierre con Escape o al na
 
 ## Capturas de referencia
 `docs/design/screenshots/` (generadas por `tests/frontend/browser.mjs` con datos de prueba, no reales):
-`d-light-*`, `d-dark-*` (escritorio) y `m-light-*` (móvil, 390 px) para login, chat y administración.
+`d-light-*`, `d-dark-*` (escritorio) y `m-light-*` (móvil, 390 px) para login, chat y administración, más `d-light-dashboard` (panel con campana abierta) y `m-dark-dashboard`.

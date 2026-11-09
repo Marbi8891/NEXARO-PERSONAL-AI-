@@ -1,6 +1,7 @@
 // Marco de la aplicación: barra lateral (navegación y estado del modelo), cabecera y contenido.
 import { api } from "./api.js";
 import { brand } from "./components/brand.js";
+import { notificationBell } from "./components/notifications.js";
 import { userMenu } from "./components/user-menu.js";
 import { clear, h } from "./dom.js";
 import { rememberConversation, setNotice, setUser } from "./state.js";
@@ -12,6 +13,7 @@ export function createShell({ user }) {
   const statusText = h("span", {}, "Comprobando conexión...");
 
   const links = [
+    { nav: "dashboard", href: "#/dashboard", label: "Panel" },
     { nav: "chat", href: "#/chat", label: "Chat" },
     { nav: "organizations", href: "#/organizations", label: "Organizaciones" },
     ...(user.role === "admin" ? [{ nav: "admin", href: "#/admin", label: "Administración" }] : []),
@@ -23,7 +25,8 @@ export function createShell({ user }) {
   const topbarActions = h("div", { class: "topbar-actions" });
 
   const menu = userMenu({ user, onLogout: logout });
-  topbarActions.append(menu.element);
+  const bell = notificationBell();
+  topbarActions.append(bell.element, menu.element);
 
   const menuButton = h("button", { class: "menu-button", type: "button", "aria-controls": "sidebar", "aria-expanded": "false", "aria-label": "Abrir navegación", onclick: () => setDrawer(app.dataset.navOpen !== "true") }, "☰");
   const scrim = h("div", { class: "scrim", onclick: () => setDrawer(false) });
@@ -94,6 +97,7 @@ export function createShell({ user }) {
     setActive(nav) {
       setDrawer(false);
       menu.close();
+      bell.refresh();
       for (const link of links) {
         if (link.dataset.nav === nav) link.setAttribute("aria-current", "page");
         else link.removeAttribute("aria-current");
@@ -103,6 +107,7 @@ export function createShell({ user }) {
       clearInterval(timer);
       document.removeEventListener("keydown", onEscape);
       menu.destroy();
+      bell.destroy();
       clear(app);
     },
   };
