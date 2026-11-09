@@ -63,7 +63,7 @@ def create_api_key(
         SELECT COUNT(*) AS total FROM api_keys
         WHERE organization_id = ? AND revoked_at IS NULL
           AND (expires_at IS NULL OR expires_at > {_NOW})
-        """,  # noqa: S608 - _NOW es una constante
+        """,  # noqa: S608  # nosec B608 - _NOW es una constante
         (organization_id,),
     ).fetchone()["total"]
     if active >= MAX_ACTIVE_KEYS:
@@ -119,7 +119,7 @@ def list_api_keys(db: sqlite3.Connection, organization_id: str) -> list[dict[str
         FROM api_keys k JOIN users u ON u.id = k.created_by
         WHERE k.organization_id = ?
         ORDER BY k.created_at DESC, k.rowid DESC
-        """,  # noqa: S608
+        """,  # noqa: S608  # nosec B608
         (organization_id,),
     ).fetchall()
     return [
@@ -137,7 +137,7 @@ def revoke_api_key(db: sqlite3.Connection, organization_id: str, key_id: str) ->
     if row is None:
         return False
     db.execute(
-        f"UPDATE api_keys SET revoked_at = {_NOW} WHERE id = ? AND revoked_at IS NULL",  # noqa: S608
+        f"UPDATE api_keys SET revoked_at = {_NOW} WHERE id = ? AND revoked_at IS NULL",  # noqa: S608  # nosec B608
         (key_id,),
     )
     return True
@@ -157,7 +157,7 @@ def authenticate_api_key(db: sqlite3.Connection, secret: str) -> ApiKeyIdentity 
                           AND m.status = 'active'
         WHERE k.key_hash = ? AND k.revoked_at IS NULL
           AND (k.expires_at IS NULL OR k.expires_at > {_NOW})
-        """,  # noqa: S608
+        """,  # noqa: S608  # nosec B608
         (_hash(secret),),
     ).fetchone()
     if row is None:
@@ -167,7 +167,7 @@ def authenticate_api_key(db: sqlite3.Connection, secret: str) -> ApiKeyIdentity 
         UPDATE api_keys SET last_used_at = {_NOW}
         WHERE id = ? AND (last_used_at IS NULL
               OR last_used_at <= strftime('%Y-%m-%d %H:%M:%S', 'now', ?))
-        """,  # noqa: S608
+        """,  # noqa: S608  # nosec B608
         (row["id"], f"-{LAST_USED_GRANULARITY_SECONDS} seconds"),
     )
     return ApiKeyIdentity(

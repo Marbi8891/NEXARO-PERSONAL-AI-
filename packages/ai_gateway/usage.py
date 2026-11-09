@@ -91,7 +91,7 @@ class UsageStore:
         marks = ", ".join("?" for _ in columns)
         with self._database.connect() as db:
             db.execute(
-                f"INSERT INTO model_usage ({', '.join(columns)}) VALUES ({marks})",  # noqa: S608
+                f"INSERT INTO model_usage ({', '.join(columns)}) VALUES ({marks})",  # noqa: S608  # nosec B608 - huecos fijos, ver tests/security/test_sql_injection.py
                 tuple(columns.values()),
             )
 

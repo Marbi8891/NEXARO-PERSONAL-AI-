@@ -168,12 +168,12 @@ def list_expenses(
 ) -> dict[str, Any]:
     where, args = _filters(organization_id, start, end, category, query)
     totals = db.execute(
-        f"SELECT COUNT(*) AS n, COALESCE(SUM(amount_cents), 0) AS cents, "  # noqa: S608
+        f"SELECT COUNT(*) AS n, COALESCE(SUM(amount_cents), 0) AS cents, "  # noqa: S608  # nosec B608
         f"COALESCE(SUM(vat_cents), 0) AS vat FROM expenses WHERE {where}",
         args,
     ).fetchone()
     rows = db.execute(
-        f"SELECT * FROM expenses WHERE {where} "  # noqa: S608
+        f"SELECT * FROM expenses WHERE {where} "  # noqa: S608  # nosec B608
         "ORDER BY spent_on DESC, created_at DESC, rowid DESC LIMIT ? OFFSET ?",
         [*args, min(max(limit, 1), MAX_LIMIT), max(offset, 0)],
     ).fetchall()
@@ -207,13 +207,13 @@ def summary(
     following = _month_start(first, -1)
     base = "organization_id = ? AND deleted_at IS NULL"
     current = db.execute(
-        f"SELECT COUNT(*) AS n, COALESCE(SUM(amount_cents), 0) AS cents, "  # noqa: S608
+        f"SELECT COUNT(*) AS n, COALESCE(SUM(amount_cents), 0) AS cents, "  # noqa: S608  # nosec B608
         f"COALESCE(SUM(vat_cents), 0) AS vat FROM expenses "
         f"WHERE {base} AND spent_on >= ? AND spent_on < ?",
         (organization_id, first.isoformat(), following.isoformat()),
     ).fetchone()
     by_category = db.execute(
-        f"SELECT category, SUM(amount_cents) AS cents, COUNT(*) AS n FROM expenses "  # noqa: S608
+        f"SELECT category, SUM(amount_cents) AS cents, COUNT(*) AS n FROM expenses "  # noqa: S608  # nosec B608
         f"WHERE {base} AND spent_on >= ? AND spent_on < ? "
         "GROUP BY category ORDER BY cents DESC, category",
         (organization_id, first.isoformat(), following.isoformat()),
@@ -222,7 +222,7 @@ def summary(
     per_month = {
         r["month"]: r["cents"]
         for r in db.execute(
-            f"SELECT substr(spent_on, 1, 7) AS month, SUM(amount_cents) AS cents FROM expenses "  # noqa: S608
+            f"SELECT substr(spent_on, 1, 7) AS month, SUM(amount_cents) AS cents FROM expenses "  # noqa: S608  # nosec B608
             f"WHERE {base} AND spent_on >= ? AND spent_on < ? GROUP BY month",
             (organization_id, months[0].isoformat(), following.isoformat()),
         )
@@ -264,7 +264,7 @@ def export_csv(
     """CSV para hoja de cálculo en español: separador `;`, coma decimal, BOM UTF-8."""
     where, args = _filters(organization_id, start, end, category, None)
     rows = db.execute(
-        f"SELECT * FROM expenses WHERE {where} ORDER BY spent_on, created_at, rowid",  # noqa: S608
+        f"SELECT * FROM expenses WHERE {where} ORDER BY spent_on, created_at, rowid",  # noqa: S608  # nosec B608
         args,
     ).fetchall()
     out = io.StringIO()
