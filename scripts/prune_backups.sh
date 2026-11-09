@@ -20,7 +20,11 @@ case "$keep" in ''|*[!0-9]*) echo "--keep debe ser un entero" >&2; exit 2 ;; esa
 [ -d "$dir" ] || { echo "no existe el directorio $dir" >&2; exit 2; }
 
 # Los nombres llevan sello de fecha: el orden alfabético es el cronológico.
-mapfile -t all < <(find "$dir" -maxdepth 1 -type f -name 'nexaro.pre-rebuild-*.db' | sort)
+# Sin mapfile: el bash 3.2 de macOS no lo tiene.
+all=()
+while IFS= read -r file; do
+  all+=("$file")
+done < <(find "$dir" -maxdepth 1 -type f -name 'nexaro.pre-rebuild-*.db' | sort)
 total=${#all[@]}
 if [ "$total" -le "$keep" ]; then
   echo "Hay $total copias (límite $keep): nada que podar."
