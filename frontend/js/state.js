@@ -28,3 +28,21 @@ export function rememberedConversation() {
     return null;
   }
 }
+
+const MODE_KEY = "nexaro_chat_mode";
+export const CHAT_MODES = ["general", "tutor"];
+export function rememberMode(mode) {
+  try {
+    localStorage.setItem(MODE_KEY, mode);
+  } catch {
+    // Sin almacenamiento: el modo vuelve a «general» al recargar.
+  }
+}
+export function rememberedMode() {
+  try {
+    const mode = localStorage.getItem(MODE_KEY);
+    return CHAT_MODES.includes(mode) ? mode : "general";
+  } catch {
+    return "general";
+  }
+}

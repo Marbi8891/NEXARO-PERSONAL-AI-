@@ -3,6 +3,9 @@
 ## [Sin publicar] — rama `refactor/nexaro-platform`
 
 ### Añadido
+- Modo tutor de programación: `mode: "tutor"` en `/api/chat`, `/api/chat/stream` y `/api/v1/chat`, y un selector «Modo» en el chat. Guía con pistas y no da la solución hasta que hay un intento propio (ADR-0020).
+- Evaluación de calidad del modelo: `scripts/quality_eval.py`, 31 casos en `scripts/eval/cases.json` y `make eval` para comparar modelos con el prompt de producción. Puntuación determinista y ejecución del código generado en un contenedor sin red.
+- Bloqueo de preguntas sobre el modelo de IA y la infraestructura interna: filtro determinista en el backend (chat, streaming, `/api/v1/chat` y `documents/ask`) que responde con un texto fijo sin consultar al modelo. El prompt de sistema ya no incluye el proveedor, el modelo ni el stack (ADR-0019).
 - Documentos PDF con texto: `POST /api/organizations/{id}/documents/pdf` (cuerpo binario) y subida desde Documentos; extracción con `pypdf==7.0.0`, sin OCR, con límites de tamaño, páginas y texto (ADR-0018).
 - Documentos en el chat (Fase 4): interruptor «Consultar mis documentos» (opt-in por mensaje) que añade al modelo los mejores fragmentos BM25 de la organización elegida y muestra las fuentes; exige `documents:read` (ADR-0017).
 - Gateway (Fase 2): cortacircuitos por proveedor (`AI_BREAKER_THRESHOLD`, `AI_BREAKER_COOLDOWN_SECONDS`) que falla en el acto si Ollama está caído y lo vuelve a probar tras el enfriamiento, `GET /api/admin/models` (salud, modelo configurado, instalado o no, modelos instalados) y pestaña «Modelos» en Administración (ADR-0016).

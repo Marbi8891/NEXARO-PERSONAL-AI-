@@ -31,7 +31,11 @@ async def chat(request: Request, body: ChatRequest, user: CurrentUser, ctx: Ctx)
 
     try:
         outcome = await ctx.personal_ai.chat(
-            user["id"], body.message, body.conversation_id, document_organization_id=document_org
+            user["id"],
+            body.message,
+            body.conversation_id,
+            document_organization_id=document_org,
+            mode=body.mode,
         )
     except ConversationNotFoundError:
         raise NOT_FOUND from None
@@ -80,6 +84,7 @@ async def chat_stream(
             body.message,
             body.conversation_id,
             document_organization_id=document_org,
+            mode=body.mode,
         )
     except BaseException as exc:
         lease.release()

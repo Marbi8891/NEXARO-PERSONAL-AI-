@@ -60,14 +60,14 @@ export function parseSse(buffer) {
 
 // Chat en streaming: llama a onEvent por cada evento (start, sources, token, done, error) según llega.
 // `documentOrganizationId` (opcional) activa la consulta de los documentos de esa organización.
-export async function chatStream(message, conversationId, { signal, onEvent, documentOrganizationId = null }) {
+export async function chatStream(message, conversationId, { signal, onEvent, documentOrganizationId = null, mode = "general" }) {
   let response;
   try {
     response = await fetch("/api/chat/stream", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, conversation_id: conversationId, document_organization_id: documentOrganizationId }),
+      body: JSON.stringify({ message, conversation_id: conversationId, document_organization_id: documentOrganizationId, mode }),
       signal,
     });
   } catch (error) {

@@ -24,7 +24,7 @@ En producción `/docs` está desactivado. En desarrollo, la referencia generada 
 
 | Método | Ruta | Acceso | Notas |
 |---|---|---|---|
-| POST | `/chat` | sesión | `{message, conversation_id?, document_organization_id?}` → `{conversation_id, answer, sources?}`. Con `document_organization_id` se consultan los documentos de esa organización (requiere `documents:read`; 404 si no eres miembro, 403 sin permiso) y `sources` lista los fragmentos usados |
+| POST | `/chat` | sesión | `{message, conversation_id?, document_organization_id?, mode?}` → `{conversation_id, answer, sources?}`. `mode`: `general` (por defecto) o `tutor` (guía con pistas en lugar de dar la solución; ADR-0020). Lo mismo en `/chat/stream` y `/api/v1/chat`. Con `document_organization_id` se consultan los documentos de esa organización (requiere `documents:read`; 404 si no eres miembro, 403 sin permiso) y `sources` lista los fragmentos usados |
 | POST | `/chat/stream` | sesión | mismo cuerpo; respuesta `text/event-stream` con eventos JSON `start` (`conversation_id`), `sources` (solo con documentos; `sources`), `token` (`content`), `done` (`truncated`, `metrics`) o `error` (`message`). 404 antes de emitir si la conversación es ajena. Cerrar la conexión cancela la generación y se guarda lo generado |
 | GET | `/conversations` | sesión | solo las del usuario |
 | GET | `/conversations/{id}` | sesión | 404 si no es del usuario |

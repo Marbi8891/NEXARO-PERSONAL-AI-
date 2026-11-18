@@ -1,4 +1,4 @@
-.PHONY: install lint format typecheck test cov check run up down logs audit
+.PHONY: install lint format typecheck test cov check run up down logs audit eval
 
 PY ?= python3
 
@@ -40,3 +40,19 @@ logs:
 
 audit:
 	pip-audit -r requirements/base.txt -r requirements/aws.txt
+
+# Evaluación de calidad (ver DEVELOPMENT.md). Paso 1: genera respuestas en la red de Ollama.
+# Paso 2: las puntúa ejecutando el código del modelo en un contenedor sin red ni privilegios.
+EVAL_MODELS ?= qwen2.5:3b
+EVAL_IMAGE ?= python:3.12-slim
+EVAL_ARGS ?=  # p. ej. EVAL_ARGS="--only tutor"
+eval:
+	mkdir -p eval-out
+	docker run --rm --network ollama-local_default -v "$(CURDIR):/repo:ro" -v "$(CURDIR)/eval-out:/out" \
+		$(EVAL_IMAGE) python /repo/scripts/quality_eval.py --base-url http://ollama:11434 \
+		--models $(EVAL_MODELS) --save-answers /out/respuestas.json --report /out/informe.md $(EVAL_ARGS)
+	docker run --rm --network none --read-only --tmpfs /tmp --cap-drop ALL \
+		--security-opt no-new-privileges --memory 512m --pids-limit 128 \
+		-v "$(CURDIR):/repo:ro" -v "$(CURDIR)/eval-out:/out" \
+		$(EVAL_IMAGE) python /repo/scripts/quality_eval.py --grade-only /out/respuestas.json \
+		--run-code --report /out/informe.md $(EVAL_ARGS)

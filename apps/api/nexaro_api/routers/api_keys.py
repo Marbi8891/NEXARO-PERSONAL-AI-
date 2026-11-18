@@ -118,6 +118,7 @@ async def public_chat(body: ChatRequest, key: ChatKey, ctx: Ctx) -> dict[str, An
             body.conversation_id,
             organization_id=key.organization_id,
             api_key_id=key.key_id,
+            mode=body.mode,
         )
     except ConversationNotFoundError:
         raise HTTPException(status_code=404, detail="Conversación no encontrada") from None

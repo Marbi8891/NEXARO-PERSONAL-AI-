@@ -34,3 +34,6 @@ htmlcov/
 *.tfvars
 !*.tfvars.example
 node_modules
+
+# Resultados de make eval (respuestas del modelo)
+eval-out/

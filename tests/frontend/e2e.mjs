@@ -379,6 +379,35 @@ await check("chat con documentos: opt-in, envía la organización y muestra las 
     globalThis.fetch = realFetch;
   }
 });
+await check("modo tutor: se elige en el chat, se envía con el mensaje y se recuerda", async () => {
+  location.hash = "#/chat";
+  await until(() => $("#chat-mode"), "selector de modo");
+  assert.equal($("#chat-mode").value, "general", "por defecto, modo general");
+  let sent = null;
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    if (String(url).includes("/api/chat/stream")) sent = JSON.parse(init.body);
+    return realFetch(url, init);
+  };
+  try {
+    $("#chat-mode").value = "tutor";
+    $("#chat-mode").dispatchEvent(new window.Event("change"));
+    assert.match($("#message").placeholder, /ejercicio/);
+    $("#message").value = "¿cómo empiezo un bucle?";
+    submit($(".composer"));
+    await until(() => !$(".message.generating") && $(".composer button").textContent === "Enviar", "respuesta del tutor");
+    assert.equal(sent.mode, "tutor");
+    location.hash = "#/dashboard";
+    await until(() => !$("#chat-mode"), "fuera del chat");
+    location.hash = "#/chat";
+    await until(() => $("#chat-mode"), "vuelta al chat");
+    assert.equal($("#chat-mode").value, "tutor", "el modo se recuerda");
+    $("#chat-mode").value = "general";
+    $("#chat-mode").dispatchEvent(new window.Event("change"));
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
 await check("botón Detener corta la respuesta, conserva lo generado y deja enviar de nuevo", async () => {
   $("#message").value = "algo lento";
   submit($(".composer"));

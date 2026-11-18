@@ -16,7 +16,8 @@ from ai_gateway.streaming import stream_completion
 from nexaro_core.database import Database, begin_write
 from nexaro_core.timeseries import fill_days, last_days
 from products.personal_ai import documents as docs
-from products.personal_ai.prompts import build_system_prompt
+from products.personal_ai.guard import REFUSAL, restricted_topic
+from products.personal_ai.prompts import Mode, build_system_prompt
 
 logger = logging.getLogger("nexaro.chat")
 
@@ -45,6 +46,28 @@ def _source(hit: docs.Hit) -> dict[str, Any]:
         "snippet": hit.snippet,
         "score": hit.score,
     }
+
+
+def _output_class(message: str, mode: Mode) -> str:
+    """El tutor da pistas, no programas enteros: nunca usa el tope largo de «code». En una CPU
+    sin GPU, además, menos tokens de salida son respuestas antes."""
+    category = classify_query(message)
+    return "default" if mode == "tutor" and category == "code" else category
+
+
+def _is_restricted(message: str) -> bool:
+    """Preguntas sobre el modelo o la infraestructura interna: no llegan al proveedor."""
+    category = restricted_topic(message)
+    if category is not None:
+        # Solo la categoría: el texto del usuario no se escribe en los logs.
+        logger.info("chat blocked category=%s", category)
+    return category is not None
+
+
+async def _refusal_events() -> AsyncIterator[dict[str, Any]]:
+    """Mismo contrato de eventos que una respuesta del modelo: token y done."""
+    yield {"event": "token", "content": REFUSAL}
+    yield {"event": "done", "truncated": False, "metrics": None}
 
 
 class ConversationNotFoundError(Exception):
@@ -96,14 +119,20 @@ class PersonalAIService:
         organization_id: str | None = None,
         api_key_id: str | None = None,
         document_organization_id: str | None = None,
+        mode: Mode = "general",
     ) -> ChatOutcome:
         conversation_id = conversation_id or str(uuid.uuid4())
+        if _is_restricted(message):
+            await asyncio.to_thread(
+                self._record_refusal, user_id, message, conversation_id, organization_id
+            )
+            return ChatOutcome(conversation_id, REFUSAL)
         hits = await asyncio.to_thread(self._retrieve, document_organization_id, message)
         turn = await asyncio.to_thread(
             self._begin_turn, user_id, message, conversation_id, organization_id
         )
         request = self._build_request(
-            user_id, message, turn.history, organization_id, api_key_id, hits
+            user_id, message, turn.history, organization_id, api_key_id, hits, mode
         )
         try:
             result = await self._provider.complete(request)
@@ -125,16 +154,22 @@ class PersonalAIService:
         organization_id: str | None = None,
         api_key_id: str | None = None,
         document_organization_id: str | None = None,
+        mode: Mode = "general",
     ) -> tuple[str, AsyncIterator[dict[str, Any]]]:
         """Prepara el turno (lanza ConversationNotFoundError antes de emitir nada) y devuelve
         el id de la conversación y el flujo de eventos: [sources], token*, done o error."""
         conversation_id = conversation_id or str(uuid.uuid4())
+        if _is_restricted(message):
+            await asyncio.to_thread(
+                self._record_refusal, user_id, message, conversation_id, organization_id
+            )
+            return conversation_id, _refusal_events()
         hits = await asyncio.to_thread(self._retrieve, document_organization_id, message)
         turn = await asyncio.to_thread(
             self._begin_turn, user_id, message, conversation_id, organization_id
         )
         request = self._build_request(
-            user_id, message, turn.history, organization_id, api_key_id, hits
+            user_id, message, turn.history, organization_id, api_key_id, hits, mode
         )
         sources = None if hits is None else [_source(h) for h in hits]
         return conversation_id, self._events(conversation_id, request, turn, sources)
@@ -147,11 +182,12 @@ class PersonalAIService:
         organization_id: str | None,
         api_key_id: str | None,
         hits: list[docs.Hit] | None = None,
+        mode: Mode = "general",
     ) -> CompletionRequest:
         """`hits` None: documentos desactivados. Lista (aunque vacía): activados. Los fragmentos
         solo viajan al modelo en este mensaje; en la base se guarda el texto tal cual lo escribió
         el usuario."""
-        system = build_system_prompt(provider=self._provider.name.capitalize(), model=self._model)
+        system = build_system_prompt(mode)
         content = message
         if hits is not None:
             if hits:
@@ -166,7 +202,7 @@ class PersonalAIService:
                 *history,
                 ChatMessage(role="user", content=content),
             ],
-            max_output_tokens=self._output_tokens.get(classify_query(message)),
+            max_output_tokens=self._output_tokens.get(_output_class(message, mode)),
             user_id=user_id,
             organization_id=organization_id,
             api_key_id=api_key_id,
@@ -192,6 +228,18 @@ class PersonalAIService:
             )
             user_message_id = int(cursor.lastrowid or 0)
         return _Turn(history, user_message_id, created)
+
+    def _record_refusal(
+        self, user_id: str, message: str, conversation_id: str, organization_id: str | None
+    ) -> None:
+        """Turno bloqueado: se guarda como cualquier otro (pregunta y respuesta) sin consultar al
+        modelo. La propiedad de la conversación se comprueba igual que en un turno normal."""
+        with self._database.connect() as db:
+            self._claim_conversation(db, user_id, conversation_id, organization_id)
+            db.executemany(
+                "INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)",
+                [(conversation_id, "user", message), (conversation_id, "assistant", REFUSAL)],
+            )
 
     def _save_answer(self, conversation_id: str, content: str) -> None:
         with self._database.connect() as db:

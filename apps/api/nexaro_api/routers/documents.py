@@ -20,6 +20,7 @@ from nexaro_core.audit import record_event
 from nexaro_core.database import begin_write
 from products.personal_ai import documents as docs
 from products.personal_ai import pdf
+from products.personal_ai.guard import REFUSAL, restricted_topic
 from products.personal_ai.prompts import build_system_prompt
 
 router = APIRouter(prefix="/api/organizations/{organization_id}/documents", tags=["documents"])
@@ -195,14 +196,14 @@ async def ask(
     """Responde con los fragmentos más relevantes como contexto. Sin fragmentos relevantes no se
     consulta al modelo: se dice que no hay información (evita respuestas inventadas)."""
     validate_origin(request, ctx)
+    if restricted_topic(body.question) is not None:
+        return {"answer": REFUSAL, "sources": []}
     with ctx.database.connect() as db:
         hits = docs.search(db, organization_id, body.question, TOP_FRAGMENTS)
     if not hits:
         return {"answer": NO_ANSWER, "sources": []}
 
-    system = build_system_prompt(
-        provider=ctx.provider.name.capitalize(), model=ctx.personal_ai.model
-    )
+    system = build_system_prompt()
     system += docs.DOCUMENT_RULES
     user = f"{docs.build_context(hits)}\n\nPregunta: {body.question}"
     lease = acquire_generation(ctx, f"user:{access.user['id']}")

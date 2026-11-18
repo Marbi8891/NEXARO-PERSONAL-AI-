@@ -4,7 +4,7 @@ import { toast } from "../components/toast.js";
 import { clear, formatDate, h } from "../dom.js";
 import { renderMarkdown } from "../markdown.js";
 import { navigate } from "../router.js";
-import { rememberConversation, rememberedConversation } from "../state.js";
+import { rememberConversation, rememberedConversation, rememberedMode, rememberMode } from "../state.js";
 
 export async function chatView({ container, sidebar, params, shell }) {
   shell.setTitle("Chat");
@@ -13,7 +13,22 @@ export async function chatView({ container, sidebar, params, shell }) {
   let controller = null;
 
   const messages = h("div", { class: "messages", role: "log", "aria-live": "polite" });
-  const input = h("textarea", { id: "message", rows: "2", placeholder: "Escribe tu mensaje...", "aria-label": "Mensaje", maxlength: "8000" });
+  const PLACEHOLDERS = { general: "Escribe tu mensaje...", tutor: "Cuéntame tu ejercicio o pega tu código..." };
+  const input = h("textarea", { id: "message", rows: "2", placeholder: PLACEHOLDERS.general, "aria-label": "Mensaje", maxlength: "8000" });
+  // Modo tutor: guía con pistas en vez de dar la solución. Se recuerda entre visitas.
+  const modeSelect = h(
+    "select",
+    { id: "chat-mode" },
+    h("option", { value: "general" }, "General"),
+    h("option", { value: "tutor" }, "Tutor de programación"),
+  );
+  const applyMode = () => {
+    input.placeholder = PLACEHOLDERS[modeSelect.value];
+    rememberMode(modeSelect.value);
+  };
+  modeSelect.value = rememberedMode();
+  modeSelect.addEventListener("change", applyMode);
+  const modeBar = h("label", { class: "mode-toggle" }, h("span", {}, "Modo"), modeSelect);
   const send = h("button", { class: "button primary", type: "submit" }, "Enviar");
   // Documentos: opt-in. Solo se muestra si el usuario pertenece a alguna organización.
   const useDocuments = h("input", { id: "use-documents", type: "checkbox" });
@@ -195,6 +210,7 @@ export async function chatView({ container, sidebar, params, shell }) {
       await api.chatStream(text, conversationId, {
         signal: controller.signal,
         documentOrganizationId,
+        mode: modeSelect.value,
         onEvent(item) {
           if (item.event === "start") {
             const isNew = item.conversation_id !== conversationId;
@@ -256,6 +272,7 @@ export async function chatView({ container, sidebar, params, shell }) {
         "div",
         { class: "composer-wrap" },
         h("form", { class: "composer", onsubmit: onSubmit }, input, send),
+        modeBar,
         documentsBar,
         h("div", { class: "composer-hint" }, "Enter envía · Mayús+Enter salta de línea"),
       ),
@@ -272,5 +289,6 @@ export async function chatView({ container, sidebar, params, shell }) {
   } else await openConversation(conversationId);
   await loadHistory();
   await loadOrganizations();
+  applyMode();
   input.focus();
 }

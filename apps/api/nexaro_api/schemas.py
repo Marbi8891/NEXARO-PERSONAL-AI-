@@ -3,6 +3,7 @@ from datetime import date
 from pydantic import BaseModel, Field
 
 from nexaro_core.api_keys import DEFAULT_SCOPES
+from products.personal_ai.prompts import Mode
 
 
 class ChatRequest(BaseModel):
@@ -10,6 +11,8 @@ class ChatRequest(BaseModel):
     conversation_id: str | None = Field(default=None, max_length=64)
     # Opt-in: organización cuyos documentos se consultan para responder a este mensaje.
     document_organization_id: str | None = Field(default=None, max_length=64)
+    # «tutor»: guía con pistas en lugar de dar la solución (ADR-0020).
+    mode: Mode = "general"
 
 
 class LoginRequest(BaseModel):
