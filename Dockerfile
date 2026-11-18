@@ -25,7 +25,11 @@ COPY apps/api ./apps/api
 COPY frontend ./frontend
 
 # El contenedor corre como uid 10001: el código debe ser legible aunque en el host tenga permisos 600.
-RUN chmod -R a+rX /app
+# /data pertenece a nexaro: Docker copia ese propietario al crear un volumen nuevo (sin esto, en
+# una instalación desde cero el volumen sería de root y la base no se podría crear). Un volumen
+# con datos no cambia.
+RUN chmod -R a+rX /app \
+    && mkdir -p /data && chown 10001:10001 /data
 
 USER 10001:10001
 

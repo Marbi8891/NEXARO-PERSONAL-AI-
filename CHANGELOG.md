@@ -3,6 +3,8 @@
 ## [Sin publicar] — rama `refactor/nexaro-platform`
 
 ### Añadido
+- Docker y Ollama (F26, ADR-0021): servicio `ollama` opcional con el perfil `ollama` (sin puertos, volumen `ollama_models`, healthcheck `ollama list`, endurecido) y el backend esperando a que esté sano solo con el perfil activo. `make up` (preflight de Docker, Compose >= 2.20, modo y red, y `--wait`), `make model` y `make model-check` (`scripts/ollama_model.py`, idempotente, con timeouts y reintentos) y `make smoke` (`scripts/stack.sh`: servicios, salud, modelo, generación real y persistencia tras recrear los contenedores).
+- `/api/health` comprueba también que el modelo configurado está instalado (503 «Modelo de IA no disponible»), con la misma llamada a Ollama.
 - Modo tutor de programación: `mode: "tutor"` en `/api/chat`, `/api/chat/stream` y `/api/v1/chat`, y un selector «Modo» en el chat. Guía con pistas y no da la solución hasta que hay un intento propio (ADR-0020).
 - Evaluación de calidad del modelo: `scripts/quality_eval.py`, 31 casos en `scripts/eval/cases.json` y `make eval` para comparar modelos con el prompt de producción. Puntuación determinista y ejecución del código generado en un contenedor sin red.
 - Bloqueo de preguntas sobre el modelo de IA y la infraestructura interna: filtro determinista en el backend (chat, streaming, `/api/v1/chat` y `documents/ask`) que responde con un texto fijo sin consultar al modelo. El prompt de sistema ya no incluye el proveedor, el modelo ni el stack (ADR-0019).
@@ -37,6 +39,9 @@
 - La app pasa a `create_app()` (factory); el comando de admin es `python -m nexaro_api.bootstrap_admin`.
 - Prompt del asistente generado desde proveedor y modelo configurados (sin modelo fijo en código).
 - Índice `idx_messages_conversation_id`.
+
+### Corregido
+- Instalación desde cero: `/data` se crea en la imagen con propietario 10001. Antes, un volumen nuevo era de root y el backend no podía crear la base. Los volúmenes con datos no cambian (ADR-0021).
 
 ### Eliminado
 - `backend/` (sustituido por la nueva estructura).

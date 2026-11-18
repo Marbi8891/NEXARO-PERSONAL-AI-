@@ -22,6 +22,16 @@ from ai_gateway.usage import ModelPrice, Status, UsageStore, estimate_cost
 logger = logging.getLogger(__name__)
 
 
+def _canonical_model(name: str) -> str:
+    """Ollama guarda `modelo` como `modelo:latest`: ambos nombres son el mismo modelo."""
+    return name if ":" in name else f"{name}:latest"
+
+
+def model_installed(model: str, installed: list[dict[str, Any]]) -> bool:
+    wanted = _canonical_model(model)
+    return any(_canonical_model(str(m["name"])) == wanted for m in installed)
+
+
 @dataclass(frozen=True)
 class Route:
     provider: str
@@ -76,6 +86,22 @@ class Gateway:
     async def health(self) -> bool:
         return await self._providers[self.name].health()
 
+    async def readiness(self) -> tuple[bool, bool | None]:
+        """(proveedor principal disponible, modelo configurado instalado).
+
+        Con un proveedor que lista modelos basta una sola llamada: si responde, está disponible.
+        `None` = el proveedor no sabe decir qué modelos tiene (p. ej. Bedrock).
+        """
+        provider = self._providers[self.name]
+        lister = getattr(provider, "list_models", None)
+        if lister is None:
+            return await provider.health(), None
+        try:
+            installed = await lister()
+        except ProviderError:
+            return False, None
+        return True, model_installed(self.model, installed)
+
     async def aclose(self) -> None:
         """Cierra los clientes HTTP de los proveedores que los mantienen abiertos."""
         for provider in self._providers.values():
@@ -110,9 +136,7 @@ class Gateway:
                     "consecutive_failures": breaker.failures,
                     "installed_models": installed,
                     "model_installed": (
-                        None
-                        if installed is None
-                        else any(m["name"] == route.model for m in installed)
+                        None if installed is None else model_installed(route.model, installed)
                     ),
                 }
             )

@@ -1,4 +1,4 @@
-.PHONY: install lint format typecheck test cov check run up down logs audit eval
+.PHONY: install lint format typecheck test cov check run up down logs audit eval model model-check smoke
 
 PY ?= python3
 
@@ -28,15 +28,29 @@ run:
 	DATABASE_PATH=./data/nexaro.db FRONTEND_PATH=./frontend PYTHONPATH=.:packages:apps/api \
 	uvicorn nexaro_api.main:create_app --factory --reload --host 127.0.0.1 --port 8001
 
+# Docker (ADR-0021). El modo de Ollama sale de .env: sin nada, el externo (~/Docker/ollama-local);
+# con COMPOSE_PROFILES=ollama y OLLAMA_NETWORK=nexaro_ollama, el incluido. Ver DEPLOYMENT.md.
 up:
-	docker compose up -d --build backend
+	scripts/stack.sh preflight
+	docker compose up -d --build --wait --wait-timeout 300
 
-# Nunca `down -v`: destruiría el volumen con la base de datos.
+# Nunca `down -v`: destruiría los volúmenes con la base de datos y los modelos.
 down:
 	docker compose down
 
 logs:
-	docker compose logs -f backend
+	docker compose logs -f
+
+# Descarga el modelo configurado solo si falta (idempotente). Necesita el stack arrancado.
+model:
+	docker exec -i nexaro-backend sh -c 'python - ensure "$$OLLAMA_MODEL"' < scripts/ollama_model.py
+
+model-check:
+	docker exec -i nexaro-backend sh -c 'python - check "$$OLLAMA_MODEL"' < scripts/ollama_model.py
+
+# Prueba de humo contra Docker y Ollama reales (servicios, salud, modelo, respuesta y persistencia).
+smoke:
+	scripts/stack.sh smoke
 
 audit:
 	pip-audit -r requirements/base.txt -r requirements/aws.txt

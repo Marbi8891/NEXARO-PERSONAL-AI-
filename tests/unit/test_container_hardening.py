@@ -5,6 +5,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 COMPOSE = (ROOT / "compose.yaml").read_text(encoding="utf-8")
+# Bloque del servicio backend (el de Ollama incluido se prueba en test_compose_stack.py).
+BACKEND = COMPOSE.split("\n  backend:\n", 1)[1].split("\n  ollama:\n", 1)[0]
 DOCKERFILE = (ROOT / "Dockerfile").read_text(encoding="utf-8")
 
 
@@ -34,7 +36,7 @@ def test_image_is_pinned_by_digest_and_runs_as_non_root() -> None:
 
 
 def test_data_volume_is_the_only_writable_mount() -> None:
-    mounts = re.findall(r"^\s+- (\S+:/\S+)$", COMPOSE, re.MULTILINE)
+    mounts = re.findall(r"^\s+- (\S+:/\S+)$", BACKEND, re.MULTILINE)
     assert any(m.startswith("nexaro_data:/data") for m in mounts)
     others = [m for m in mounts if not m.startswith("nexaro_data:")]
     assert all(m.endswith(":ro") for m in others), others  # p. ej. ./frontend:/app/frontend:ro

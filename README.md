@@ -10,6 +10,7 @@ proveedores en la nube. Monolito modular en Python (FastAPI) con frontend HTML/C
 |---|---|
 | Autenticación, sesiones, auditoría, administración | Implementado y probado |
 | Chat con Ollama (`products/personal_ai`) | Implementado y probado |
+| Docker: Ollama externo o incluido (perfil), `make model`, `make smoke`, salud del modelo | Implementado; probado con Docker y un Ollama simulado. **VERIFY** con Ollama real (ADR-0021) |
 | AWS (Terraform: red, KMS, ECR, S3, ALB+Fargate, Aurora, alarmas, presupuesto) | Escrito, **no validado ni aplicado** (ADR-0006) |
 | AI Gateway: políticas, respaldo, registro de uso, proveedores Bedrock/SageMaker | Implementado; AWS probado solo con dobles (ADR-0004) |
 | Multiorganización: organizaciones, miembros, roles y permisos | Implementado y probado |
@@ -27,13 +28,16 @@ proveedores en la nube. Monolito modular en Python (FastAPI) con frontend HTML/C
 ## Arranque rápido (Docker)
 
 ```bash
-docker compose up -d --build backend      # http://127.0.0.1:8001
+make up        # comprueba el entorno, construye y espera a que todo esté sano: http://127.0.0.1:8001
+make model     # descarga qwen2.5:3b solo si falta
+make smoke     # servicios, salud, modelo, respuesta real y persistencia tras reiniciar
 docker exec -it nexaro-backend python -m nexaro_api.bootstrap_admin \
     --confirm-database /data/nexaro.db --email TU_CORREO
 ```
 
-Requiere la red externa `ollama-local_default` con Ollama. No hay administradores ni registro
-público por defecto; ver [SECURITY.md](SECURITY.md).
+Por defecto usa el Ollama de `~/Docker/ollama-local`; en una máquina sin él, el perfil `ollama` lo
+incluye ([DEPLOYMENT.md](DEPLOYMENT.md)). No hay administradores ni registro público por defecto; ver
+[SECURITY.md](SECURITY.md).
 
 ## Desarrollo
 

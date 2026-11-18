@@ -2,28 +2,55 @@
 
 ## Instalación desde cero (Docker, local)
 
-Requisitos: Docker con Compose v2 y un contenedor de Ollama accesible en la red externa
-`ollama-local_default` (nombre del servicio `ollama`) con el modelo descargado (`ollama pull qwen2.5:3b`).
+Requisitos: Docker con **Compose >= 2.20** (Docker Desktop en macOS o Docker Engine en Linux, incluido
+Linux en VirtualBox), `make` y `curl`. Unos 4 GB de RAM libres para Docker con `qwen2.5:3b`.
+
+Hay dos modos de Ollama ([ADR-0021](docs/decisions/0021-compose-ollama-profile-and-smoke.md)). En los
+dos, el backend lo encuentra como `http://ollama:11434` y Ollama **no publica puertos** desde este proyecto.
+
+| | Externo (por defecto, MacBook) | Incluido (máquina nueva) |
+|---|---|---|
+| Ollama | contenedor `ollama` de `~/Docker/ollama-local` | servicio `ollama` de este `compose.yaml` (perfil) |
+| Red | `ollama-local_default` (la crea `ollama-local`) | `nexaro_ollama` (la crea `make up`) |
+| Modelos | volumen `ollama-local_ollama_data` | volumen `nexaro-personal-ai_ollama_models` |
+| `.env` | nada | `COMPOSE_PROFILES=ollama` y `OLLAMA_NETWORK=nexaro_ollama` |
+
+No uses los dos a la vez sobre la misma red: `make up` lo impide.
 
 1. Clona el repositorio y entra en él.
-2. Comprueba que existe la red: `docker network ls | grep ollama-local_default`. Si no, levanta antes tu
-   Ollama o ajusta el nombre de la red en `compose.yaml`.
-3. `docker compose up -d --build backend`. La aplicación queda en `http://127.0.0.1:8001` (solo local).
-4. `curl -s http://127.0.0.1:8001/api/health/live` debe devolver `{"status":"ok"}`. `/api/health` devuelve
-   503 si Ollama no responde: el chat no funcionará hasta que lo haga.
-5. Crea el primer administrador (abajo). **No hay administradores ni registro público por defecto.**
-6. Abre la aplicación, inicia sesión y, si quieres que otras personas pidan acceso, abre el registro en
-   Administración. Cada cuenta nueva queda pendiente hasta que la apruebes.
-7. Para crear claves de API: Administración → crea una organización (la creas tú como propietario) →
+2. Modo externo: `cd ~/Docker/ollama-local && docker compose up -d`. Modo incluido: añade las dos líneas
+   de la tabla a `.env` (es el archivo que lee Compose; está en `.gitignore`).
+3. `make up`. Comprueba Docker, Compose, la red y el modo, construye y espera a que los servicios estén
+   sanos. La aplicación queda en `http://127.0.0.1:8001` (solo local).
+4. `make model`. Descarga `qwen2.5:3b` (~2 GB) **solo si falta**; repetirlo no descarga nada.
+   `make model-check` solo comprueba. Para otro modelo: `OLLAMA_MODEL=...` en `.env` y `make up`.
+5. `make smoke`: servicios, salud, modelo, una respuesta real y persistencia tras recrear los
+   contenedores. Debe terminar en `SMOKE OK`.
+6. Crea el primer administrador (abajo). **No hay administradores ni registro público por defecto.**
+7. Abre la aplicación e inicia sesión. Si quieres que otras personas pidan acceso, abre el registro en
+   Administración: cada cuenta nueva queda pendiente hasta que la apruebes.
+8. Para crear claves de API: Administración → crea una organización (la creas tú como propietario) →
    Developer.
 
-Variables de configuración: [`.env.example`](.env.example). `compose.yaml` fija las del servicio; para
-cambiarlas, edítalas ahí. El modelo, los orígenes permitidos y la ruta de la base de datos son configurables,
-sin valores fijos en el código.
+`/api/health/live` solo dice que el proceso vive (lo usa el healthcheck). `/api/health` devuelve 503 con
+«Servicio de IA no disponible» si Ollama no responde, o «Modelo de IA no disponible» si falta el modelo;
+con todo bien, `{"status":"ok","ollama":"connected","model":"ready"}`.
 
-**VERIFY:** estos pasos no se han ejecutado con Docker en el entorno de desarrollo de esta rama (sin Docker);
-sí está probada la aplicación, la migración y la interfaz. La primera vez, reconstruye con
-`scripts/rebuild_backend.sh` (verifica copia, tests y resultado) y comprueba el inicio de sesión.
+Variables de la aplicación: [`.env.example`](.env.example). `compose.yaml` fija las del servicio; desde
+`.env` se pueden cambiar `OLLAMA_MODEL`, `OLLAMA_NETWORK`, `OLLAMA_IMAGE` (fíjala a una versión tras la
+primera descarga: `docker image inspect ollama/ollama:latest --format '{{index .RepoDigests 0}}'`) y
+`OLLAMA_MEM_LIMIT` (6g).
+
+### Problemas frecuentes
+
+| Síntoma | Causa y solución |
+|---|---|
+| `no existe la red ollama-local_default` | Arranca `~/Docker/ollama-local` o pasa al modo incluido |
+| `habría dos 'ollama'` | Modo incluido sobre la red del externo: pon `OLLAMA_NETWORK=nexaro_ollama` |
+| `hace falta Docker Compose >= 2.20` | Actualiza Docker Desktop o el plugin `docker-compose-plugin` |
+| `/api/health` → «Modelo de IA no disponible» | `make model` |
+| `make model` se corta «sin progreso» | Red lenta o caída: repítelo, Ollama reanuda la descarga |
+| La primera respuesta tarda mucho | Carga del modelo en CPU; `OLLAMA_KEEP_ALIVE=30m` lo mantiene cargado |
 
 ### Sin Docker (desarrollo)
 
@@ -43,11 +70,12 @@ sí está probada la aplicación, la migración y la interfaz. La primera vez, r
 ## Local (Docker)
 
 ```bash
-docker compose up -d --build backend
+make up && make model && make smoke
 ```
 
-Volumen persistente `nexaro-personal-ai_nexaro_data` (SQLite en `/data/nexaro.db`), puerto
-`127.0.0.1:8001`, red externa `ollama-local_default`.
+Volúmenes persistentes: `nexaro-personal-ai_nexaro_data` (SQLite en `/data/nexaro.db`) y, en el modo
+incluido, `nexaro-personal-ai_ollama_models`. Puerto `127.0.0.1:8001`. `make down` para los contenedores
+sin tocar los volúmenes; **nunca** `docker compose down -v`.
 
 ### Reconstruir conservando datos
 
