@@ -25,4 +25,4 @@ Una decisión aceptada no se cambia en silencio: se propone un *DECISION REVIEW*
 | [0018](0018-pdf-documents.md) | Documentos PDF con texto | Aceptada |
 | [0019](0019-restricted-topics-guard.md) | Bloqueo de preguntas sobre el modelo de IA y la infraestructura interna | Propuesta |
 | [0020](0020-tutor-mode.md) | Modo tutor de programación | Aceptada |
-| [0021](0021-compose-ollama-profile-and-smoke.md) | Ollama opcional por perfil, modelo comprobado y prueba de humo | Propuesta |
+| [0021](0021-compose-ollama-profile-and-smoke.md) | Ollama opcional por perfil, modelo comprobado y prueba de humo | Aceptada |

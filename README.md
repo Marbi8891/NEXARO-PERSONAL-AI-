@@ -10,7 +10,7 @@ proveedores en la nube. Monolito modular en Python (FastAPI) con frontend HTML/C
 |---|---|
 | Autenticación, sesiones, auditoría, administración | Implementado y probado |
 | Chat con Ollama (`products/personal_ai`) | Implementado y probado |
-| Docker: Ollama externo o incluido (perfil), `make model`, `make smoke`, salud del modelo | Implementado; probado con Docker y un Ollama simulado. **VERIFY** con Ollama real (ADR-0021) |
+| Docker: Ollama externo o incluido (perfil), `make model`, `make smoke`, salud del modelo | Implementado. Verificado en el Mac con Ollama y `qwen2.5:3b` reales (modo externo, `make smoke`); modo incluido probado solo con un Ollama simulado (ADR-0021) |
 | AWS (Terraform: red, KMS, ECR, S3, ALB+Fargate, Aurora, alarmas, presupuesto) | Escrito, **no validado ni aplicado** (ADR-0006) |
 | AI Gateway: políticas, respaldo, registro de uso, proveedores Bedrock/SageMaker | Implementado; AWS probado solo con dobles (ADR-0004) |
 | Multiorganización: organizaciones, miembros, roles y permisos | Implementado y probado |

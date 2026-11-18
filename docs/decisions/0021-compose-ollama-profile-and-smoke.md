@@ -1,6 +1,6 @@
 # ADR-0021: Ollama opcional por perfil de Compose, modelo comprobado y prueba de humo
 
-- **Estado:** Propuesta (implementada; pendiente de `make smoke` con Docker y Ollama reales)
+- **Estado:** Aceptada. Modo externo verificado en el MacBook; el modo incluido está pendiente de probarse en Linux con la imagen real de Ollama
 - **Fecha:** 2026-11-18
 
 ## Contexto
@@ -82,3 +82,14 @@ En contra:
 
   **No verificado:** imagen real de Ollama, `qwen2.5:3b` real, Docker Desktop en macOS, Linux en
   VirtualBox.
+
+## Verificación real (2026-11-18, MacBook Pro, Docker 29.9.2, Compose 5.6.1)
+
+Modo externo, con `~/Docker/ollama-local` y `qwen2.5:3b` real. `make up`: backend reconstruido y
+*healthy* en 7 s. `make model-check`: modelo instalado. `make smoke`: SMOKE OK (primera generación en
+21,8 s, con la carga del modelo en CPU). `SMOKE_RESTART_OLLAMA=1 make smoke`: SMOKE OK (1,4 s), con
+Ollama reiniciado. La base real se conservó en los dos casos (users=1, conversations=14, messages=64,
+documents=1, antes y después).
+
+Pendiente (VERIFY): el modo incluido con la imagen real de Ollama (`cap_drop: ALL`) en Linux con
+VirtualBox.
