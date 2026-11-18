@@ -63,8 +63,7 @@ En contra:
   silencioso, y el preflight lo comprueba antes.
 - La imagen de Ollama no está fijada (`OLLAMA_IMAGE`, por defecto `latest`, igual que en
   `ollama-local`). Fijarla requiere conocer la versión que funciona: VERIFY tras la primera descarga.
-- `cap_drop: ALL` en Ollama se ha probado con un Ollama simulado, no con la imagen real: VERIFY con
-  `make smoke` en modo incluido.
+- `cap_drop: ALL` en Ollama: comprobado con la imagen real (arranque y API), sin descargar un modelo.
 - El smoke reinicia el Ollama externo solo con `SMOKE_RESTART_OLLAMA=1`, porque es otro proyecto.
 
 ## Consecuencias
@@ -91,5 +90,8 @@ Modo externo, con `~/Docker/ollama-local` y `qwen2.5:3b` real. `make up`: backen
 Ollama reiniciado. La base real se conservó en los dos casos (users=1, conversations=14, messages=64,
 documents=1, antes y después).
 
-Pendiente (VERIFY): el modo incluido con la imagen real de Ollama (`cap_drop: ALL`) en Linux con
+Imagen real `ollama/ollama:latest` con `--cap-drop ALL` y `no-new-privileges`: arranca y atiende la API
+(`ollama list` y `GET /api/tags` con 200). Docker Desktop tiene 7,8 GiB; `OLLAMA_MEM_LIMIT=6g` cabe.
+
+Pendiente (VERIFY): el modo incluido completo (`make up` + `make model` + `make smoke`) en Linux con
 VirtualBox.
