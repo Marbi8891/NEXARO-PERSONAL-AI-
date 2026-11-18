@@ -4,7 +4,7 @@ import { toast } from "../components/toast.js";
 import { clear, formatDate, h } from "../dom.js";
 import { renderMarkdown } from "../markdown.js";
 import { navigate } from "../router.js";
-import { rememberConversation, rememberedConversation, rememberedMode, rememberMode } from "../state.js";
+import { rememberAgent, rememberConversation, rememberedAgent, rememberedConversation } from "../state.js";
 
 export async function chatView({ container, sidebar, params, shell }) {
   shell.setTitle("Chat");
@@ -13,27 +13,52 @@ export async function chatView({ container, sidebar, params, shell }) {
   let controller = null;
 
   const messages = h("div", { class: "messages", role: "log", "aria-live": "polite" });
-  const PLACEHOLDERS = { general: "Escribe tu mensaje...", tutor: "Cuéntame tu ejercicio o pega tu código..." };
-  const input = h("textarea", { id: "message", rows: "2", placeholder: PLACEHOLDERS.general, "aria-label": "Mensaje", maxlength: "8000" });
-  // Modo tutor: guía con pistas en vez de dar la solución. Se recuerda entre visitas.
-  const modeSelect = h(
-    "select",
-    { id: "chat-mode" },
-    h("option", { value: "general" }, "General"),
-    h("option", { value: "tutor" }, "Tutor de programación"),
-  );
-  const applyMode = () => {
-    input.placeholder = PLACEHOLDERS[modeSelect.value];
-    rememberMode(modeSelect.value);
-  };
-  modeSelect.value = rememberedMode();
-  modeSelect.addEventListener("change", applyMode);
-  const modeBar = h("label", { class: "mode-toggle" }, h("span", {}, "Modo"), modeSelect);
+  const PLACEHOLDERS = { tutor: "Cuéntame tu ejercicio o pega tu código..." };
+  const DEFAULT_PLACEHOLDER = "Escribe tu mensaje...";
+  const input = h("textarea", { id: "message", rows: "2", placeholder: DEFAULT_PLACEHOLDER, "aria-label": "Mensaje", maxlength: "8000" });
+  // Agente especializado (ADR-0022): la lista llega de GET /api/agents; hasta entonces, el general.
+  // Se recuerda entre visitas.
+  let agents = [{ id: "general", name: "Asistente general", description: "", tools: ["documents"] }];
+  const agentSelect = h("select", { id: "chat-agent" });
+  const agentHint = h("span", { class: "hint", id: "chat-agent-hint" });
+  const agentBar = h("label", { class: "mode-toggle" }, h("span", {}, "Agente"), agentSelect, agentHint);
+  const currentAgent = () => agents.find((a) => a.id === agentSelect.value) || agents[0];
+  function renderAgents(selected) {
+    agentSelect.replaceChildren(...agents.map((a) => h("option", { value: a.id, title: a.description }, a.name)));
+    agentSelect.value = agents.some((a) => a.id === selected) ? selected : "general";
+  }
+  renderAgents("general");
   const send = h("button", { class: "button primary", type: "submit" }, "Enviar");
   // Documentos: opt-in. Solo se muestra si el usuario pertenece a alguna organización.
   const useDocuments = h("input", { id: "use-documents", type: "checkbox" });
   const documentsOrg = h("select", { id: "documents-org", "aria-label": "Organización de los documentos", hidden: true });
   const documentsBar = h("label", { class: "docs-toggle", hidden: true }, useDocuments, h("span", {}, "Consultar mis documentos"), documentsOrg);
+  // Las herramientas dependen del agente: sin «documents», el interruptor se desactiva.
+  function applyAgent() {
+    const agent = currentAgent();
+    input.placeholder = PLACEHOLDERS[agent.id] || DEFAULT_PLACEHOLDER;
+    agentHint.textContent = agent.description;
+    const canRead = agent.tools.includes("documents");
+    useDocuments.disabled = !canRead;
+    documentsOrg.disabled = !canRead;
+    if (!canRead) useDocuments.checked = false;
+    documentsBar.title = canRead ? "" : "Este agente no consulta documentos";
+    rememberAgent(agent.id);
+  }
+  agentSelect.addEventListener("change", applyAgent);
+
+  async function loadAgents() {
+    try {
+      const data = await api.agents();
+      if (data.agents?.length) agents = data.agents;
+    } catch {
+      // Sin la lista: el chat sigue con el agente general.
+    }
+    renderAgents(rememberedAgent());
+    applyAgent();
+  }
+  // En paralelo con la conversación: no retrasa ni pisa lo que el usuario ya esté escribiendo.
+  const agentsReady = loadAgents();
   const list = h("div", { class: "conversation-list" });
   const startNew = () => {
     rememberConversation(null);
@@ -175,6 +200,13 @@ export async function chatView({ container, sidebar, params, shell }) {
       rememberConversation(id);
       clear(messages);
       for (const message of data.messages) addMessage(message.role === "user" ? "user" : "assistant", message.content);
+      // Al reabrir una conversación se continúa con el agente que dio la última respuesta.
+      await agentsReady;
+      const last = [...data.messages].reverse().find((m) => m.role === "assistant" && m.agent);
+      if (last && agents.some((a) => a.id === last.agent)) {
+        agentSelect.value = last.agent;
+        applyAgent();
+      }
     } catch (error) {
       if (error.status === 404) {
         rememberConversation(null);
@@ -204,13 +236,13 @@ export async function chatView({ container, sidebar, params, shell }) {
     let truncated = false;
     let aborted = false;
     let sources = null;
-    const documentOrganizationId = !documentsBar.hidden && useDocuments.checked ? documentsOrg.value : null;
+    const documentOrganizationId = !documentsBar.hidden && !useDocuments.disabled && useDocuments.checked ? documentsOrg.value : null;
     controller = new AbortController();
     try {
       await api.chatStream(text, conversationId, {
         signal: controller.signal,
         documentOrganizationId,
-        mode: modeSelect.value,
+        agent: agentSelect.value,
         onEvent(item) {
           if (item.event === "start") {
             const isNew = item.conversation_id !== conversationId;
@@ -272,7 +304,7 @@ export async function chatView({ container, sidebar, params, shell }) {
         "div",
         { class: "composer-wrap" },
         h("form", { class: "composer", onsubmit: onSubmit }, input, send),
-        modeBar,
+        agentBar,
         documentsBar,
         h("div", { class: "composer-hint" }, "Enter envía · Mayús+Enter salta de línea"),
       ),
@@ -289,6 +321,5 @@ export async function chatView({ container, sidebar, params, shell }) {
   } else await openConversation(conversationId);
   await loadHistory();
   await loadOrganizations();
-  applyMode();
   input.focus();
 }

@@ -16,11 +16,19 @@ from nexaro_api.deps import (
 )
 from nexaro_api.schemas import ChatRequest
 from nexaro_core.audit import record_event
+from nexaro_core.audit.service import Outcome
+from products.personal_ai.agents import TOOL_PERMISSIONS, get_agent, public_agents
 from products.personal_ai.service import ConversationNotFoundError
 
 router = APIRouter(prefix="/api", tags=["personal-ai"])
 
 NOT_FOUND = HTTPException(status_code=404, detail="Conversación no encontrada")
+
+
+@router.get("/agents")
+def list_agents(user: CurrentUser) -> dict[str, Any]:
+    """Agentes disponibles y sus herramientas (ADR-0022)."""
+    return {"agents": public_agents()}
 
 
 @router.post("/chat")
@@ -35,7 +43,7 @@ async def chat(request: Request, body: ChatRequest, user: CurrentUser, ctx: Ctx)
             body.message,
             body.conversation_id,
             document_organization_id=document_org,
-            mode=body.mode,
+            agent=body.agent_id,
         )
     except ConversationNotFoundError:
         raise NOT_FOUND from None
@@ -50,19 +58,50 @@ async def chat(request: Request, body: ChatRequest, user: CurrentUser, ctx: Ctx)
     response: dict[str, Any] = {
         "conversation_id": outcome.conversation_id,
         "answer": outcome.answer,
+        "agent": body.agent_id,
     }
     if outcome.sources is not None:
         response["sources"] = outcome.sources
+        _record_tool(request, ctx, user, body, "success", sources=len(outcome.sources))
     return response
+
+
+def _record_tool(
+    request: Request,
+    ctx: Ctx,
+    user: dict[str, Any],
+    body: ChatRequest,
+    outcome: Outcome,
+    **details: Any,
+) -> None:
+    """Acción de un agente con una herramienta: quién, qué agente, qué herramienta y sobre qué
+    organización. Nunca el contenido del mensaje ni de los documentos."""
+    with ctx.database.connect() as db:
+        record_event(
+            db,
+            "agent.tool",
+            outcome,
+            actor_user_id=user["id"],
+            target_type="organization",
+            target_id=body.document_organization_id,
+            ip=client_ip(request),
+            details={"agent": body.agent_id, "tool": "documents", **details},
+        )
 
 
 def _document_scope(
     request: Request, ctx: Ctx, user: dict[str, Any], body: ChatRequest
 ) -> str | None:
-    """Documentos solo si el usuario los pide y es miembro con permiso de lectura."""
+    """Documentos solo si el usuario los pide, el agente tiene la herramienta y el usuario es
+    miembro con el permiso que exige."""
     if body.document_organization_id is None:
         return None
-    check_org_permission(ctx, request, user, body.document_organization_id, "documents:read")
+    if "documents" not in get_agent(body.agent_id).tools:
+        _record_tool(request, ctx, user, body, "denied", reason="agent_without_tool")
+        raise HTTPException(status_code=403, detail="Este agente no puede consultar documentos")
+    check_org_permission(
+        ctx, request, user, body.document_organization_id, TOOL_PERMISSIONS["documents"]
+    )
     return body.document_organization_id
 
 
@@ -84,7 +123,7 @@ async def chat_stream(
             body.message,
             body.conversation_id,
             document_organization_id=document_org,
-            mode=body.mode,
+            agent=body.agent_id,
         )
     except BaseException as exc:
         lease.release()
@@ -92,8 +131,11 @@ async def chat_stream(
             raise NOT_FOUND from None
         raise
 
+    if document_org is not None:
+        _record_tool(request, ctx, user, body, "success")
+
     async def body_iter() -> AsyncIterator[str]:
-        yield _sse({"event": "start", "conversation_id": conversation_id})
+        yield _sse({"event": "start", "conversation_id": conversation_id, "agent": body.agent_id})
         try:
             async for event in events:
                 yield _sse(event)

@@ -379,10 +379,12 @@ await check("chat con documentos: opt-in, envía la organización y muestra las 
     globalThis.fetch = realFetch;
   }
 });
-await check("modo tutor: se elige en el chat, se envía con el mensaje y se recuerda", async () => {
+await check("agentes: la lista viene de la API, se envía el elegido y se recuerda", async () => {
   location.hash = "#/chat";
-  await until(() => $("#chat-mode"), "selector de modo");
-  assert.equal($("#chat-mode").value, "general", "por defecto, modo general");
+  await until(() => $("#chat-agent")?.options.length > 1, "selector de agentes");
+  const ids = [...$("#chat-agent").options].map((o) => o.value);
+  assert.deepEqual(ids, ["general", "developer", "security", "research", "productivity", "data", "tutor"]);
+  assert.equal($("#chat-agent").value, "general", "por defecto, el agente general");
   let sent = null;
   const realFetch = globalThis.fetch;
   globalThis.fetch = async (url, init) => {
@@ -390,20 +392,37 @@ await check("modo tutor: se elige en el chat, se envía con el mensaje y se recu
     return realFetch(url, init);
   };
   try {
-    $("#chat-mode").value = "tutor";
-    $("#chat-mode").dispatchEvent(new window.Event("change"));
+    $("#chat-agent").value = "tutor";
+    $("#chat-agent").dispatchEvent(new window.Event("change"));
     assert.match($("#message").placeholder, /ejercicio/);
+    assert.ok($("#use-documents").disabled, "el tutor no consulta documentos");
+    assert.match($("#chat-agent-hint").textContent, /pistas/);
     $("#message").value = "¿cómo empiezo un bucle?";
     submit($(".composer"));
     await until(() => !$(".message.generating") && $(".composer button").textContent === "Enviar", "respuesta del tutor");
-    assert.equal(sent.mode, "tutor");
+    assert.equal(sent.agent, "tutor");
+    assert.equal(sent.document_organization_id, null);
+    const tutorChat = location.hash;
+    $("#chat-agent").value = "research";
+    $("#chat-agent").dispatchEvent(new window.Event("change"));
+    assert.ok(!$("#use-documents").disabled, "el de investigación sí consulta documentos");
     location.hash = "#/dashboard";
-    await until(() => !$("#chat-mode"), "fuera del chat");
+    await until(() => !$("#chat-agent"), "fuera del chat");
     location.hash = "#/chat";
-    await until(() => $("#chat-mode"), "vuelta al chat");
-    assert.equal($("#chat-mode").value, "tutor", "el modo se recuerda");
-    $("#chat-mode").value = "general";
-    $("#chat-mode").dispatchEvent(new window.Event("change"));
+    await until(() => $("#chat-agent")?.options.length > 1, "vuelta al chat");
+    assert.equal($("#chat-agent").value, "tutor", "al reabrir la conversación, el agente de su última respuesta");
+    location.hash = "#/dashboard";
+    await until(() => !$("#chat-agent"), "fuera del chat");
+    localStorage.removeItem("nexaro_chat_agent");
+    localStorage.removeItem("nexaro_conversation_id");
+    localStorage.setItem("nexaro_chat_mode", "tutor");
+    location.hash = "#/chat/nueva-inexistente";
+    await until(() => $("#chat-agent")?.options.length > 1 && location.hash === "#/chat", "chat nuevo");
+    assert.equal($("#chat-agent").value, "tutor", "se respeta el modo tutor elegido con el selector antiguo");
+    assert.ok(tutorChat.startsWith("#/chat/"));
+    $("#chat-agent").value = "general";
+    $("#chat-agent").dispatchEvent(new window.Event("change"));
+    localStorage.removeItem("nexaro_chat_mode");
   } finally {
     globalThis.fetch = realFetch;
   }

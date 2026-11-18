@@ -20,8 +20,9 @@ proveedores en la nube. Monolito modular en Python (FastAPI) con frontend HTML/C
 | Finanzas: gastos con resumen mensual y exportación CSV | Implementado y probado |
 | Security: resumen de seguridad derivado de la auditoría (solo administradores) | Implementado y probado |
 | Finance, Business | Solo identidad de marca; sin funcionalidad (no aparecen en la navegación) |
-| Agentes, tareas, embeddings | Solo esquema (sin API) |
-| Migraciones versionadas | Implementado (SQLite, hasta la 6) |
+| Agentes: 6 especializados + tutor, herramientas con permiso por agente y usuario, auditoría `agent.tool`, selector en el chat | Implementado y probado (ADR-0022) |
+| Tareas, embeddings | Solo esquema (sin API) |
+| Migraciones versionadas | Implementado (SQLite, hasta la 7) |
 | PostgreSQL | DDL validado con un servidor real; la app aún no ejecuta sobre él |
 | AWS (Terraform) | Aparcado por decisión del propietario; **no se crea nada en AWS sin autorización expresa** |
 

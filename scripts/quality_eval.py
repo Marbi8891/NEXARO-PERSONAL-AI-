@@ -49,14 +49,14 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from products.personal_ai.prompts import build_system_prompt  # noqa: E402
+from products.personal_ai.prompts import AGENT_RULES, build_system_prompt  # noqa: E402
 
 DEFAULT_CASES = ROOT / "scripts" / "eval" / "cases.json"
 CATEGORIES = {
     "python", "java", "sql", "web", "redes", "seguridad",
-    "honestidad", "confidencialidad", "multiturno", "documentos", "estilo", "tutor",
+    "honestidad", "confidencialidad", "multiturno", "documentos", "estilo", "tutor", "agentes",
 }  # fmt: skip
-MODES = {"general", "tutor"}
+MODES = set(AGENT_RULES)  # `mode` de un caso = agente (ADR-0022)
 CASE_KEYS = {
     "id", "category", "prompt", "messages", "must_include", "must_not_include",
     "spanish", "max_chars", "python_tests", "num_predict", "mode", "max_code_lines",

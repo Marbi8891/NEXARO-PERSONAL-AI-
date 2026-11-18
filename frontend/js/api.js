@@ -60,14 +60,15 @@ export function parseSse(buffer) {
 
 // Chat en streaming: llama a onEvent por cada evento (start, sources, token, done, error) según llega.
 // `documentOrganizationId` (opcional) activa la consulta de los documentos de esa organización.
-export async function chatStream(message, conversationId, { signal, onEvent, documentOrganizationId = null, mode = "general" }) {
+// `agent`: agente especializado que responde (GET /api/agents).
+export async function chatStream(message, conversationId, { signal, onEvent, documentOrganizationId = null, agent = "general" }) {
   let response;
   try {
     response = await fetch("/api/chat/stream", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, conversation_id: conversationId, document_organization_id: documentOrganizationId, mode }),
+      body: JSON.stringify({ message, conversation_id: conversationId, document_organization_id: documentOrganizationId, agent }),
       signal,
     });
   } catch (error) {
@@ -130,6 +131,7 @@ export const api = {
   dashboard: (days = 14) => request(`/api/dashboard?days=${days}`),
   notifications: () => request("/api/notifications"),
 
+  agents: () => request("/api/agents"),
   conversations: () => request("/api/conversations"),
   conversation: (conversationId) => request(`/api/conversations/${id(conversationId)}`),
   deleteConversation: (conversationId) => request(`/api/conversations/${id(conversationId)}`, { method: "DELETE" }),

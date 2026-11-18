@@ -61,7 +61,7 @@ primera descarga: `docker image inspect ollama/ollama:latest --format '{{index .
 - La base es un único archivo SQLite en el volumen `nexaro-personal-ai_nexaro_data`. Copia con
   `sqlite3 nexaro.db ".backup copia.db"` (o `scripts/rebuild_backend.sh`, que la hace antes de actualizar).
   Guarda las copias fuera del repositorio: contienen datos de usuarios.
-- Actualizar = reconstruir **solo** `backend` conservando el volumen. Las migraciones pendientes (hoy hasta la 6)
+- Actualizar = reconstruir **solo** `backend` conservando el volumen. Las migraciones pendientes (hoy hasta la 7)
   se aplican al arrancar en una transacción; si fallan, el arranque aborta sin dejar estado parcial.
 - Revertir código: la imagen anterior queda etiquetada `rollback-<fecha>`. Las migraciones no tienen
   «bajada»: para volver atrás de verdad se restaura la copia previa.

@@ -3,7 +3,7 @@ from datetime import date
 from pydantic import BaseModel, Field
 
 from nexaro_core.api_keys import DEFAULT_SCOPES
-from products.personal_ai.prompts import Mode
+from products.personal_ai.prompts import AgentId, Mode
 
 
 class ChatRequest(BaseModel):
@@ -11,8 +11,14 @@ class ChatRequest(BaseModel):
     conversation_id: str | None = Field(default=None, max_length=64)
     # Opt-in: organización cuyos documentos se consultan para responder a este mensaje.
     document_organization_id: str | None = Field(default=None, max_length=64)
-    # «tutor»: guía con pistas en lugar de dar la solución (ADR-0020).
+    # Agente especializado (ADR-0022). Sin él, `mode` (ADR-0020) elige general o tutor.
+    agent: AgentId | None = None
     mode: Mode = "general"
+
+    @property
+    def agent_id(self) -> str:
+        """`agent` manda; `mode` se mantiene por compatibilidad (Python Learning Dashboard)."""
+        return self.agent or self.mode
 
 
 class LoginRequest(BaseModel):

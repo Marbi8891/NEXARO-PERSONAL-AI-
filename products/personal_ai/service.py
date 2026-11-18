@@ -16,8 +16,9 @@ from ai_gateway.streaming import stream_completion
 from nexaro_core.database import Database, begin_write
 from nexaro_core.timeseries import fill_days, last_days
 from products.personal_ai import documents as docs
+from products.personal_ai.agents import get_agent
 from products.personal_ai.guard import REFUSAL, restricted_topic
-from products.personal_ai.prompts import Mode, build_system_prompt
+from products.personal_ai.prompts import build_system_prompt
 
 logger = logging.getLogger("nexaro.chat")
 
@@ -48,11 +49,14 @@ def _source(hit: docs.Hit) -> dict[str, Any]:
     }
 
 
-def _output_class(message: str, mode: Mode) -> str:
-    """El tutor da pistas, no programas enteros: nunca usa el tope largo de «code». En una CPU
-    sin GPU, además, menos tokens de salida son respuestas antes."""
+def _output_class(message: str, agent: str) -> str:
+    """El tutor (y los agentes sin respuestas largas de código) dan pistas, no programas
+    enteros: nunca usan el tope largo de «code». En una CPU sin GPU, además, menos tokens de
+    salida son respuestas antes."""
     category = classify_query(message)
-    return "default" if mode == "tutor" and category == "code" else category
+    if category == "code" and not get_agent(agent).long_code_answers:
+        return "default"
+    return category
 
 
 def _is_restricted(message: str) -> bool:
@@ -119,12 +123,12 @@ class PersonalAIService:
         organization_id: str | None = None,
         api_key_id: str | None = None,
         document_organization_id: str | None = None,
-        mode: Mode = "general",
+        agent: str = "general",
     ) -> ChatOutcome:
         conversation_id = conversation_id or str(uuid.uuid4())
         if _is_restricted(message):
             await asyncio.to_thread(
-                self._record_refusal, user_id, message, conversation_id, organization_id
+                self._record_refusal, user_id, message, conversation_id, organization_id, agent
             )
             return ChatOutcome(conversation_id, REFUSAL)
         hits = await asyncio.to_thread(self._retrieve, document_organization_id, message)
@@ -132,7 +136,7 @@ class PersonalAIService:
             self._begin_turn, user_id, message, conversation_id, organization_id
         )
         request = self._build_request(
-            user_id, message, turn.history, organization_id, api_key_id, hits, mode
+            user_id, message, turn.history, organization_id, api_key_id, hits, agent
         )
         try:
             result = await self._provider.complete(request)
@@ -141,7 +145,7 @@ class PersonalAIService:
             self._discard_turn(conversation_id, turn)
             raise
 
-        await asyncio.to_thread(self._save_answer, conversation_id, result.content)
+        await asyncio.to_thread(self._save_answer, conversation_id, result.content, agent)
         sources = None if hits is None else [_source(h) for h in hits]
         return ChatOutcome(conversation_id, result.content, sources)
 
@@ -154,14 +158,14 @@ class PersonalAIService:
         organization_id: str | None = None,
         api_key_id: str | None = None,
         document_organization_id: str | None = None,
-        mode: Mode = "general",
+        agent: str = "general",
     ) -> tuple[str, AsyncIterator[dict[str, Any]]]:
         """Prepara el turno (lanza ConversationNotFoundError antes de emitir nada) y devuelve
         el id de la conversación y el flujo de eventos: [sources], token*, done o error."""
         conversation_id = conversation_id or str(uuid.uuid4())
         if _is_restricted(message):
             await asyncio.to_thread(
-                self._record_refusal, user_id, message, conversation_id, organization_id
+                self._record_refusal, user_id, message, conversation_id, organization_id, agent
             )
             return conversation_id, _refusal_events()
         hits = await asyncio.to_thread(self._retrieve, document_organization_id, message)
@@ -169,10 +173,10 @@ class PersonalAIService:
             self._begin_turn, user_id, message, conversation_id, organization_id
         )
         request = self._build_request(
-            user_id, message, turn.history, organization_id, api_key_id, hits, mode
+            user_id, message, turn.history, organization_id, api_key_id, hits, agent
         )
         sources = None if hits is None else [_source(h) for h in hits]
-        return conversation_id, self._events(conversation_id, request, turn, sources)
+        return conversation_id, self._events(conversation_id, request, turn, sources, agent)
 
     def _build_request(
         self,
@@ -182,12 +186,12 @@ class PersonalAIService:
         organization_id: str | None,
         api_key_id: str | None,
         hits: list[docs.Hit] | None = None,
-        mode: Mode = "general",
+        agent: str = "general",
     ) -> CompletionRequest:
         """`hits` None: documentos desactivados. Lista (aunque vacía): activados. Los fragmentos
         solo viajan al modelo en este mensaje; en la base se guarda el texto tal cual lo escribió
         el usuario."""
-        system = build_system_prompt(mode)
+        system = build_system_prompt(agent)
         content = message
         if hits is not None:
             if hits:
@@ -202,7 +206,7 @@ class PersonalAIService:
                 *history,
                 ChatMessage(role="user", content=content),
             ],
-            max_output_tokens=self._output_tokens.get(_output_class(message, mode)),
+            max_output_tokens=self._output_tokens.get(_output_class(message, agent)),
             user_id=user_id,
             organization_id=organization_id,
             api_key_id=api_key_id,
@@ -230,22 +234,31 @@ class PersonalAIService:
         return _Turn(history, user_message_id, created)
 
     def _record_refusal(
-        self, user_id: str, message: str, conversation_id: str, organization_id: str | None
+        self,
+        user_id: str,
+        message: str,
+        conversation_id: str,
+        organization_id: str | None,
+        agent: str,
     ) -> None:
         """Turno bloqueado: se guarda como cualquier otro (pregunta y respuesta) sin consultar al
         modelo. La propiedad de la conversación se comprueba igual que en un turno normal."""
         with self._database.connect() as db:
             self._claim_conversation(db, user_id, conversation_id, organization_id)
             db.executemany(
-                "INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)",
-                [(conversation_id, "user", message), (conversation_id, "assistant", REFUSAL)],
+                "INSERT INTO messages (conversation_id, role, content, agent) VALUES (?, ?, ?, ?)",
+                [
+                    (conversation_id, "user", message, None),
+                    (conversation_id, "assistant", REFUSAL, agent),
+                ],
             )
 
-    def _save_answer(self, conversation_id: str, content: str) -> None:
+    def _save_answer(self, conversation_id: str, content: str, agent: str) -> None:
         with self._database.connect() as db:
             db.execute(
-                "INSERT INTO messages (conversation_id, role, content) VALUES (?, 'assistant', ?)",
-                (conversation_id, content),
+                "INSERT INTO messages (conversation_id, role, content, agent)"
+                " VALUES (?, 'assistant', ?, ?)",
+                (conversation_id, content, agent),
             )
 
     def _discard_turn(self, conversation_id: str, turn: _Turn) -> None:
@@ -267,6 +280,7 @@ class PersonalAIService:
         request: CompletionRequest,
         turn: _Turn,
         sources: list[dict[str, Any]] | None = None,
+        agent: str = "general",
     ) -> AsyncIterator[dict[str, Any]]:
         parts: list[str] = []
         completed = False  # el proveedor terminó con `chunk.done`
@@ -315,7 +329,7 @@ class PersonalAIService:
             # escribiendo sin que nadie lo espere (escritura huérfana). Es una operación breve.
             if parts and (completed or cancelled):
                 # Completa, o parcial por cancelación del cliente («Detener», desconexión).
-                self._save_answer(conversation_id, "".join(parts))
+                self._save_answer(conversation_id, "".join(parts), agent)
             else:
                 # Fallo del proveedor, flujo sin `done` o cancelación sin contenido.
                 self._discard_turn(conversation_id, turn)
@@ -456,7 +470,7 @@ class PersonalAIService:
 
             rows = db.execute(
                 """
-                SELECT id, role, content, created_at FROM messages
+                SELECT id, role, content, agent, created_at FROM messages
                 WHERE conversation_id = ? ORDER BY id ASC
                 """,
                 (conversation_id,),

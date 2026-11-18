@@ -181,6 +181,7 @@ td.mono, .mono { font-family: var(--font-mono); font-size: var(--fs-xs); }
 .mode-toggle, .docs-toggle { display: flex; align-items: center; gap: var(--space-2); max-width: 850px; margin: var(--space-2) auto 0; color: var(--muted); font-size: var(--fs-xs); }
 .docs-toggle[hidden], .docs-toggle select[hidden] { display: none; }
 .mode-toggle select, .docs-toggle select { font-size: var(--fs-xs); max-width: 14rem; }
+.docs-toggle:has(input:disabled) { opacity: 0.6; cursor: not-allowed; }
 .message-sources { margin-top: var(--space-3); font-size: var(--fs-xs); color: var(--muted); }
 .message-sources summary { cursor: pointer; }
 .message-sources .sources { margin-top: var(--space-2); }

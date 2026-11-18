@@ -118,7 +118,7 @@ async def public_chat(body: ChatRequest, key: ChatKey, ctx: Ctx) -> dict[str, An
             body.conversation_id,
             organization_id=key.organization_id,
             api_key_id=key.key_id,
-            mode=body.mode,
+            agent=body.agent_id,
         )
     except ConversationNotFoundError:
         raise HTTPException(status_code=404, detail="Conversación no encontrada") from None
@@ -128,7 +128,11 @@ async def public_chat(body: ChatRequest, key: ChatKey, ctx: Ctx) -> dict[str, An
         raise HTTPException(status_code=502, detail="Error al consultar el servicio de IA") from exc
     finally:
         lease.release()
-    return {"conversation_id": outcome.conversation_id, "answer": outcome.answer}
+    return {
+        "conversation_id": outcome.conversation_id,
+        "answer": outcome.answer,
+        "agent": body.agent_id,
+    }
 
 
 @router.get("/api/v1/conversations")

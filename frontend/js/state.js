@@ -29,19 +29,20 @@ export function rememberedConversation() {
   }
 }
 
-const MODE_KEY = "nexaro_chat_mode";
-export const CHAT_MODES = ["general", "tutor"];
-export function rememberMode(mode) {
+// Agente del chat (ADR-0022). `nexaro_chat_mode` es la clave del antiguo selector de modo
+// (general | tutor): se lee una vez para no perder la elección al actualizar.
+const AGENT_KEY = "nexaro_chat_agent";
+const LEGACY_MODE_KEY = "nexaro_chat_mode";
+export function rememberAgent(agent) {
   try {
-    localStorage.setItem(MODE_KEY, mode);
+    localStorage.setItem(AGENT_KEY, agent);
   } catch {
-    // Sin almacenamiento: el modo vuelve a «general» al recargar.
+    // Sin almacenamiento: el agente vuelve a «general» al recargar.
   }
 }
-export function rememberedMode() {
+export function rememberedAgent() {
   try {
-    const mode = localStorage.getItem(MODE_KEY);
-    return CHAT_MODES.includes(mode) ? mode : "general";
+    return localStorage.getItem(AGENT_KEY) || localStorage.getItem(LEGACY_MODE_KEY) || "general";
   } catch {
     return "general";
   }
