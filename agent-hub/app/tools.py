@@ -89,9 +89,11 @@ def create_directory(path: str) -> dict[str, Any]:
 async def run_command(command: str, working_directory: str = ".", timeout: int | None = None) -> dict[str, Any]:
     cwd = _safe_path(working_directory)
     if not cwd.is_dir(): raise ValueError("working_directory must be a directory")
-    args = shlex.split(command)
+    lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|<>")
+    lexer.whitespace_split = True
+    args = list(lexer)
     if not args: raise ValueError("Command is empty")
-    if any(token in {";", "&&", "||", "|", ">", "<"} for token in args):
+    if any(token and all(char in ";&|<>" for char in token) for token in args):
         raise ValueError("Shell operators are disabled; commands run without a shell")
     executable = Path(args[0]).name.lower()
     if executable not in ALLOWED_COMMANDS: raise PermissionError(f"Command is not allowlisted: {executable}")
