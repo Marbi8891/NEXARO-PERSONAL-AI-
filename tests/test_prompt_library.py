@@ -39,3 +39,21 @@ def test_pack_catalogue_contains_six_packs():
     packs = pack_catalogue()["packs"]
     assert len(packs) == 6
     assert all(pack["prompt_ids"] for pack in packs)
+
+
+def test_import_preview_accepts_prompt_and_flags_duplicates():
+    from app.main import import_preview, create_prompt, PromptCreate
+    create_prompt(PromptCreate(name="Import Test Prompt", category="Testing", user_template="Test {{topic}}", variables=[{"name":"topic","required":True}]))
+    result = import_preview({"prompts":[{"name":"Import Test Prompt","category":"Testing","user_template":"Test {{topic}}"}]})
+    assert result["valid"] == 1
+    assert result["items"][0]["duplicate"]["name"] == "Import Test Prompt"
+
+
+def test_workflow_crud_persists_ordered_nodes():
+    from app.main import create_workflow, get_workflow, update_workflow, delete_workflow
+    created = create_workflow({"name":"Test Flow","nodes":[{"prompt_id":"python-tutor"},{"prompt_id":"sql-tutor"}]})
+    assert [n["prompt_id"] for n in created["nodes"]] == ["python-tutor","sql-tutor"]
+    updated = update_workflow(created["id"], {"name":"Updated Flow","nodes":[{"prompt_id":"sql-tutor"},{"prompt_id":"python-tutor"}]})
+    assert updated["name"] == "Updated Flow"
+    assert [n["prompt_id"] for n in get_workflow(created["id"])["nodes"]] == ["sql-tutor","python-tutor"]
+    assert delete_workflow(created["id"])["deleted"] is True
