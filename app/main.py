@@ -12,7 +12,7 @@ from typing import Any
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -60,6 +60,21 @@ def init_db() -> None:
         );
         CREATE TABLE IF NOT EXISTS installed_packs (
           pack_id TEXT PRIMARY KEY, installed_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS workflows (
+          id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
+          nodes TEXT NOT NULL DEFAULT '[]', created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS workflow_executions (
+          id TEXT PRIMARY KEY, workflow_id TEXT NOT NULL, input_text TEXT NOT NULL DEFAULT '',
+          status TEXT NOT NULL, final_output TEXT NOT NULL DEFAULT '', error TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL, finished_at TEXT NOT NULL DEFAULT ''
+        );
+        CREATE TABLE IF NOT EXISTS workflow_steps (
+          id INTEGER PRIMARY KEY AUTOINCREMENT, execution_id TEXT NOT NULL, step_index INTEGER NOT NULL,
+          prompt_id TEXT NOT NULL, prompt_name TEXT NOT NULL, model TEXT NOT NULL,
+          input_text TEXT NOT NULL DEFAULT '', output_text TEXT NOT NULL DEFAULT '',
+          status TEXT NOT NULL, error TEXT NOT NULL DEFAULT '', duration_ms INTEGER NOT NULL DEFAULT 0
         );
         CREATE TABLE IF NOT EXISTS prompt_versions (
           id INTEGER PRIMARY KEY AUTOINCREMENT, prompt_id TEXT NOT NULL,
