@@ -278,6 +278,12 @@ def list_prompts(q: str = "", category: str = "", favorite: bool = False, sort: 
         d=prompt_dict(row);d["favorite"]=d["id"] in favorites;result.append(d)
     return result
 
+@app.get("/api/prompts/export")
+def export_library():
+    with db() as conn:
+        rows = conn.execute("SELECT * FROM prompts ORDER BY category,name").fetchall()
+    return {"schema_version": "1.0", "exported_at": now(), "prompts": [prompt_dict(r) for r in rows]}
+
 @app.get("/api/prompts/{prompt_id}")
 def get_prompt(prompt_id: str):
     with db() as conn:
@@ -346,17 +352,11 @@ def versions(prompt_id: str):
 def export_prompt(prompt_id: str, format: str = "json"):
     p = get_prompt(prompt_id)
     if format == "markdown":
-        content = f"# {p['name']}\n\n{p['description']}\n\n## System Prompt\n\n{p['system_prompt']}\n\n## User Template\n\n{p['user_template']}\n\n## Metadata\n\n- Category: {p['category']}\n- Tags: {', '.join(p['tags'])}\n- Version: {p['version']}\n\n## Variables\n\n\`\`\`json\n{json.dumps(p['variables'], ensure_ascii=False, indent=2)}\n\`\`\`"
+        content = "\\n".join(["# " + p["name"], p["description"], "## System Prompt", p["system_prompt"], "## User Template", p["user_template"], "## Metadata", "- Category: " + p["category"], "- Tags: " + ", ".join(p["tags"]), "- Version: " + str(p["version"]), "## Variables", chr(96)*3 + "json", json.dumps(p["variables"], ensure_ascii=False, indent=2), chr(96)*3])
         return {"filename": f"{p['name'].replace(' ', '-')}.md", "content": content}
     if format != "json":
         raise HTTPException(400, "format must be json or markdown")
     return {"filename": f"{p['id']}.json", "prompt": p}
-
-@app.get("/api/prompts/export")
-def export_library():
-    with db() as conn:
-        rows = conn.execute("SELECT * FROM prompts ORDER BY category,name").fetchall()
-    return {"schema_version": "1.0", "exported_at": now(), "prompts": [prompt_dict(r) for r in rows]}
 
 @app.post("/api/import/preview")
 def import_preview(payload: dict[str, Any]):
@@ -520,9 +520,10 @@ async def execute_workflow(workflow_id: str, payload: dict[str, Any]):
                 if not pid:
                     raise ValueError(f"Step {i+1} has no prompt_id")
                 p = get_prompt(pid)
-                values = dict(node.get("variables", {}))
-                values.setdefault("workflow_input", input_text)
-                values.setdefault("previous_output", previous)
+                values = dict(payload.get("variables", {}))
+                values.update(node.get("variables", {}))
+                values["workflow_input"] = input_text
+                values["previous_output"] = previous
                 rendered = render_template(node.get("user_template") or p["user_template"], values)
                 model = node.get("model") or p.get("model") or DEFAULT_MODEL
                 step_started = time.perf_counter()
