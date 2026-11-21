@@ -17,7 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 ROOT = Path(__file__).resolve().parent
-DB_PATH = Path(os.getenv("NEXARO_DB_PATH", "/data/nexaro.db"))
+DB_PATH = Path(os.getenv("NEXARO_DB_PATH", str(ROOT.parent / "data" / "nexaro.db")))
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434")
 DEFAULT_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2")
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
