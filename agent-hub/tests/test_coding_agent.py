@@ -17,4 +17,4 @@ async def test_agent_executes_tools(tmp_path,monkeypatch):
     assert result["status"]=="completed"
     assert (tmp_path/"calculator.py").exists()
     assert result["tool_calls"]==2
-    assert any(e["tool"]=="run_command" and e["success"] for e in result["events"])
+    assert any(e["tool"]=="run_command" and e["success"] for e in result["events"]), result["events"]
