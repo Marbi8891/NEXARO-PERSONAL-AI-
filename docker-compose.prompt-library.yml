@@ -1,0 +1,16 @@
+services:
+  nexaro-prompt-library:
+    build: .
+    container_name: nexaro-prompt-library
+    ports:
+      - "8000:8000"
+    environment:
+      NEXARO_DB_PATH: /data/nexaro.db
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: llama3.2
+    volumes:
+      - nexaro_prompt_data:/data
+    restart: unless-stopped
+    # Connect this service to the existing private Ollama network before use.
+volumes:
+  nexaro_prompt_data:
