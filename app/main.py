@@ -207,7 +207,6 @@ def list_packs():
     packs = pack_catalogue().get("packs", [])
     with db() as conn:
         installed = {r[0] for r in conn.execute("SELECT pack_id FROM installed_packs")}
-        counts = {r[0]: r[1] for r in conn.execute("SELECT pack_id, COUNT(*) FROM pack_prompts GROUP BY pack_id")} if False else {}
     return [{**pack, "installed": pack["id"] in installed, "prompt_count": len(pack.get("prompt_ids", []))} for pack in packs]
 
 @app.get("/api/packs/{pack_id}")
