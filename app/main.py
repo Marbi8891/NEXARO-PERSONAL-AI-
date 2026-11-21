@@ -243,6 +243,19 @@ def get_pack(pack_id: str):
         installed = conn.execute("SELECT 1 FROM installed_packs WHERE pack_id=?", (pack_id,)).fetchone() is not None
     return {**pack, "installed": installed, "prompts": prompts}
 
+@app.get("/api/packs/{pack_id}/export")
+def export_pack(pack_id: str):
+    pack = next((p for p in pack_catalogue().get("packs", []) if p.get("id") == pack_id), None)
+    if not pack:
+        raise HTTPException(404, "Pack not found")
+    prompts = []
+    for prompt_id in pack.get("prompt_ids", []):
+        try:
+            prompts.append(get_prompt(prompt_id))
+        except HTTPException:
+            continue
+    return {"schema_version":"1.0","pack":pack,"prompts":prompts}
+
 @app.post("/api/packs/{pack_id}/install")
 def install_pack(pack_id: str):
     pack = next((p for p in pack_catalogue().get("packs", []) if p.get("id") == pack_id), None)
@@ -563,6 +576,19 @@ async def execute_workflow(workflow_id: str, payload: dict[str, Any]):
             conn.execute("INSERT INTO workflow_steps(execution_id,step_index,prompt_id,prompt_name,model,input_text,output_text,status,error,duration_ms) VALUES(?,?,?,?,?,?,?,?,?,?)", (run_id, len(logs), "", "", "", "", "", "failed", error, 0))
         raise HTTPException(502, {"execution_id": run_id, "error": error, "completed_steps": logs})
 
+
+@app.post("/api/prompts/{prompt_id}/versions/{version}/restore")
+def restore_prompt_version(prompt_id: str, version: int):
+    current = get_prompt(prompt_id)
+    with db() as conn:
+        row = conn.execute("SELECT snapshot FROM prompt_versions WHERE prompt_id=? AND version=?", (prompt_id,version)).fetchone()
+    if not row:
+        raise HTTPException(404, "Prompt version not found")
+    snapshot = json.loads(row["snapshot"])
+    merged = {key:current.get(key) for key in ["name","description","category","subcategory","tags","difficulty","prompt_type","visibility","system_prompt","user_template","variables","output_format","model"]}
+    merged.update({key:value for key,value in snapshot.items() if key in merged})
+    merged["changelog"] = f"Restored from version {version}"
+    return update_prompt(prompt_id, PromptCreate(**merged))
 
 @app.get("/api/executions")
 def executions(limit: int = Query(50,ge=1,le=200)):
