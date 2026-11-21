@@ -9,7 +9,8 @@ This branch introduces an initial working Prompt Library module for the document
 - Dynamic variables with required-variable validation.
 - Ollama execution through its `/api/chat` endpoint (non-streaming MVP).
 - Local web UI with prompt cards, editor, run form, result modal and history.
-- Initial seed catalogue: 25 prompts.
+- Initial seed catalogue: 26 prompts.
+- Basic unit tests for variable rendering and seed idempotency.
 
 ## Run locally
 ```bash
@@ -17,9 +18,15 @@ python -m venv .venv
 # Windows: .venv\\Scripts\\activate
 source .venv/bin/activate
 pip install -r requirements.txt
-OLLAMA_URL=http://localhost:11434 uvicorn app.main:app --reload
+uvicorn app.main:app --reload
 ```
 Open http://localhost:8000.
+
+## Run tests
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
 
 ## Docker
 The included Compose file is a standalone starting point. Connect the app to the existing Ollama service/network and avoid publishing Ollama publicly.
