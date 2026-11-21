@@ -102,7 +102,10 @@ async def run_command(command: str, working_directory: str = ".", timeout: int |
     if executable in {"docker", "docker-compose"} and (len(args) < 2 or args[1] not in {"ps", "logs", "config"}):
         raise PermissionError("Only read-only Docker inspection commands are allowed")
     effective_timeout = min(max(timeout or settings.command_timeout_seconds, 1), settings.command_timeout_seconds)
-    proc = await asyncio.create_subprocess_exec(*args, cwd=str(cwd), stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env={**os.environ, "PYTHONUNBUFFERED": "1"})
+    inherited = os.environ
+    safe_env = {key: inherited[key] for key in ("PATH", "HOME", "TMPDIR", "TEMP", "TMP", "LANG", "LC_ALL", "SYSTEMROOT", "WINDIR", "USER") if key in inherited}
+    safe_env["PYTHONUNBUFFERED"] = "1"
+    proc = await asyncio.create_subprocess_exec(*args, cwd=str(cwd), stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=safe_env)
     try:
         stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=effective_timeout)
     except asyncio.TimeoutError:
