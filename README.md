@@ -1,41 +1,46 @@
-# NEXARO Personal AI
+# NEXARO Agent Hub MVP
 
-Local-first personal AI assistant built around Ollama, FastAPI, SQLite and Docker.
+Runnable FastAPI service that reads the agent catalogue and sends chat requests to Ollama. It is an isolated backend foundation; frontend integration is not included yet.
 
-> **Project status:** architecture and Agent Hub foundation in progress. The files in this branch define the proposed multi-agent foundation and configuration catalogue. They are not a claim that every agent or execution capability is already implemented.
+## Run locally (PowerShell)
 
-## Product direction
+```powershell
+cd agent-hub
+Copy-Item .env.example .env
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8081
+```
 
-- Persistent chat and model management.
-- Configurable specialist agents.
-- User-controlled memory and project workspaces.
-- A permissioned tool registry.
-- Multi-agent orchestration.
-- Local document retrieval (RAG).
-- Task and automation management.
+From the repository root, the catalogue path defaults to `docs/agents/catalogue.json`. Ollama defaults to `http://localhost:11434` and model `qwen2.5:3b`.
 
-## Planned stack
+## Docker
 
-- Backend: Python, FastAPI, Pydantic, SQLAlchemy.
-- Frontend: HTML, CSS and JavaScript ES modules.
-- Local inference: Ollama.
-- Persistence: SQLite initially, with a migration path to PostgreSQL.
-- Runtime: Docker Compose.
+From this folder:
 
-## Important status distinction
+```powershell
+docker compose up --build
+```
 
-The Agent Hub documents and seed configurations are a design foundation. Agent execution, persistent CRUD, tool calling, memory, RAG, and frontend screens must be implemented and tested before being described as available.
+The container uses Docker Desktop's `host.docker.internal` to reach Ollama on the host and binds API port 8081 to loopback only.
 
-## Security and privacy
+## API
 
-- Never commit .env files, credentials, tokens, certificates, personal conversation history, live databases, or private logs.
-- Do not expose Ollama or SQLite directly to the public internet.
-- Treat retrieved documents and tool output as untrusted input.
-- Enforce tool permissions in backend code, not prompts alone.
-- Default agents to read-only access and disable terminal/network access.
+- `GET /health`
+- `GET /api/agents`
+- `GET /api/agents/{agent_id}`
+- `GET /api/models`
+- `POST /api/agents/{agent_id}/chat`
+- `POST /api/orchestrator/plan`
 
-See [SECURITY.md](SECURITY.md) and [docs/security/agent-security-model.md](docs/security/agent-security-model.md).
+Chat body example:
+```json
+{
+  "message": "Explain this Python function",
+  "context": "def add(a, b): return a + b",
+  "model": null
+}
+```
 
-## License
-
-No license has been added. Until one is added, no reuse rights are granted.
+This MVP does not execute commands, modify files, browse the network, persist chats, or invoke tools. The orchestrator endpoint only produces a plan; it does not perform delegation.

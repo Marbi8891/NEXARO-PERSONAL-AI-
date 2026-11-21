@@ -12,6 +12,10 @@ services:
       OLLAMA_DEFAULT_MODEL: qwen2.5:3b
       AGENT_CATALOGUE_PATH: /app/catalogue.json
       CORS_ORIGINS: http://localhost:8080,http://localhost:5173
+      WORKSPACE_DIR: /workspace
+      CODING_AGENT_MAX_ITERATIONS: "20"
+    volumes:
+      - ./workspace:/workspace
     extra_hosts:
       - "host.docker.internal:host-gateway"
     read_only: true

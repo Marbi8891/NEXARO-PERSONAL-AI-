@@ -1,46 +1,39 @@
-# NEXARO Agent Hub MVP
+# NEXARO Agent Hub — Coding Agent MVP
+FastAPI service connecting Ollama to workspace-confined filesystem and allowlisted terminal tools.
 
-Runnable FastAPI service that reads the agent catalogue and sends chat requests to Ollama. It is an isolated backend foundation; frontend integration is not included yet.
-
-## Run locally (PowerShell)
-
+## Local PowerShell
 ```powershell
 cd agent-hub
 Copy-Item .env.example .env
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+$env:WORKSPACE_DIR = "$PWD\workspace"
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8081
 ```
-
-From the repository root, the catalogue path defaults to `docs/agents/catalogue.json`. Ollama defaults to `http://localhost:11434` and model `qwen2.5:3b`.
+Ollama must be available at `http://localhost:11434`. The default model is qwen2.5:3b. Coding quality is generally better with a model capable of tool calling, such as qwen2.5-coder:7b where resources permit.
 
 ## Docker
-
-From this folder:
-
 ```powershell
+New-Item -ItemType Directory -Force workspace
 docker compose up --build
 ```
-
-The container uses Docker Desktop's `host.docker.internal` to reach Ollama on the host and binds API port 8081 to loopback only.
+Loopback-only API on 8081; only `agent-hub/workspace` is mounted. Ollama is accessed via `host.docker.internal`.
 
 ## API
-
 - `GET /health`
 - `GET /api/agents`
-- `GET /api/agents/{agent_id}`
 - `GET /api/models`
 - `POST /api/agents/{agent_id}/chat`
-- `POST /api/orchestrator/plan`
+- `POST /api/orchestrator/plan` (planning-only)
+- `POST /api/coding/execute` (real tool execution)
 
-Chat body example:
+Example request:
 ```json
-{
-  "message": "Explain this Python function",
-  "context": "def add(a, b): return a + b",
-  "model": null
-}
+{"task":"Create calculator.py with arithmetic functions, add tests and run them.","model":"qwen2.5-coder:7b","max_iterations":12}
 ```
 
-This MVP does not execute commands, modify files, browse the network, persist chats, or invoke tools. The orchestrator endpoint only produces a plan; it does not perform delegation.
+Tools: list/read/search files, write/edit files, create directories and run allowlisted commands. Workspace paths are confined. Shell operators are rejected; subprocess runs without a shell. Deletion, deployment, push and merge are not provided.
+
+## Security note
+This is a personal-use MVP, not a hardened multi-tenant sandbox. Keep the workspace to trusted source code and do not expose the API publicly. Command allowlisting and path confinement reduce risk but do not replace OS/container isolation.
