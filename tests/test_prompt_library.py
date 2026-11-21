@@ -57,3 +57,13 @@ def test_workflow_crud_persists_ordered_nodes():
     assert updated["name"] == "Updated Flow"
     assert [n["prompt_id"] for n in get_workflow(created["id"])["nodes"]] == ["sql-tutor","python-tutor"]
     assert delete_workflow(created["id"])["deleted"] is True
+
+
+def test_prompt_search_filters_metadata():
+    from app.main import list_prompts
+    education = list_prompts(prompt_type="Education")
+    assert education
+    assert all(p["prompt_type"] == "Education" for p in education)
+    security = list_prompts(q="authorized")
+    assert security
+    assert any("authorized" in " ".join(p["tags"]).lower() for p in security)
