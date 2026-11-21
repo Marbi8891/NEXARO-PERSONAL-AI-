@@ -578,6 +578,43 @@ async def execute_prompt(prompt_id: str, payload: ExecuteRequest):
             conn.execute("INSERT INTO executions(id,prompt_id,prompt_version,model,variables,rendered_prompt,result,duration_ms,error,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)",(execution_id,prompt_id,prompt["version"],model,json.dumps(payload.variables),rendered,"",duration,message,now()))
         raise HTTPException(502,message)
 
+@app.post("/api/prompts/{prompt_id}/execute/stream")
+async def execute_prompt_stream(prompt_id: str, payload: ExecuteRequest):
+    prompt = get_prompt(prompt_id)
+    rendered = render_template(payload.user_template or prompt["user_template"], payload.variables)
+    system = payload.system_prompt if payload.system_prompt is not None else prompt["system_prompt"]
+    model = payload.model or prompt["model"] or DEFAULT_MODEL
+    execution_id, started = str(uuid.uuid4()), time.perf_counter()
+    async def events():
+        chunks = []
+        yield "event: meta\ndata: " + json.dumps({"id": execution_id, "model": model}) + "\n\n"
+        try:
+            async with httpx.AsyncClient(timeout=None) as client:
+                async with client.stream("POST", f"{OLLAMA_URL.rstrip('/')}/api/chat", json={"model": model, "stream": True, "messages": [{"role": "system", "content": system}, {"role": "user", "content": rendered}]}) as response:
+                    response.raise_for_status()
+                    async for line in response.aiter_lines():
+                        if not line:
+                            continue
+                        item = json.loads(line)
+                        token = item.get("message", {}).get("content", "")
+                        if token:
+                            chunks.append(token)
+                            yield "event: token\ndata: " + json.dumps({"text": token}, ensure_ascii=False) + "\n\n"
+                        if item.get("done"):
+                            break
+            result, duration = "".join(chunks), int((time.perf_counter() - started) * 1000)
+            with db() as conn:
+                conn.execute("UPDATE prompts SET usage_count=usage_count+1 WHERE id=?", (prompt_id,))
+                conn.execute("INSERT INTO executions(id,prompt_id,prompt_version,model,variables,rendered_prompt,result,duration_ms,error,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)", (execution_id,prompt_id,prompt["version"],model,json.dumps(payload.variables,ensure_ascii=False),rendered,result,duration,"",now()))
+            yield "event: done\ndata: " + json.dumps({"id": execution_id, "duration_ms": duration, "model": model}, ensure_ascii=False) + "\n\n"
+        except Exception as exc:
+            duration = int((time.perf_counter() - started) * 1000)
+            error = str(exc)
+            with db() as conn:
+                conn.execute("INSERT INTO executions(id,prompt_id,prompt_version,model,variables,rendered_prompt,result,duration_ms,error,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)", (execution_id,prompt_id,prompt["version"],model,json.dumps(payload.variables,ensure_ascii=False),rendered,"".join(chunks),duration,error,now()))
+            yield "event: error\ndata: " + json.dumps({"message": error}, ensure_ascii=False) + "\n\n"
+    return StreamingResponse(events(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
 @app.delete("/api/executions/{execution_id}")
 def delete_execution(execution_id: str):
     with db() as conn:
