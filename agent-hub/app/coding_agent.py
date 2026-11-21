@@ -35,9 +35,18 @@ class CodingAgent:
                 fn = call.get("function") or {}
                 name = fn.get("name")
                 args = fn.get("arguments") or {}
+                if isinstance(args, str):
+                    try:
+                        args = json.loads(args)
+                    except json.JSONDecodeError:
+                        args = {"_invalid_arguments": args}
+                if not isinstance(args, dict):
+                    args = {"_invalid_arguments": args}
                 tool_count += 1
                 event={"iteration":iteration,"tool":name,"arguments":args}
                 try:
+                    if "_invalid_arguments" in args:
+                        raise ValueError("Tool arguments were not valid JSON")
                     result=await execute_tool(name,args)
                     event["result"]=result
                     event["success"]=not (isinstance(result,dict) and result.get("exit_code") not in (0,None))
