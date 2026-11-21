@@ -1,0 +1,23 @@
+services:
+  nexaro-agent-hub:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nexaro-agent-hub
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8081:8081"
+    environment:
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_DEFAULT_MODEL: qwen2.5:3b
+      AGENT_CATALOGUE_PATH: /app/catalogue.json
+      CORS_ORIGINS: http://localhost:8080,http://localhost:5173
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
