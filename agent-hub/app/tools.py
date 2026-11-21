@@ -89,12 +89,16 @@ def create_directory(path: str) -> dict[str, Any]:
 async def run_command(command: str, working_directory: str = ".", timeout: int | None = None) -> dict[str, Any]:
     cwd = _safe_path(working_directory)
     if not cwd.is_dir(): raise ValueError("working_directory must be a directory")
-    if any(op in command for op in (";", "&&", "||", "|", ">", "<", "`", "$(", "\\n")):
-        raise ValueError("Shell operators are disabled; execute one command at a time")
     args = shlex.split(command)
     if not args: raise ValueError("Command is empty")
+    if any(token in {";", "&&", "||", "|", ">", "<"} for token in args):
+        raise ValueError("Shell operators are disabled; commands run without a shell")
     executable = Path(args[0]).name.lower()
     if executable not in ALLOWED_COMMANDS: raise PermissionError(f"Command is not allowlisted: {executable}")
+    if executable == "git" and (len(args) < 2 or args[1] not in {"status", "diff", "log", "show", "ls-files"}):
+        raise PermissionError("Only read-only Git commands are allowed")
+    if executable in {"docker", "docker-compose"} and (len(args) < 2 or args[1] not in {"ps", "logs", "config"}):
+        raise PermissionError("Only read-only Docker inspection commands are allowed")
     effective_timeout = min(max(timeout or settings.command_timeout_seconds, 1), settings.command_timeout_seconds)
     proc = await asyncio.create_subprocess_exec(*args, cwd=str(cwd), stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env={**os.environ, "PYTHONUNBUFFERED": "1"})
     try:
