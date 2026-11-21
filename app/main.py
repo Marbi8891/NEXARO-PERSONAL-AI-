@@ -257,7 +257,7 @@ def uninstall_pack(pack_id: str):
 
 
 @app.get("/api/prompts")
-def list_prompts(q: str = "", category: str = "", favorite: bool = False, sort: str = "recent", limit: int = Query(100,ge=1,le=250)):
+def list_prompts(q: str = "", category: str = "", subcategory: str = "", tag: str = "", difficulty: str = "", prompt_type: str = "", model: str = "", visibility: str = "", favorite: bool = False, sort: str = "recent", limit: int = Query(100,ge=1,le=250)):
     allowed={"recent":"updated_at DESC","name":"name COLLATE NOCASE ASC","popular":"usage_count DESC","created":"created_at DESC"}
     order=allowed.get(sort,"updated_at DESC")
     clauses=[]; params=[]
