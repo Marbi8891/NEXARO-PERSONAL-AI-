@@ -137,12 +137,12 @@ def prompt_dict(row: sqlite3.Row) -> dict[str,Any]:
     return d
 
 def render_template(template: str, values: dict[str,Any]) -> str:
-    names=set(re.findall(r"{{\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*}}",template))
+    names=set(re.findall(r"{{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*}}",template))
     missing=names-set(values)
     if missing:
         raise HTTPException(422,detail={"missing_variables":sorted(missing)})
     for key in names:
-        template=re.sub(r"{{\\s*"+re.escape(key)+r"\\s*}}",str(values.get(key,"")),template)
+        template=re.sub(r"{{\s*"+re.escape(key)+r"\s*}}",str(values.get(key,"")),template)
     return template
 
 @app.on_event("startup")
