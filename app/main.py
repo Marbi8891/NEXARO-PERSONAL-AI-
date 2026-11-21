@@ -341,6 +341,212 @@ def versions(prompt_id: str):
         rows=conn.execute("SELECT version,changelog,created_at,snapshot FROM prompt_versions WHERE prompt_id=? ORDER BY version DESC",(prompt_id,)).fetchall()
     return [dict(version=r["version"],changelog=r["changelog"],created_at=r["created_at"],snapshot=json.loads(r["snapshot"])) for r in rows]
 
+# Import/export routes
+@app.get("/api/prompts/{prompt_id}/export")
+def export_prompt(prompt_id: str, format: str = "json"):
+    p = get_prompt(prompt_id)
+    if format == "markdown":
+        content = f"# {p['name']}\n\n{p['description']}\n\n## System Prompt\n\n{p['system_prompt']}\n\n## User Template\n\n{p['user_template']}\n\n## Metadata\n\n- Category: {p['category']}\n- Tags: {', '.join(p['tags'])}\n- Version: {p['version']}\n\n## Variables\n\n\`\`\`json\n{json.dumps(p['variables'], ensure_ascii=False, indent=2)}\n\`\`\`"
+        return {"filename": f"{p['name'].replace(' ', '-')}.md", "content": content}
+    if format != "json":
+        raise HTTPException(400, "format must be json or markdown")
+    return {"filename": f"{p['id']}.json", "prompt": p}
+
+@app.get("/api/prompts/export")
+def export_library():
+    with db() as conn:
+        rows = conn.execute("SELECT * FROM prompts ORDER BY category,name").fetchall()
+    return {"schema_version": "1.0", "exported_at": now(), "prompts": [prompt_dict(r) for r in rows]}
+
+@app.post("/api/import/preview")
+def import_preview(payload: dict[str, Any]):
+    items = payload.get("prompts") if isinstance(payload.get("prompts"), list) else [payload.get("prompt", payload)]
+    if not items or not isinstance(items, list):
+        raise HTTPException(422, "No prompt records found")
+    preview = []
+    with db() as conn:
+        for item in items:
+            if not isinstance(item, dict):
+                preview.append({"valid": False, "error": "Prompt must be an object"})
+                continue
+            name = str(item.get("name", "")).strip()
+            template = str(item.get("user_template", item.get("template", ""))).strip()
+            if not name or not template:
+                preview.append({"valid": False, "name": name, "error": "name and user_template are required"})
+                continue
+            existing = conn.execute("SELECT id,name FROM prompts WHERE id=? OR name=?", (item.get("id"), name)).fetchone()
+            normalized = {**item, "name": name, "category": str(item.get("category", "Imported")).strip() or "Imported", "user_template": template}
+            for key, default in {"description":"","system_prompt":"","tags":[],"variables":[],"difficulty":"Beginner","prompt_type":"Assistant","visibility":"private","output_format":"Markdown","model":""}.items():
+                normalized.setdefault(key, default)
+            preview.append({"valid": True, "name": name, "duplicate": dict(existing) if existing else None, "prompt": normalized})
+    return {"total": len(preview), "valid": sum(1 for x in preview if x.get("valid")), "items": preview}
+
+@app.post("/api/import/prompts")
+def import_prompts(payload: dict[str, Any]):
+    mode = payload.get("mode", "new")
+    if mode not in ("new", "update"):
+        raise HTTPException(422, "mode must be new or update")
+    preview = import_preview(payload)
+    imported, skipped, updated = [], [], []
+    for item in preview["items"]:
+        if not item.get("valid"):
+            skipped.append({"name": item.get("name", ""), "error": item["error"]})
+            continue
+        p, duplicate = item["prompt"], item.get("duplicate")
+        if duplicate and mode == "new":
+            skipped.append({"name": p["name"], "reason": "duplicate"})
+            continue
+        if duplicate and mode == "update":
+            prompt_id = duplicate["id"]
+            update_prompt(prompt_id, PromptCreate(**{**p, "id": prompt_id, "changelog": "Imported update"}))
+            updated.append(prompt_id)
+            continue
+        p["id"] = str(uuid.uuid4())
+        create_prompt(PromptCreate(**{**p, "changelog": "Imported prompt"}))
+        imported.append(p["id"])
+    return {"imported": imported, "updated": updated, "skipped": skipped}
+
+# Prompt Builder and quality evaluation
+@app.post("/api/prompt-builder")
+async def prompt_builder(payload: dict[str, Any]):
+    objective = str(payload.get("objective", "")).strip()
+    if not objective:
+        raise HTTPException(422, "objective is required")
+    parts = [("Role", payload.get("role", "")), ("Context", payload.get("context", "")), ("Task", objective), ("Constraints", payload.get("constraints", "")), ("Style", payload.get("style", "")), ("Output format", payload.get("output_format", ""))]
+    brief = "\n".join(f"{label}: {value}" for label, value in parts if value)
+    model = payload.get("model") or DEFAULT_MODEL
+    system = "You are a prompt design assistant. Create a reusable, clear prompt from the supplied brief. Do not execute the task. Return only the prompt, with dynamic {{variables}} where useful."
+    try:
+        async with httpx.AsyncClient(timeout=180) as client:
+            response = await client.post(f"{OLLAMA_URL.rstrip('/')}/api/chat", json={"model": model, "stream": False, "messages": [{"role": "system", "content": system}, {"role": "user", "content": brief}]})
+            response.raise_for_status()
+        return {"prompt": response.json().get("message", {}).get("content", ""), "model": model}
+    except httpx.HTTPError as exc:
+        raise HTTPException(502, f"Ollama request failed: {exc}")
+
+@app.post("/api/prompts/{prompt_id}/evaluate")
+async def evaluate_prompt(prompt_id: str):
+    p = get_prompt(prompt_id)
+    rubric = "Assess clarity, specificity, context, role, task, constraints, output format, reusability and ambiguity. Return JSON: score 0-100 (subjective), findings array, recommendations array, improved_prompt string."
+    try:
+        async with httpx.AsyncClient(timeout=180) as client:
+            response = await client.post(f"{OLLAMA_URL.rstrip('/')}/api/chat", json={"model": p.get("model") or DEFAULT_MODEL, "stream": False, "format": "json", "messages": [{"role": "system", "content": rubric}, {"role": "user", "content": json.dumps({"system_prompt": p["system_prompt"], "user_template": p["user_template"], "variables": p["variables"]}, ensure_ascii=False)}]})
+            response.raise_for_status()
+        content = response.json().get("message", {}).get("content", "{}")
+        try:
+            result = json.loads(content)
+        except json.JSONDecodeError:
+            result = {"raw": content}
+        result["subjective"] = True
+        return result
+    except httpx.HTTPError as exc:
+        raise HTTPException(502, f"Ollama request failed: {exc}")
+
+# Sequential Workflow MVP
+@app.get("/api/workflows")
+def list_workflows():
+    with db() as conn:
+        rows = conn.execute("SELECT * FROM workflows ORDER BY updated_at DESC").fetchall()
+    return [dict(r, nodes=json.loads(r["nodes"])) for r in rows]
+
+@app.post("/api/workflows")
+def create_workflow(payload: dict[str, Any]):
+    name = str(payload.get("name", "")).strip()
+    nodes = payload.get("nodes", [])
+    if not name or not isinstance(nodes, list) or len(nodes) > 20:
+        raise HTTPException(422, "Name required; workflows support up to 20 steps")
+    wid, stamp = str(uuid.uuid4()), now()
+    with db() as conn:
+        conn.execute("INSERT INTO workflows(id,name,description,nodes,created_at,updated_at) VALUES(?,?,?,?,?,?)", (wid, name, str(payload.get("description", "")), json.dumps(nodes, ensure_ascii=False), stamp, stamp))
+    return get_workflow(wid)
+
+@app.get("/api/workflows/{workflow_id}")
+def get_workflow(workflow_id: str):
+    with db() as conn:
+        row = conn.execute("SELECT * FROM workflows WHERE id=?", (workflow_id,)).fetchone()
+    if not row:
+        raise HTTPException(404, "Workflow not found")
+    return dict(row, nodes=json.loads(row["nodes"]))
+
+@app.put("/api/workflows/{workflow_id}")
+def update_workflow(workflow_id: str, payload: dict[str, Any]):
+    current = get_workflow(workflow_id)
+    name = str(payload.get("name", current["name"])).strip()
+    nodes = payload.get("nodes", current["nodes"])
+    if not name or not isinstance(nodes, list) or len(nodes) > 20:
+        raise HTTPException(422, "Invalid workflow")
+    with db() as conn:
+        conn.execute("UPDATE workflows SET name=?,description=?,nodes=?,updated_at=? WHERE id=?", (name, str(payload.get("description", current["description"])), json.dumps(nodes, ensure_ascii=False), now(), workflow_id))
+    return get_workflow(workflow_id)
+
+@app.delete("/api/workflows/{workflow_id}")
+def delete_workflow(workflow_id: str):
+    with db() as conn:
+        cur = conn.execute("DELETE FROM workflows WHERE id=?", (workflow_id,))
+    if not cur.rowcount:
+        raise HTTPException(404, "Workflow not found")
+    return {"deleted": True}
+
+@app.get("/api/workflows/{workflow_id}/executions")
+def workflow_execution_history(workflow_id: str):
+    with db() as conn:
+        rows = conn.execute("SELECT * FROM workflow_executions WHERE workflow_id=? ORDER BY created_at DESC", (workflow_id,)).fetchall()
+    return [dict(r) for r in rows]
+
+@app.get("/api/workflow-executions/{execution_id}")
+def workflow_execution_detail(execution_id: str):
+    with db() as conn:
+        run = conn.execute("SELECT * FROM workflow_executions WHERE id=?", (execution_id,)).fetchone()
+        steps = conn.execute("SELECT * FROM workflow_steps WHERE execution_id=? ORDER BY step_index", (execution_id,)).fetchall()
+    if not run:
+        raise HTTPException(404, "Workflow execution not found")
+    return {"execution": dict(run), "steps": [dict(r) for r in steps]}
+
+@app.post("/api/workflows/{workflow_id}/execute")
+async def execute_workflow(workflow_id: str, payload: dict[str, Any]):
+    workflow = get_workflow(workflow_id)
+    nodes = workflow["nodes"]
+    if not nodes:
+        raise HTTPException(422, "Workflow has no steps")
+    run_id, started = str(uuid.uuid4()), time.perf_counter()
+    input_text = str(payload.get("input", ""))
+    with db() as conn:
+        conn.execute("INSERT INTO workflow_executions(id,workflow_id,input_text,status,created_at) VALUES(?,?,?,?,?)", (run_id, workflow_id, input_text, "running", now()))
+    previous, logs = input_text, []
+    try:
+        async with httpx.AsyncClient(timeout=180) as client:
+            for i, node in enumerate(nodes):
+                pid = node.get("prompt_id")
+                if not pid:
+                    raise ValueError(f"Step {i+1} has no prompt_id")
+                p = get_prompt(pid)
+                values = dict(node.get("variables", {}))
+                values.setdefault("workflow_input", input_text)
+                values.setdefault("previous_output", previous)
+                rendered = render_template(node.get("user_template") or p["user_template"], values)
+                model = node.get("model") or p.get("model") or DEFAULT_MODEL
+                step_started = time.perf_counter()
+                response = await client.post(f"{OLLAMA_URL.rstrip('/')}/api/chat", json={"model": model, "stream": False, "messages": [{"role": "system", "content": node.get("system_prompt", p["system_prompt"])}, {"role": "user", "content": rendered}]})
+                response.raise_for_status()
+                output = response.json().get("message", {}).get("content", "")
+                duration = int((time.perf_counter() - step_started) * 1000)
+                with db() as conn:
+                    conn.execute("INSERT INTO workflow_steps(execution_id,step_index,prompt_id,prompt_name,model,input_text,output_text,status,duration_ms) VALUES(?,?,?,?,?,?,?,?,?)", (run_id, i, pid, p["name"], model, rendered, output, "completed", duration))
+                    conn.execute("UPDATE prompts SET usage_count=usage_count+1 WHERE id=?", (pid,))
+                logs.append({"step": i+1, "prompt_id": pid, "prompt_name": p["name"], "model": model, "output": output, "duration_ms": duration, "status": "completed"})
+                previous = output
+        total = int((time.perf_counter() - started) * 1000)
+        with db() as conn:
+            conn.execute("UPDATE workflow_executions SET status='completed',final_output=?,finished_at=? WHERE id=?", (previous, now(), run_id))
+        return {"execution_id": run_id, "status": "completed", "final_output": previous, "steps": logs, "duration_ms": total}
+    except Exception as exc:
+        error = str(exc)
+        with db() as conn:
+            conn.execute("UPDATE workflow_executions SET status='failed',error=?,finished_at=? WHERE id=?", (error, now(), run_id))
+            conn.execute("INSERT INTO workflow_steps(execution_id,step_index,prompt_id,prompt_name,model,input_text,output_text,status,error,duration_ms) VALUES(?,?,?,?,?,?,?,?,?,?)", (run_id, len(logs), "", "", "", "", "", "failed", error, 0))
+        raise HTTPException(502, {"execution_id": run_id, "error": error, "completed_steps": logs})
+
+
 @app.get("/api/executions")
 def executions(limit: int = Query(50,ge=1,le=200)):
     with db() as conn:
