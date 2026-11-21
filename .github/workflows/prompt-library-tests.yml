@@ -21,5 +21,7 @@ jobs:
         run: |
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
+      - name: Check frontend syntax
+        run: node --check app/static/app.js
       - name: Run tests
         run: pytest -q
