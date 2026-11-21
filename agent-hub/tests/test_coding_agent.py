@@ -4,7 +4,7 @@ class FakeOllama:
     async def chat_with_tools(self,*,model,messages,tools):
         self.calls+=1
         if self.calls==1:
-            return {"message":{"role":"assistant","content":"","tool_calls":[{"function":{"name":"write_file","arguments":{"path":"calculator.py","content":"def add(a, b): return a + b\\n"}}}]}}
+            return {"message":{"role":"assistant","content":"","tool_calls":[{"function":{"name":"write_file","arguments":{"path":"calculator.py","content":"def add(a, b): return a + b\n"}}}]}}
         if self.calls==2:
             return {"message":{"role":"assistant","content":"","tool_calls":[{"function":{"name":"run_command","arguments":{"command":"python -c \"import calculator; assert calculator.add(2,3)==5; print('OK')\""}}}]}}
         return {"message":{"role":"assistant","content":"Implemented calculator.py and verified the command."}}
