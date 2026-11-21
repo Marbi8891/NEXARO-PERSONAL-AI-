@@ -266,10 +266,22 @@ def list_prompts(q: str = "", category: str = "", subcategory: str = "", tag: st
     order=allowed.get(sort,"updated_at DESC")
     clauses=[]; params=[]
     if q:
-        clauses.append("(name LIKE ? OR description LIKE ? OR user_template LIKE ? OR category LIKE ? OR tags LIKE ?)")
-        pattern=f"%{q}%";params += [pattern]*5
+        clauses.append("(name LIKE ? OR description LIKE ? OR system_prompt LIKE ? OR user_template LIKE ? OR category LIKE ? OR subcategory LIKE ? OR tags LIKE ? OR prompt_type LIKE ?)")
+        pattern=f"%{q}%";params += [pattern]*8
     if category:
         clauses.append("category=?");params.append(category)
+    if subcategory:
+        clauses.append("subcategory=?");params.append(subcategory)
+    if tag:
+        clauses.append("tags LIKE ?");params.append(f"%{tag}%")
+    if difficulty:
+        clauses.append("difficulty=?");params.append(difficulty)
+    if prompt_type:
+        clauses.append("prompt_type=?");params.append(prompt_type)
+    if model:
+        clauses.append("model=?");params.append(model)
+    if visibility:
+        clauses.append("visibility=?");params.append(visibility)
     join=" JOIN favorites f ON f.prompt_id=p.id" if favorite else ""
     sql=f"SELECT p.* FROM prompts p{join}"
     if clauses: sql += " WHERE "+" AND ".join(clauses)
