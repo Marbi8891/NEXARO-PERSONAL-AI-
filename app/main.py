@@ -58,6 +58,9 @@ def init_db() -> None:
           prompt_id TEXT PRIMARY KEY, created_at TEXT NOT NULL,
           FOREIGN KEY(prompt_id) REFERENCES prompts(id) ON DELETE CASCADE
         );
+        CREATE TABLE IF NOT EXISTS installed_packs (
+          pack_id TEXT PRIMARY KEY, installed_at TEXT NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS prompt_versions (
           id INTEGER PRIMARY KEY AUTOINCREMENT, prompt_id TEXT NOT NULL,
           version INTEGER NOT NULL, snapshot TEXT NOT NULL, changelog TEXT NOT NULL DEFAULT '',
@@ -66,6 +69,7 @@ def init_db() -> None:
         );
         """)
         seed(conn)
+        seed_catalogue(conn)
 
 def seed(conn: sqlite3.Connection) -> None:
     if conn.execute("SELECT COUNT(*) FROM prompts").fetchone()[0]:
@@ -105,6 +109,41 @@ def seed(conn: sqlite3.Connection) -> None:
         VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,'NEXARO',?,?)""",(id_,name,description,category,subcategory,json.dumps(tags),difficulty,prompt_type,"public",system,user_template,variables,output_format,model,stamp,stamp))
         snapshot=json.dumps(dict(id=id_,name=name,system_prompt=system,user_template=user_template,variables=json.loads(variables)),ensure_ascii=False)
         conn.execute("INSERT INTO prompt_versions(prompt_id,version,snapshot,changelog,created_at) VALUES(?,?,?,?,?)",(id_,1,snapshot,"Initial seed",stamp))
+
+def seed_catalogue(conn: sqlite3.Connection) -> None:
+    """Import the curated catalogue idempotently; never overwrite user edits."""
+    catalogue_path = ROOT.parent / "data" / "prompt_catalogue_100.json"
+    if not catalogue_path.exists():
+        return
+    try:
+        catalogue = json.loads(catalogue_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return
+    for item in catalogue.get("prompts", []):
+        if conn.execute("SELECT 1 FROM prompts WHERE id=?", (item.get("id"),)).fetchone():
+            continue
+        stamp = now()
+        variables = item.get("variables", [])
+        conn.execute("""INSERT INTO prompts(id,name,description,category,subcategory,tags,difficulty,prompt_type,visibility,system_prompt,user_template,variables,output_format,model,version,author,created_at,updated_at)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?,?)""", (
+            item["id"], item["name"], item.get("description", ""), item["category"], item.get("subcategory", ""),
+            json.dumps(item.get("tags", []), ensure_ascii=False), item.get("difficulty", "Beginner"), item.get("prompt_type", "Assistant"),
+            item.get("visibility", "public"), item.get("system_prompt", ""), item["user_template"], json.dumps(variables, ensure_ascii=False),
+            item.get("output_format", "Markdown"), item.get("model", ""), item.get("author", "NEXARO"), stamp, stamp
+        ))
+        snapshot = json.dumps(item, ensure_ascii=False)
+        conn.execute("INSERT INTO prompt_versions(prompt_id,version,snapshot,changelog,created_at) VALUES(?,?,?,?,?)", (item["id"], 1, snapshot, "Initial catalogue prompt", stamp))
+
+
+def pack_catalogue() -> dict[str, Any]:
+    path = ROOT.parent / "data" / "prompt_packs.json"
+    if not path.exists():
+        return {"packs": []}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"packs": []}
+
 
 class PromptCreate(BaseModel):
     id: str | None = None
@@ -162,6 +201,46 @@ def categories():
     with db() as conn:
         rows=conn.execute("SELECT category,subcategory,COUNT(*) AS count FROM prompts GROUP BY category,subcategory ORDER BY category,subcategory").fetchall()
     return [{"category":r["category"],"subcategory":r["subcategory"],"count":r["count"]} for r in rows]
+
+@app.get("/api/packs")
+def list_packs():
+    packs = pack_catalogue().get("packs", [])
+    with db() as conn:
+        installed = {r[0] for r in conn.execute("SELECT pack_id FROM installed_packs")}
+        counts = {r[0]: r[1] for r in conn.execute("SELECT pack_id, COUNT(*) FROM pack_prompts GROUP BY pack_id")} if False else {}
+    return [{**pack, "installed": pack["id"] in installed, "prompt_count": len(pack.get("prompt_ids", []))} for pack in packs]
+
+@app.get("/api/packs/{pack_id}")
+def get_pack(pack_id: str):
+    pack = next((p for p in pack_catalogue().get("packs", []) if p.get("id") == pack_id), None)
+    if not pack:
+        raise HTTPException(404, "Pack not found")
+    prompts = []
+    for prompt_id in pack.get("prompt_ids", []):
+        try:
+            prompts.append(get_prompt(prompt_id))
+        except HTTPException:
+            continue
+    with db() as conn:
+        installed = conn.execute("SELECT 1 FROM installed_packs WHERE pack_id=?", (pack_id,)).fetchone() is not None
+    return {**pack, "installed": installed, "prompts": prompts}
+
+@app.post("/api/packs/{pack_id}/install")
+def install_pack(pack_id: str):
+    pack = next((p for p in pack_catalogue().get("packs", []) if p.get("id") == pack_id), None)
+    if not pack:
+        raise HTTPException(404, "Pack not found")
+    with db() as conn:
+        conn.execute("INSERT OR IGNORE INTO installed_packs(pack_id,installed_at) VALUES(?,?)", (pack_id, now()))
+        available = [pid for pid in pack.get("prompt_ids", []) if conn.execute("SELECT 1 FROM prompts WHERE id=?", (pid,)).fetchone()]
+    return {"installed": True, "pack_id": pack_id, "available_prompts": available, "missing_prompts": sorted(set(pack.get("prompt_ids", [])) - set(available))}
+
+@app.delete("/api/packs/{pack_id}/install")
+def uninstall_pack(pack_id: str):
+    with db() as conn:
+        cur = conn.execute("DELETE FROM installed_packs WHERE pack_id=?", (pack_id,))
+    return {"installed": False, "pack_id": pack_id, "removed": bool(cur.rowcount), "note": "Prompts remain in the library; uninstall does not delete user data."}
+
 
 @app.get("/api/prompts")
 def list_prompts(q: str = "", category: str = "", favorite: bool = False, sort: str = "recent", limit: int = Query(100,ge=1,le=250)):
