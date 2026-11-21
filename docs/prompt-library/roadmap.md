@@ -11,12 +11,13 @@
 - [x] Seed prompts
 
 ## Next increments
-1. Add automated tests for CRUD, rendering, missing variables, Ollama errors and persistence.
-2. Add streaming, cancellation and run detail persistence UI.
-3. Add JSON/Markdown import/export with schema validation and duplicate preview.
+1. [x] Add tests for catalogue, pack metadata, import preview and workflow CRUD. Continue adding coverage for execution errors and Ollama integration.
+2. [x] Add SSE streaming for prompt execution, execution persistence and client-side abort.
+3. [x] Add JSON library export and JSON/Markdown prompt import preview with duplicate handling.
 4. [x] Add Prompt Packs and install/uninstall idempotency (curated packs and basic UI/API).
-5. Add workflow builder with sequential stages, explicit budgets and failure handling.
-6. Add quality evaluation with clearly marked AI-generated, non-objective scores.
+5. [x] Add sequential Workflow Builder, ordered stages, shared variables, execution logs and error persistence. Future: budgets, pause/resume, retries.
+6. [x] Add AI prompt quality evaluation with subjective scores and recommendations.
 7. Add semantic search only after checking embedding/vector infrastructure.
 8. Add auth/ownership and sharing before any multi-user or public deployment.
 9. [x] Expand catalogue to 100 prompts with role-specific system instructions and structured variables. Review and refine prompt quality iteratively.
+10. [x] Add Prompt Builder backed by Ollama.
