@@ -27,7 +27,15 @@ def test_seed_catalogue_initializes_once():
     init_db()
     with db() as conn:
         count = conn.execute("SELECT COUNT(*) FROM prompts").fetchone()[0]
-        assert count >= 20
+        assert count >= 120
+        assert conn.execute("SELECT COUNT(*) FROM prompts WHERE id LIKE 'catalog-%'").fetchone()[0] == 100
         init_db()
         count_after = conn.execute("SELECT COUNT(*) FROM prompts").fetchone()[0]
         assert count_after == count
+
+
+def test_pack_catalogue_contains_six_packs():
+    from app.main import pack_catalogue
+    packs = pack_catalogue()["packs"]
+    assert len(packs) == 6
+    assert all(pack["prompt_ids"] for pack in packs)
