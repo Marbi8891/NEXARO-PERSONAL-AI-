@@ -1,8 +1,8 @@
 # NEXARO Agent Hub MVP
 
-A small runnable FastAPI service that loads the proposed agent catalogue and calls Ollama. This is an isolated backend foundation; it does not yet integrate into the existing NEXARO frontend.
+Runnable FastAPI service that reads the agent catalogue and sends chat requests to Ollama. It is an isolated backend foundation; frontend integration is not included yet.
 
-## Run locally
+## Run locally (PowerShell)
 
 ```powershell
 cd agent-hub
@@ -13,17 +13,17 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8081
 ```
 
-Ensure Ollama is running and the configured models are installed. Defaults are:
-- Ollama API: `http://localhost:11434`
-- Model: `qwen2.5:3b`
+From the repository root, the catalogue path defaults to `docs/agents/catalogue.json`. Ollama defaults to `http://localhost:11434` and model `qwen2.5:3b`.
 
 ## Docker
 
-This standalone compose file binds the service to loopback only. Configure `OLLAMA_BASE_URL` to the Ollama service reachable from the container. If Ollama is on the host, use `http://host.docker.internal:11434` on Docker Desktop.
+From this folder:
 
 ```powershell
 docker compose up --build
 ```
+
+The container uses Docker Desktop's `host.docker.internal` to reach Ollama on the host and binds API port 8081 to loopback only.
 
 ## API
 
@@ -34,7 +34,7 @@ docker compose up --build
 - `POST /api/agents/{agent_id}/chat`
 - `POST /api/orchestrator/plan`
 
-Chat request:
+Chat body example:
 ```json
 {
   "message": "Explain this Python function",
@@ -43,4 +43,4 @@ Chat request:
 }
 ```
 
-The API does not execute shell commands, modify files, or provide agent tools. Orchestrator endpoint returns a bounded planning response; it does not run delegated agents yet.
+This MVP does not execute commands, modify files, browse the network, persist chats, or invoke tools. The orchestrator endpoint only produces a plan; it does not perform delegation.

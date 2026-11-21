@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
     ollama_base_url: str = "http://localhost:11434"
     ollama_default_model: str = "qwen2.5:3b"
-    agent_catalogue_path: str = "../docs/agents/catalogue.json"
+    agent_catalogue_path: str = "docs/agents/catalogue.json"
     cors_origins: str = "http://localhost:8080,http://localhost:5173"
     request_timeout_seconds: float = 120.0
     max_message_chars: int = 12000

@@ -1,8 +1,8 @@
 services:
   nexaro-agent-hub:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: agent-hub/Dockerfile
     container_name: nexaro-agent-hub
     restart: unless-stopped
     ports:
