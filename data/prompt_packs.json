@@ -1,0 +1,146 @@
+{
+  "schema_version": "1.0",
+  "packs": [
+    {
+      "id": "daw-developer-pack",
+      "name": "DAW Developer Pack",
+      "description": "Tutors and assistants for the core DAW development stack and project work.",
+      "category": "Software Development",
+      "tags": [
+        "DAW",
+        "programming",
+        "education"
+      ],
+      "prompt_ids": [
+        "catalog-002-python-developer",
+        "catalog-003-java-developer",
+        "catalog-004-javascript-developer",
+        "catalog-005-typescript-developer",
+        "catalog-010-database-designer",
+        "catalog-011-sql-tutor",
+        "catalog-017-docker-specialist",
+        "catalog-018-git-assistant",
+        "catalog-012-code-reviewer",
+        "catalog-015-testing-engineer"
+      ],
+      "version": "1.0.0"
+    },
+    {
+      "id": "cybersecurity-pack",
+      "name": "Cybersecurity Pack",
+      "description": "Defensive analysis, authorized testing, security learning and reporting.",
+      "category": "Cybersecurity",
+      "tags": [
+        "security",
+        "blue-team",
+        "authorized"
+      ],
+      "prompt_ids": [
+        "catalog-036-security-analyst",
+        "catalog-037-soc-analyst",
+        "catalog-038-blue-team-mentor",
+        "catalog-040-web-security-tutor",
+        "catalog-041-application-security-auditor",
+        "catalog-042-osint-analyst",
+        "catalog-044-incident-response-assistant",
+        "catalog-045-vulnerability-assessment-assistant",
+        "catalog-046-security-report-writer",
+        "catalog-049-ejpt-tutor"
+      ],
+      "version": "1.0.0"
+    },
+    {
+      "id": "ai-engineering-pack",
+      "name": "AI Engineering Pack",
+      "description": "Prompt design, local models, agents, RAG and AI application engineering.",
+      "category": "AI & Agents",
+      "tags": [
+        "ai",
+        "llm",
+        "engineering"
+      ],
+      "prompt_ids": [
+        "catalog-021-prompt-engineer",
+        "catalog-022-prompt-optimizer",
+        "catalog-023-ai-agent-architect",
+        "catalog-024-multi-agent-architect",
+        "catalog-025-rag-architect",
+        "catalog-026-llm-application-developer",
+        "catalog-027-ollama-specialist",
+        "catalog-028-ai-evaluation-engineer",
+        "catalog-032-ai-security-reviewer",
+        "catalog-034-local-ai-consultant"
+      ],
+      "version": "1.0.0"
+    },
+    {
+      "id": "productivity-pack",
+      "name": "Productivity Pack",
+      "description": "Planning, research, prioritization and career workflow helpers.",
+      "category": "Productivity",
+      "tags": [
+        "productivity",
+        "planning"
+      ],
+      "prompt_ids": [
+        "catalog-066-personal-assistant",
+        "catalog-067-daily-planner",
+        "catalog-068-weekly-planner",
+        "catalog-069-task-prioritizer",
+        "catalog-070-research-assistant",
+        "catalog-071-decision-assistant",
+        "catalog-072-email-assistant",
+        "catalog-074-job-application-assistant",
+        "catalog-075-interview-coach"
+      ],
+      "version": "1.0.0"
+    },
+    {
+      "id": "language-learning-pack",
+      "name": "Language Learning Pack",
+      "description": "Arabic, English and German language practice and coaching.",
+      "category": "Languages",
+      "tags": [
+        "languages",
+        "learning"
+      ],
+      "prompt_ids": [
+        "catalog-086-arabic-fusha-tutor",
+        "catalog-087-arabic-conversation-partner",
+        "catalog-088-arabic-writing-coach",
+        "catalog-089-arabic-grammar-tutor",
+        "catalog-090-arabic-vocabulary-trainer",
+        "catalog-091-english-ielts-tutor",
+        "catalog-092-english-conversation-partner",
+        "catalog-093-german-tutor",
+        "catalog-094-pronunciation-coach",
+        "catalog-095-translation-assistant"
+      ],
+      "version": "1.0.0"
+    },
+    {
+      "id": "saas-builder-pack",
+      "name": "SaaS Builder Pack",
+      "description": "Validate ideas, design products, research markets and develop pricing.",
+      "category": "Business",
+      "tags": [
+        "saas",
+        "startup",
+        "product"
+      ],
+      "prompt_ids": [
+        "catalog-076-startup-validator",
+        "catalog-077-saas-product-strategist",
+        "catalog-078-market-research-analyst",
+        "catalog-079-competitor-analyst",
+        "catalog-080-business-model-designer",
+        "catalog-081-pricing-consultant",
+        "catalog-082-product-manager",
+        "catalog-083-financial-planning-assistant",
+        "catalog-084-marketing-strategist",
+        "catalog-085-sales-assistant"
+      ],
+      "version": "1.0.0"
+    }
+  ]
+}
