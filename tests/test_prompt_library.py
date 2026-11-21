@@ -61,9 +61,9 @@ def test_workflow_crud_persists_ordered_nodes():
 
 def test_prompt_search_filters_metadata():
     from app.main import list_prompts
-    education = list_prompts(prompt_type="Education")
+    education = list_prompts(prompt_type="Education", limit=250)
     assert education
     assert all(p["prompt_type"] == "Education" for p in education)
-    security = list_prompts(q="authorized")
+    security = list_prompts(q="authorized", limit=250)
     assert security
     assert any("authorized" in " ".join(p["tags"]).lower() for p in security)
