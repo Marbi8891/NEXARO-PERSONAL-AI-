@@ -352,7 +352,7 @@ def versions(prompt_id: str):
 def export_prompt(prompt_id: str, format: str = "json"):
     p = get_prompt(prompt_id)
     if format == "markdown":
-        content = "\\n".join(["# " + p["name"], p["description"], "## System Prompt", p["system_prompt"], "## User Template", p["user_template"], "## Metadata", "- Category: " + p["category"], "- Tags: " + ", ".join(p["tags"]), "- Version: " + str(p["version"]), "## Variables", chr(96)*3 + "json", json.dumps(p["variables"], ensure_ascii=False, indent=2), chr(96)*3])
+        content = "\n".join(["# " + p["name"], p["description"], "## System Prompt", p["system_prompt"], "## User Template", p["user_template"], "## Metadata", "- Category: " + p["category"], "- Tags: " + ", ".join(p["tags"]), "- Version: " + str(p["version"]), "## Variables", chr(96)*3 + "json", json.dumps(p["variables"], ensure_ascii=False, indent=2), chr(96)*3])
         return {"filename": f"{p['name'].replace(' ', '-')}.md", "content": content}
     if format != "json":
         raise HTTPException(400, "format must be json or markdown")
