@@ -67,3 +67,12 @@ def test_prompt_search_filters_metadata():
     security = list_prompts(q="authorized", limit=250)
     assert security
     assert any("authorized" in " ".join(p["tags"]).lower() for p in security)
+
+
+def test_version_restore_creates_new_version():
+    from app.main import create_prompt, update_prompt, restore_prompt_version, PromptCreate
+    created = create_prompt(PromptCreate(name="Version Test",category="Testing",user_template="Original {{x}}"))
+    update_prompt(created["id"],PromptCreate(name="Version Test",category="Testing",user_template="Changed {{x}}",changelog="Changed"))
+    restored = restore_prompt_version(created["id"],1)
+    assert restored["user_template"] == "Original {{x}}"
+    assert restored["version"] == 3
