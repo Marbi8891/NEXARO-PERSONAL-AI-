@@ -6,6 +6,7 @@ nada a medias. Las migraciones aplicadas no se editan (se verifica su checksum).
 
 import hashlib
 import sqlite3
+import uuid
 from collections.abc import Callable
 from contextlib import closing
 from dataclasses import dataclass
@@ -110,16 +111,24 @@ def backup_before_migrations(
     if not pending:
         return None
 
-    stamp = (now or datetime.now(timezone.utc)).strftime("%Y%m%dT%H%M%SZ")
-    target = path.with_name(f"{path.stem}.pre-migration-v{pending[0]}-{stamp}{path.suffix}")
-    if target.exists():
-        raise MigrationError(f"Ya existe la copia {target.name}; no se sobrescribe")
-    with closing(sqlite3.connect(path)) as source, closing(sqlite3.connect(target)) as copy:
-        source.backup(copy)
-        result = copy.execute("PRAGMA integrity_check").fetchone()[0]
-    if result != "ok":
-        raise MigrationError(f"La copia {target.name} no supera integrity_check: {result}")
-    return target
+    stamp = (now or datetime.now(timezone.utc)).strftime("%Y%m%dT%H%M%S%fZ")
+    # El UUID evita colisiones entre procesos que arrancan al mismo tiempo.
+    target = path.with_name(
+        f"{path.stem}.pre-migration-v{pending[0]}-{stamp}-{uuid.uuid4().hex[:8]}{path.suffix}"
+    )
+    try:
+        # Creación exclusiva: nunca sobrescribir una copia preexistente.
+        target.touch(exist_ok=False)
+        with closing(sqlite3.connect(path)) as source, closing(sqlite3.connect(target)) as copy:
+            source.backup(copy)
+            result = copy.execute("PRAGMA integrity_check").fetchone()[0]
+        if result != "ok":
+            raise MigrationError(f"La copia {target.name} no supera integrity_check: {result}")
+        return target
+    except Exception:
+        # No dejar una copia parcial si el backup o su validación fallan.
+        target.unlink(missing_ok=True)
+        raise
 
 
 def run_migrations(database: Database, migrations: list[Migration]) -> list[int]:
