@@ -122,7 +122,7 @@ def test_leases_are_released_after_success_error_and_stream(
         other = client.post(
             "/api/chat", json={"message": "x", "conversation_id": "no"}, headers=HEADERS
         )
-        assert other.status_code == 200
+        assert other.status_code == 404  # un id desconocido no crea conversación (V-01)
         assert app.state.ctx.chat_guard.active() == 0
 
 
