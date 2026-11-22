@@ -137,7 +137,7 @@ def test_backup_copies_existing_data_before_pending_migrations(database: Databas
     copy = backup_before_migrations(database, migrations, now=when)
 
     assert copy is not None
-    assert copy.name.startswith("m.pre-migration-v2-20261122T150000000Z-")
+    assert copy.name.startswith("m.pre-migration-v2-20261122T150000000000Z-")
     assert copy.name.endswith(".db")
     with closing(sqlite3.connect(copy)) as db:
         assert db.execute("SELECT COUNT(*) FROM a").fetchone()[0] == 1
