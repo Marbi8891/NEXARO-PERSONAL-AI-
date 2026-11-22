@@ -40,6 +40,20 @@ Por defecto usa el Ollama de `~/Docker/ollama-local`; en una máquina sin él, e
 incluye ([DEPLOYMENT.md](DEPLOYMENT.md)). No hay administradores ni registro público por defecto; ver
 [SECURITY.md](SECURITY.md).
 
+## Documentación
+
+La documentación de la aplicación está centralizada en [docs/README.md](docs/README.md).
+
+- [Descripción del producto](docs/PRODUCT.md)
+- [Guía de usuario](docs/USER_GUIDE.md)
+- [Arquitectura](ARCHITECTURE.md)
+- [API](API.md)
+- [Desarrollo](DEVELOPMENT.md)
+- [Despliegue y operación](docs/OPERATIONS.md)
+- [Seguridad](SECURITY.md)
+- [Sistema de diseño](docs/design-system.md)
+- [Decisiones técnicas (ADRs)](docs/decisions/)
+
 ## Desarrollo
 
 ```bash
@@ -48,9 +62,7 @@ make check     # ruff + mypy + pytest con cobertura
 make run       # API local con recarga en 127.0.0.1:8001
 ```
 
-Detalles en [DEVELOPMENT.md](DEVELOPMENT.md). Arquitectura en [ARCHITECTURE.md](ARCHITECTURE.md),
-diseño en [docs/design-system.md](docs/design-system.md), decisiones en [docs/decisions](docs/decisions), API en [API.md](API.md), despliegue en
-[DEPLOYMENT.md](DEPLOYMENT.md).
+Detalles en [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## Estructura
 
@@ -61,5 +73,5 @@ packages/ai_gateway/   gateway, políticas, registro de uso y proveedores (Ollam
 products/personal_ai/  caso de uso de chat (sin FastAPI)
 frontend/              HTML/CSS/ES Modules (js/, css/, views/), PWA; sistema de diseño en docs/design-system.md
 tests/                 unit, integration, security, frontend (E2E jsdom: tests/frontend/run.sh)
-docs/decisions/        ADRs
+docs/                 documentación funcional, técnica, operación y decisiones
 ```
