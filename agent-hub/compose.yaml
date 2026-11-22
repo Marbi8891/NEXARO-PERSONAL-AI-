@@ -14,6 +14,9 @@ services:
       CORS_ORIGINS: http://localhost:8080,http://localhost:5173
       WORKSPACE_DIR: /workspace
       CODING_AGENT_MAX_ITERATIONS: "20"
+      CODING_AGENT_ENABLED: ${CODING_AGENT_ENABLED:-false}
+      CODING_AGENT_ALLOW_COMMANDS: ${CODING_AGENT_ALLOW_COMMANDS:-false}
+      AGENT_HUB_API_TOKEN: ${AGENT_HUB_API_TOKEN:-}
     volumes:
       - ./workspace:/workspace
     read_only: true
