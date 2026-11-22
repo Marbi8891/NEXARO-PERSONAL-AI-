@@ -63,6 +63,6 @@ de paridad contra un PostgreSQL real.
 - Organizaciones, miembros, claves de API, documentos (búsqueda BM25, ADR-0012; consultables desde el chat, ADR-0017) y gastos tienen API; agentes, tareas y embeddings son solo esquema.
 - Las conversaciones siguen siendo personales (`organization_id` solo se rellena en el uso por clave de API).
 - Con funcionalidad: Personal AI, Developer (claves de API con scopes `chat:write` y `conversations:read`), documentos, gastos (Finance) y el resumen de Security. Business es solo identidad de marca.
-- Modelo: `OLLAMA_MODEL` es el modelo por defecto (modo «auto», con respaldo). Cada conversación puede fijar un modelo instalado del proveedor principal (`GET /api/models`, migración 9); un modelo fijado no tiene respaldo ni se sustituye en silencio. Aún no hay modelo por defecto por usuario ni por agente.
+- Modelo: `OLLAMA_MODEL` es el modelo por defecto (modo «auto», con respaldo). Cada conversación puede fijar un modelo instalado del proveedor principal (`GET /api/models`, migración 9, ADR-0023); un modelo fijado no tiene respaldo ni se sustituye en silencio. Aún no hay modelo por defecto por usuario ni por agente.
 - SQLite en modo WAL (ADR-0015): un solo escritor a la vez; suficiente para una instancia.
 - El limitador de intentos es en memoria del proceso: no se comparte entre instancias.

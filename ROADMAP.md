@@ -31,4 +31,5 @@ pequeños sobre la versión canónica (linaje `backup/macbook`), sin cambiar de 
 
 - D1: ¿`backup/macbook` pasa a ser `main`? (propuesta: sí, por fusión, sin borrar ramas).
 - D2: ¿Se integran PR #2 y PR #3 en el monolito o se cierran como prototipos?
+- D4: ¿El selector de modelo es para todos los usuarios o solo para administradores? (ADR-0023 frente a ADR-0019; ahora: todos).
 - D3: ¿Se mantienen los módulos Finanzas, Developer y multiorganización dentro de «Personal AI»?
