@@ -23,6 +23,7 @@ from nexaro_api.routers import (
     expenses,
     health,
     organizations,
+    obsidian,
 )
 from nexaro_core.config import Settings, get_settings
 from nexaro_core.database import Database
@@ -183,6 +184,7 @@ def create_app(
         expenses,
         health,
         organizations,
+        obsidian,
     ):
         app.include_router(module.router)
 
