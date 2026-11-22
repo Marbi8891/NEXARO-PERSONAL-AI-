@@ -4,7 +4,7 @@ import json, uuid
 from typing import Any
 from app.config import settings
 from app.ollama import ollama
-from app.tools import TOOL_SCHEMAS, execute_tool
+from app.tools import enabled_tool_schemas, execute_tool
 
 CODING_SYSTEM_PROMPT = """You are NEXARO Coding Agent, a software engineer with REAL filesystem and terminal tools in the authorized workspace.
 For programming tasks, do not stop at a plan or code snippets. Inspect files, make actual changes, run relevant tests/builds, diagnose errors, fix them and validate again.
@@ -23,7 +23,7 @@ class CodingAgent:
         messages = [{"role":"system","content":CODING_SYSTEM_PROMPT},{"role":"user","content":task}]
         events=[]; tool_count=0; final=""; status="running"; iteration=0
         for iteration in range(1, limit+1):
-            response = await self.client.chat_with_tools(model=selected, messages=messages, tools=TOOL_SCHEMAS)
+            response = await self.client.chat_with_tools(model=selected, messages=messages, tools=enabled_tool_schemas())
             message = response.get("message") or {}
             messages.append(message)
             calls = message.get("tool_calls") or []

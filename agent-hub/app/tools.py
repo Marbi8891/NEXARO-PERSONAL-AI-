@@ -6,7 +6,9 @@ from typing import Any
 from app.config import settings
 
 DENIED_NAMES = {".env", ".env.local", ".env.production", "id_rsa", "id_ed25519", "credentials.json"}
-DENIED_PARTS = {".ssh", ".aws", ".azure", ".gnupg", "secrets"}
+# ".git" is denied so the model cannot plant hooks or core.fsmonitor/core.pager in .git/config,
+# which read-only git commands (status, diff, log) would then execute.
+DENIED_PARTS = {".ssh", ".aws", ".azure", ".gnupg", "secrets", ".git"}
 ALLOWED_COMMANDS = {"python", "python3", "pytest", "pip", "pip3", "uv", "node", "npm", "npx", "git", "ruff", "mypy", "make", "docker", "docker-compose", "go", "cargo", "rustc"}
 
 def _workspace() -> Path:
@@ -122,9 +124,18 @@ TOOL_SCHEMAS = [
 {"type":"function","function":{"name":"create_directory","description":"Create a directory in the workspace.","parameters":{"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}}},
 {"type":"function","function":{"name":"run_command","description":"Execute one allowlisted development command without shell operators.","parameters":{"type":"object","properties":{"command":{"type":"string"},"working_directory":{"type":"string","default":"."},"timeout":{"type":"integer"}},"required":["command"]}}}
 ]
+def enabled_tool_schemas() -> list[dict[str, Any]]:
+    """Schemas offered to the model: run_command only when explicitly allowed."""
+    if settings.coding_agent_allow_commands:
+        return TOOL_SCHEMAS
+    return [schema for schema in TOOL_SCHEMAS if schema["function"]["name"] != "run_command"]
+
 async def execute_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
     functions = {"list_files": list_files, "read_file": read_file, "write_file": write_file, "edit_file": edit_file, "search_code": search_code, "create_directory": create_directory, "run_command": run_command}
     if name not in functions: raise ValueError(f"Unknown tool: {name}")
+    # Enforced here, not only by hiding the schema: a model can still name a tool it was not offered.
+    if name == "run_command" and not settings.coding_agent_allow_commands:
+        raise PermissionError("run_command is disabled (CODING_AGENT_ALLOW_COMMANDS=false)")
     result = functions[name](**arguments)
     if asyncio.iscoroutine(result): result = await result
     return result

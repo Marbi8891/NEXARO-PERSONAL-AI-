@@ -14,6 +14,12 @@ class Settings(BaseSettings):
     command_timeout_seconds:int=120
     max_command_output_chars:int=12000
     coding_agent_max_iterations:int=20
+    # Coding agent is OFF by default. Enabling it requires an API token (see README, Security).
+    coding_agent_enabled:bool=False
+    # run_command lets the model start python/node/pip/make...: that is arbitrary code execution.
+    # Keep it off unless the service runs inside the hardened container.
+    coding_agent_allow_commands:bool=False
+    agent_hub_api_token:str=""
     @property
     def origins(self)->list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
