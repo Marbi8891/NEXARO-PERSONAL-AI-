@@ -49,7 +49,9 @@ export async function render() {
 
   // Guardas: invitados solo ven acceso/registro; usuarios ven la app; administración exige rol.
   if (!user && !route?.guest) return navigate("/login");
-  // La raíz y las rutas desconocidas abren siempre el frontend principal (Panel).\n  if (user && route?.guest) return navigate("/dashboard");\n  if (user && !route) return navigate("/dashboard");
+  // La raíz y las rutas desconocidas abren siempre el frontend principal (Panel).
+  if (user && route?.guest) return navigate("/dashboard");
+  if (user && !route) return navigate("/dashboard");
   if (route?.admin && user.role !== "admin") return navigate("/chat");
 
   leave();
