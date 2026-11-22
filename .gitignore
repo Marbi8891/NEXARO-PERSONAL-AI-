@@ -37,3 +37,28 @@ node_modules
 
 # Resultados de make eval (respuestas del modelo)
 eval-out/
+
+# Añadido al consolidar con main (patrones de main que faltaban)
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials/
+*$py.class
+env/
+ENV/
+*.sqlite-journal
+*.db-journal
+backups/
+logs/
+uploads/
+tmp/
+temp/
+dist/
+build/
+coverage/
+.idea/
+.vscode/
+*.swp
+*.swo
