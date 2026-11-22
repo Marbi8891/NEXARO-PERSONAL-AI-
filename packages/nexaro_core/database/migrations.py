@@ -7,7 +7,9 @@ nada a medias. Las migraciones aplicadas no se editan (se verifica su checksum).
 import hashlib
 import sqlite3
 from collections.abc import Callable
+from contextlib import closing
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 
 from nexaro_core.database.connection import Database, begin_write
@@ -68,6 +70,56 @@ def platform_migrations() -> list[Migration]:
         ),
         sql_migration(7, "message_agent", MIGRATIONS_DIR / "sqlite" / "0007_message_agent.sql"),
     ]
+
+
+def pending_versions(database: Database, migrations: list[Migration]) -> list[int]:
+    """Versiones que `run_migrations` aplicaría, sin escribir nada en la base."""
+    if not database.path.is_file():
+        return [m.version for m in migrations]
+    with closing(sqlite3.connect(database.path)) as db:
+        tracked = db.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'schema_migrations'"
+        ).fetchone()
+        applied = (
+            {row[0] for row in db.execute("SELECT version FROM schema_migrations")}
+            if tracked
+            else set()
+        )
+    return [m.version for m in migrations if m.version not in applied]
+
+
+def backup_before_migrations(
+    database: Database, migrations: list[Migration], now: datetime | None = None
+) -> Path | None:
+    """Copia la base junto a ella antes de aplicar migraciones pendientes sobre datos existentes.
+
+    No hace nada si la base no existe, está vacía o no hay nada pendiente. La copia usa la API
+    de backup de SQLite (coherente aunque haya WAL) y se comprueba con `integrity_check`; si la
+    copia no es válida se aborta y no se migra. Nunca se borran copias anteriores.
+    """
+    path = database.path
+    if not path.is_file() or path.stat().st_size == 0:
+        return None
+    with closing(sqlite3.connect(path)) as db:
+        has_tables = db.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
+        ).fetchone()
+    if not has_tables:
+        return None
+    pending = pending_versions(database, migrations)
+    if not pending:
+        return None
+
+    stamp = (now or datetime.now(timezone.utc)).strftime("%Y%m%dT%H%M%SZ")
+    target = path.with_name(f"{path.stem}.pre-migration-v{pending[0]}-{stamp}{path.suffix}")
+    if target.exists():
+        raise MigrationError(f"Ya existe la copia {target.name}; no se sobrescribe")
+    with closing(sqlite3.connect(path)) as source, closing(sqlite3.connect(target)) as copy:
+        source.backup(copy)
+        result = copy.execute("PRAGMA integrity_check").fetchone()[0]
+    if result != "ok":
+        raise MigrationError(f"La copia {target.name} no supera integrity_check: {result}")
+    return target
 
 
 def run_migrations(database: Database, migrations: list[Migration]) -> list[int]:

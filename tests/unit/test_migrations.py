@@ -1,9 +1,18 @@
 import sqlite3
+from contextlib import closing
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
 
-from nexaro_core.database import Database, Migration, MigrationError, run_migrations
+from nexaro_core.database import (
+    Database,
+    Migration,
+    MigrationError,
+    backup_before_migrations,
+    pending_versions,
+    run_migrations,
+)
 from nexaro_core.database.migrations import split_statements, sql_migration
 
 
@@ -97,3 +106,60 @@ def test_sql_migration_checksum_changes_with_content(tmp_path: Path) -> None:
     first = sql_migration(1, "t", path).checksum
     path.write_text("CREATE TABLE t (a INTEGER, b INTEGER);")
     assert sql_migration(1, "t", path).checksum != first
+
+
+def insert_row(database: Database, table: str) -> None:
+    with database.connect() as db:
+        db.execute(f"INSERT INTO {table} (id) VALUES (1)")  # noqa: S608
+
+
+def test_backup_is_skipped_for_a_new_database(database: Database) -> None:
+    assert backup_before_migrations(database, numbered(create_table("a"))) is None
+    database.ensure_parent()
+    database.path.touch()  # fichero vacío: nada que proteger
+    assert backup_before_migrations(database, numbered(create_table("a"))) is None
+
+
+def test_backup_is_skipped_when_nothing_is_pending(database: Database) -> None:
+    migrations = numbered(create_table("a"))
+    run_migrations(database, migrations)
+    assert pending_versions(database, migrations) == []
+    assert backup_before_migrations(database, migrations) is None
+
+
+def test_backup_copies_existing_data_before_pending_migrations(database: Database) -> None:
+    run_migrations(database, numbered(create_table("a")))
+    insert_row(database, "a")
+    migrations = numbered(create_table("a"), create_table("b"))
+    when = datetime(2026, 11, 22, 15, 0, tzinfo=timezone.utc)
+
+    copy = backup_before_migrations(database, migrations, now=when)
+
+    assert copy is not None
+    assert copy.name == "m.pre-migration-v2-20261122T150000Z.db"
+    with closing(sqlite3.connect(copy)) as db:
+        assert db.execute("SELECT COUNT(*) FROM a").fetchone()[0] == 1
+        assert db.execute("SELECT MAX(version) FROM schema_migrations").fetchone()[0] == 1
+    run_migrations(database, migrations)
+    assert "b" in tables(database)
+    with closing(sqlite3.connect(copy)) as db:  # la copia no cambia al migrar
+        assert db.execute("SELECT name FROM sqlite_master WHERE name = 'b'").fetchone() is None
+
+
+def test_backup_covers_unversioned_legacy_databases(database: Database) -> None:
+    with database.connect() as db:
+        db.execute("CREATE TABLE legacy (id INTEGER)")
+    assert pending_versions(database, numbered(create_table("a"))) == [1]
+    assert backup_before_migrations(database, numbered(create_table("a"))) is not None
+
+
+def test_backup_never_overwrites_an_existing_copy(database: Database) -> None:
+    run_migrations(database, numbered(create_table("a")))
+    migrations = numbered(create_table("a"), create_table("b"))
+    when = datetime(2026, 11, 22, 15, 0, tzinfo=timezone.utc)
+    first = backup_before_migrations(database, migrations, now=when)
+    assert first is not None
+    before = first.read_bytes()
+    with pytest.raises(MigrationError, match="no se sobrescribe"):
+        backup_before_migrations(database, migrations, now=when)
+    assert first.read_bytes() == before

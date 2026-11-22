@@ -77,6 +77,7 @@ una ejecución de `make up && make model && make smoke` en el Mac o el ThinkPad.
 | Panel y avisos | IMPLEMENTED | `test_dashboard.py` |
 | PWA | IMPLEMENTED_PARTIALLY | `manifest.webmanifest`, `sw.js`; instalación no probada |
 | Migraciones SQLite (1–7) | IMPLEMENTED | `test_startup_migration.py` |
+| Copia verificada antes de migrar | IMPLEMENTED | `test_migrations.py`, `test_startup_backs_up_legacy_database_before_migrating` |
 | PostgreSQL | IMPLEMENTED_PARTIALLY | DDL validado (6 tests con pgserver); la app no lo usa |
 | Terraform AWS | NOT_VERIFIED | Escrito, no aplicado; aparcado por el propietario |
 | CI en GitHub del linaje A | NOT_VERIFIED | Nunca se ha ejecutado sobre `backup/macbook` |

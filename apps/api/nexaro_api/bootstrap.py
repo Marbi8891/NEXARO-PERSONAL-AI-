@@ -1,12 +1,21 @@
 """Ensamblado del esquema: orden de migraciones entre módulos (ADR-0005)."""
 
+import logging
 import sqlite3
 
 from ai_gateway.usage import init_usage_schema
 from nexaro_core.audit import init_audit_schema
-from nexaro_core.database import Database, Migration, platform_migrations, run_migrations
+from nexaro_core.database import (
+    Database,
+    Migration,
+    backup_before_migrations,
+    platform_migrations,
+    run_migrations,
+)
 from nexaro_core.identity import init_identity_schema
 from products.personal_ai.schema import init_personal_ai_schema
+
+logger = logging.getLogger("nexaro.migrations")
 
 
 def _baseline(db: sqlite3.Connection) -> None:
@@ -22,5 +31,13 @@ def all_migrations() -> list[Migration]:
 
 
 def migrate(database: Database) -> None:
-    """Aplica las pendientes en una sola transacción: si falla, no queda nada a medias."""
-    run_migrations(database, all_migrations())
+    """Aplica las pendientes en una sola transacción: si falla, no queda nada a medias.
+
+    Antes, si la base ya tiene datos y hay migraciones pendientes, deja una copia verificada
+    junto a ella (`<nombre>.pre-migration-v<N>-<fecha>.db`).
+    """
+    migrations = all_migrations()
+    copy = backup_before_migrations(database, migrations)
+    if copy is not None:
+        logger.info("Copia de seguridad previa a la migración: %s", copy)
+    run_migrations(database, migrations)
