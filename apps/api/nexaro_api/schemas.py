@@ -97,3 +97,40 @@ class ExpenseUpdateRequest(BaseModel):
     category: str | None = Field(default=None, min_length=1, max_length=40)
     vat_cents: int | None = Field(default=None, ge=0, le=100_000_000)
     vendor: str | None = Field(default=None, max_length=120)
+
+
+class PromptVariable(BaseModel):
+    name: str = Field(min_length=1, max_length=40)
+    label: str | None = Field(default=None, max_length=80)
+    type: str = Field(default="text", max_length=20)
+    required: bool = False
+    default: str | None = Field(default=None, max_length=20_000)
+
+
+class PromptCreateRequest(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    description: str = Field(default="", max_length=1000)
+    category: str = Field(min_length=1, max_length=80)
+    tags: list[str] = Field(default_factory=list, max_length=12)
+    system_prompt: str = Field(default="", max_length=20_000)
+    user_template: str = Field(min_length=1, max_length=20_000)
+    variables: list[PromptVariable] = Field(default_factory=list, max_length=20)
+
+
+class PromptUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=120)
+    description: str | None = Field(default=None, max_length=1000)
+    category: str | None = Field(default=None, min_length=1, max_length=80)
+    tags: list[str] | None = Field(default=None, max_length=12)
+    system_prompt: str | None = Field(default=None, max_length=20_000)
+    user_template: str | None = Field(default=None, min_length=1, max_length=20_000)
+    variables: list[PromptVariable] | None = Field(default=None, max_length=20)
+    changelog: str = Field(default="Cambios", max_length=200)
+
+
+class PromptRenderRequest(BaseModel):
+    values: dict[str, str] = Field(default_factory=dict, max_length=20)
+
+
+class PromptInstallRequest(BaseModel):
+    catalogue_id: str = Field(min_length=1, max_length=80, pattern=r"^[A-Za-z0-9_.-]+$")

@@ -23,6 +23,7 @@ from nexaro_api.routers import (
     expenses,
     health,
     organizations,
+    prompts,
 )
 from nexaro_core.config import Settings, get_settings
 from nexaro_core.database import Database
@@ -183,8 +184,10 @@ def create_app(
         expenses,
         health,
         organizations,
+        prompts,
     ):
         app.include_router(module.router)
+    app.include_router(prompts.catalogue_router)
 
     if settings.frontend_path.is_dir():
         app.mount("/", StaticFiles(directory=settings.frontend_path, html=True), name="frontend")
