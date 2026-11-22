@@ -6,3 +6,7 @@ b91b548ddf9927541ddcb5ee5b5d63c5c0771ec9:API.md:curl-auth-header:61
 aad4259189fba7fecd0af8f76bb972f0e3a04336:frontend/js/views/developer.js:curl-auth-header:124
 3497a03320fa9a993bdd95d2277aae7022ebeb24:tests/frontend/e2e.mjs:generic-api-key:52
 3497a03320fa9a993bdd95d2277aae7022ebeb24:tests/frontend/e2e.mjs:generic-api-key:131
+
+# Falso positivo histórico revisado: ejemplo de Authorization con marcador ficticio en USER_GUIDE.md.
+# El archivo actual utiliza TU_CLAVE_API; se ignora únicamente el fingerprint del commit histórico.
+0211015ed0ac78e4322147804cf5e296c8cc4ee3:docs/USER_GUIDE.md:curl-auth-header:114
