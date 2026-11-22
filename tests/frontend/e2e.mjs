@@ -99,6 +99,59 @@ await check("renombrar conversación desde el historial: título propio y Cancel
   await until(() => $(".history-title")?.textContent === "Mi primera charla", "título nuevo en el historial");
   // El historial se vuelve a pedir a la API tras renombrar: el título viene del servidor.
 });
+await check("modelo: la lista viene del proveedor, el elegido se usa y la conversación lo recuerda", async () => {
+  [...document.querySelectorAll("button")].find((b) => b.textContent.includes("Nueva")).click();
+  await until(() => $(".welcome") && $("#chat-model") && !$("#chat-model").closest("label").hidden && $("#chat-model").options.length === 3, "selector de modelo");
+  const options = [...$("#chat-model").options].map((o) => o.value);
+  assert.deepEqual(options, ["auto", "qwen2.5:3b", "llama3.2:latest"]);
+  assert.match($("#chat-model-hint").textContent, /Activo: qwen2\.5:3b/);
+  $("#chat-model").value = "llama3.2:latest";
+  $("#chat-model").dispatchEvent(new window.Event("change"));
+  assert.match($("#chat-model-hint").textContent, /Activo: llama3\.2:latest/);
+  $("#message").value = "quemodelo";
+  submit($(".composer"));
+  await until(() => text().includes("respondo con llama3.2:latest"), "respuesta del modelo elegido");
+  const id = decodeURIComponent(location.hash.split("/").pop());
+  await until(() => $(".history-item"), "historial");
+  [...document.querySelectorAll("button")].find((b) => b.textContent.includes("Nueva")).click();
+  await until(() => $(".welcome"), "nueva");
+  location.hash = `#/chat/${encodeURIComponent(id)}`;
+  await until(() => text().includes("respondo con llama3.2:latest") && $("#chat-model").value === "llama3.2:latest", "la conversación reabre con su modelo");
+  // Se borra para no alterar las cifras que comprueban los pasos siguientes.
+  assert.equal((await fetch(`/api/conversations/${encodeURIComponent(id)}`, { method: "DELETE" })).status, 204);
+  [...document.querySelectorAll("button")].find((b) => b.textContent.includes("Nueva")).click();
+  await until(() => $(".welcome") && document.querySelectorAll(".history-item").length === 1, "historial original");
+});
+await check("agentes: crear uno personal, usarlo en el chat, desactivarlo y borrarlo", async () => {
+  location.hash = "#/agents";
+  await until(() => $("#agent-form"), "formulario de agentes");
+  fill("#agent-name", "Revisor E2E");
+  $("#agent-base").value = "developer";
+  $("#agent-base").dispatchEvent(new window.Event("change"));
+  $("#agent-instructions").value = "Sé breve.";
+  submit($("#agent-form"));
+  await until(() => [...document.querySelectorAll(".data-table td")].some((td) => td.textContent === "Revisor E2E"), "agente listado");
+
+  location.hash = "#/chat";
+  await until(() => $("#chat-agent") && [...$("#chat-agent").options].some((o) => o.textContent === "Revisor E2E"), "agente en el selector del chat");
+  const option = [...$("#chat-agent").options].find((o) => o.textContent === "Revisor E2E");
+  $("#chat-agent").value = option.value;
+  $("#chat-agent").dispatchEvent(new window.Event("change"));
+  assert.equal($("#chat-agent").value, option.value);
+  $("#chat-agent").value = "general";
+  $("#chat-agent").dispatchEvent(new window.Event("change"));
+
+  location.hash = "#/agents";
+  await until(() => document.querySelector('button[aria-label="Desactivar Revisor E2E"]'), "botón desactivar");
+  document.querySelector('button[aria-label="Desactivar Revisor E2E"]').click();
+  await until(() => document.querySelector('button[aria-label="Activar Revisor E2E"]'), "agente desactivado");
+  document.querySelector('button[aria-label="Borrar Revisor E2E"]').click();
+  await until(() => document.querySelector("dialog"), "confirmación");
+  [...document.querySelectorAll("dialog button")].find((b) => b.textContent === "Borrar").click();
+  await until(() => text().includes("Aún no tienes agentes"), "agente borrado");
+  location.hash = "#/chat";
+  await until(() => $("#chat-model"), "chat");
+});
 await check("panel: cifras reales del usuario, sin sección de plataforma", async () => {
   location.hash = "#/dashboard";
   await until(() => $(".stats") && text().includes("Tu actividad"), "dashboard");

@@ -1,4 +1,4 @@
-// Biblioteca de prompts por organización (ADR-0023): lista, alta/edición, historial, catálogo y
+// Biblioteca de prompts por organización (ADR-0024): lista, alta/edición, historial, catálogo y
 // «Usar en el chat» (rellena las variables, el servidor renderiza y el chat recibe el borrador
 // para que el usuario lo revise y lo envíe). Todo el texto se pinta con h(): nunca innerHTML.
 import { api } from "../api.js";

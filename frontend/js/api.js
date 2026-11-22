@@ -61,14 +61,14 @@ export function parseSse(buffer) {
 // Chat en streaming: llama a onEvent por cada evento (start, sources, token, done, error) según llega.
 // `documentOrganizationId` (opcional) activa la consulta de los documentos de esa organización.
 // `agent`: agente especializado que responde (GET /api/agents).
-export async function chatStream(message, conversationId, { signal, onEvent, documentOrganizationId = null, agent = "general" }) {
+export async function chatStream(message, conversationId, { signal, onEvent, documentOrganizationId = null, agent = "general", model = null }) {
   let response;
   try {
     response = await fetch("/api/chat/stream", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, conversation_id: conversationId, document_organization_id: documentOrganizationId, agent }),
+      body: JSON.stringify({ message, conversation_id: conversationId, document_organization_id: documentOrganizationId, agent, model }),
       signal,
     });
   } catch (error) {
@@ -132,6 +132,12 @@ export const api = {
   notifications: () => request("/api/notifications"),
 
   agents: () => request("/api/agents"),
+  models: () => request("/api/models"),
+  customAgents: () => request("/api/agents/custom"),
+  createCustomAgent: (body) => request("/api/agents/custom", { method: "POST", body }),
+  updateCustomAgent: (agentId, body) => request(`/api/agents/custom/${id(agentId)}`, { method: "PATCH", body }),
+  duplicateCustomAgent: (agentId) => request(`/api/agents/custom/${id(agentId)}/duplicate`, { method: "POST" }),
+  deleteCustomAgent: (agentId) => request(`/api/agents/custom/${id(agentId)}`, { method: "DELETE" }),
   conversations: () => request("/api/conversations"),
   conversation: (conversationId) => request(`/api/conversations/${id(conversationId)}`),
   renameConversation: (conversationId, title) => request(`/api/conversations/${id(conversationId)}`, { method: "PATCH", body: { title } }),

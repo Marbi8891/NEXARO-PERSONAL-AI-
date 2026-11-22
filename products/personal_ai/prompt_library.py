@@ -1,4 +1,4 @@
-"""Biblioteca de prompts por organización (ADR-0023).
+"""Biblioteca de prompts por organización (ADR-0024).
 
 Integra la Prompt Library que vivía como servicio aparte (rama feature/prompt-library-mvp):
 prompts con plantilla y variables, historial de versiones, restauración y un catálogo de solo

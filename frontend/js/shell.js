@@ -15,6 +15,7 @@ export function createShell({ user }) {
   const links = [
     { nav: "dashboard", href: "#/dashboard", label: "Panel" },
     { nav: "chat", href: "#/chat", label: "Chat" },
+    { nav: "agents", href: "#/agents", label: "Agentes" },
     { nav: "documents", href: "#/documents", label: "Documentos" },
     { nav: "prompts", href: "#/prompts", label: "Prompts" },
     { nav: "finance", href: "#/finance", label: "Finanzas" },

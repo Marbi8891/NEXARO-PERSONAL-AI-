@@ -1,4 +1,4 @@
-"""Biblioteca de prompts por organización y catálogo de solo lectura (ADR-0023)."""
+"""Biblioteca de prompts por organización y catálogo de solo lectura (ADR-0024)."""
 
 from typing import Annotated, Any
 

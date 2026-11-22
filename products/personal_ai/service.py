@@ -17,6 +17,7 @@ from nexaro_core.database import Database, begin_write
 from nexaro_core.timeseries import fill_days, last_days
 from products.personal_ai import documents as docs
 from products.personal_ai.agents import get_agent
+from products.personal_ai.custom_agents import AgentProfile
 from products.personal_ai.guard import REFUSAL, restricted_topic
 from products.personal_ai.prompts import build_system_prompt
 
@@ -24,6 +25,7 @@ logger = logging.getLogger("nexaro.chat")
 
 HISTORY_LIMIT = 12
 MAX_TITLE_CHARS = 120  # título propio de una conversación
+AUTO_MODEL = "auto"  # modelo configurado con sus rutas de respaldo (sin modelo fijado)
 DOCUMENT_FRAGMENTS = 4  # fragmentos que se pasan al modelo cuando el usuario activa documentos
 SHORT_QUERY_CHARS = 80
 _CODE_HINTS = re.compile(
@@ -60,6 +62,15 @@ def _output_class(message: str, agent: str) -> str:
     return category
 
 
+def _effective_model(
+    requested: str | None, stored: str | None, agent_model: str | None = None
+) -> str | None:
+    """Modelo fijado para este turno: el pedido ahora; si no, el de la conversación; si no, el
+    del agente. `auto` (o nada) deja que el gateway use el configurado con sus respaldos."""
+    choice = next((m for m in (requested, stored, agent_model) if m is not None), None)
+    return None if choice in (None, AUTO_MODEL) else choice
+
+
 def _is_restricted(message: str) -> bool:
     """Preguntas sobre el modelo o la infraestructura interna: no llegan al proveedor."""
     category = restricted_topic(message)
@@ -93,6 +104,7 @@ class _Turn:
     history: list[ChatMessage]
     user_message_id: int
     created_conversation: bool
+    model: str | None = None  # modelo guardado en la conversación (None: automático)
 
 
 class PersonalAIService:
@@ -125,11 +137,16 @@ class PersonalAIService:
         api_key_id: str | None = None,
         document_organization_id: str | None = None,
         agent: str = "general",
+        model: str | None = None,
+        profile: AgentProfile | None = None,
     ) -> ChatOutcome:
         conversation_id = conversation_id or str(uuid.uuid4())
+        profile = profile or AgentProfile(agent, agent, "", get_agent(agent).tools, None)
+        agent = profile.base_agent
+        record = profile.record_id
         if _is_restricted(message):
             await asyncio.to_thread(
-                self._record_refusal, user_id, message, conversation_id, organization_id, agent
+                self._record_refusal, user_id, message, conversation_id, organization_id, record
             )
             return ChatOutcome(conversation_id, REFUSAL)
         hits = await asyncio.to_thread(self._retrieve, document_organization_id, message)
@@ -137,8 +154,15 @@ class PersonalAIService:
             self._begin_turn, user_id, message, conversation_id, organization_id
         )
         request = self._build_request(
-            user_id, message, turn.history, organization_id, api_key_id, hits, agent
-        )
+            user_id,
+            message,
+            turn.history,
+            organization_id,
+            api_key_id,
+            hits,
+            agent,
+            profile.instructions,
+        ).model_copy(update={"model_override": _effective_model(model, turn.model, profile.model)})
         try:
             result = await self._provider.complete(request)
         except BaseException:
@@ -146,7 +170,7 @@ class PersonalAIService:
             self._discard_turn(conversation_id, turn)
             raise
 
-        await asyncio.to_thread(self._save_answer, conversation_id, result.content, agent)
+        await asyncio.to_thread(self._save_answer, conversation_id, result.content, record, model)
         sources = None if hits is None else [_source(h) for h in hits]
         return ChatOutcome(conversation_id, result.content, sources)
 
@@ -160,13 +184,18 @@ class PersonalAIService:
         api_key_id: str | None = None,
         document_organization_id: str | None = None,
         agent: str = "general",
+        model: str | None = None,
+        profile: AgentProfile | None = None,
     ) -> tuple[str, AsyncIterator[dict[str, Any]]]:
         """Prepara el turno (lanza ConversationNotFoundError antes de emitir nada) y devuelve
         el id de la conversación y el flujo de eventos: [sources], token*, done o error."""
         conversation_id = conversation_id or str(uuid.uuid4())
+        profile = profile or AgentProfile(agent, agent, "", get_agent(agent).tools, None)
+        agent = profile.base_agent
+        record = profile.record_id
         if _is_restricted(message):
             await asyncio.to_thread(
-                self._record_refusal, user_id, message, conversation_id, organization_id, agent
+                self._record_refusal, user_id, message, conversation_id, organization_id, record
             )
             return conversation_id, _refusal_events()
         hits = await asyncio.to_thread(self._retrieve, document_organization_id, message)
@@ -174,10 +203,17 @@ class PersonalAIService:
             self._begin_turn, user_id, message, conversation_id, organization_id
         )
         request = self._build_request(
-            user_id, message, turn.history, organization_id, api_key_id, hits, agent
-        )
+            user_id,
+            message,
+            turn.history,
+            organization_id,
+            api_key_id,
+            hits,
+            agent,
+            profile.instructions,
+        ).model_copy(update={"model_override": _effective_model(model, turn.model, profile.model)})
         sources = None if hits is None else [_source(h) for h in hits]
-        return conversation_id, self._events(conversation_id, request, turn, sources, agent)
+        return conversation_id, self._events(conversation_id, request, turn, sources, record, model)
 
     def _build_request(
         self,
@@ -188,11 +224,12 @@ class PersonalAIService:
         api_key_id: str | None,
         hits: list[docs.Hit] | None = None,
         agent: str = "general",
+        instructions: str = "",
     ) -> CompletionRequest:
         """`hits` None: documentos desactivados. Lista (aunque vacía): activados. Los fragmentos
         solo viajan al modelo en este mensaje; en la base se guarda el texto tal cual lo escribió
         el usuario."""
-        system = build_system_prompt(agent)
+        system = build_system_prompt(agent, instructions)
         content = message
         if hits is not None:
             if hits:
@@ -226,13 +263,16 @@ class PersonalAIService:
     ) -> _Turn:
         with self._database.connect() as db:
             created = self._claim_conversation(db, user_id, conversation_id, organization_id)
+            stored = db.execute(
+                "SELECT model FROM conversations WHERE id = ?", (conversation_id,)
+            ).fetchone()
             history = self._recent_history(db, conversation_id, self._history_max_chars)
             cursor = db.execute(
                 "INSERT INTO messages (conversation_id, role, content) VALUES (?, 'user', ?)",
                 (conversation_id, message),
             )
             user_message_id = int(cursor.lastrowid or 0)
-        return _Turn(history, user_message_id, created)
+        return _Turn(history, user_message_id, created, stored["model"] if stored else None)
 
     def _record_refusal(
         self,
@@ -254,13 +294,22 @@ class PersonalAIService:
                 ],
             )
 
-    def _save_answer(self, conversation_id: str, content: str, agent: str) -> None:
+    def _save_answer(
+        self, conversation_id: str, content: str, agent: str, model: str | None = None
+    ) -> None:
+        """Guarda la respuesta. Una elección explícita de modelo solo se recuerda en la
+        conversación cuando ha producido respuesta: un modelo que falla no queda fijado."""
         with self._database.connect() as db:
             db.execute(
                 "INSERT INTO messages (conversation_id, role, content, agent)"
                 " VALUES (?, 'assistant', ?, ?)",
                 (conversation_id, content, agent),
             )
+            if model is not None:
+                db.execute(
+                    "UPDATE conversations SET model = ? WHERE id = ?",
+                    (None if model == AUTO_MODEL else model, conversation_id),
+                )
 
     def _discard_turn(self, conversation_id: str, turn: _Turn) -> None:
         """Deshace un turno que no produjo respuesta: quita su mensaje de usuario y, si la
@@ -282,6 +331,7 @@ class PersonalAIService:
         turn: _Turn,
         sources: list[dict[str, Any]] | None = None,
         agent: str = "general",
+        model: str | None = None,
     ) -> AsyncIterator[dict[str, Any]]:
         parts: list[str] = []
         completed = False  # el proveedor terminó con `chunk.done`
@@ -306,7 +356,7 @@ class PersonalAIService:
                     if metrics:
                         logger.info(
                             "chat model=%s ttft_ms=%s load_ms=%s tokens=%s tps=%s total_ms=%s",
-                            self._model,
+                            request.model_override or self._model,
                             metrics.ttft_ms,
                             metrics.load_ms,
                             metrics.tokens,
@@ -330,7 +380,7 @@ class PersonalAIService:
             # escribiendo sin que nadie lo espere (escritura huérfana). Es una operación breve.
             if parts and (completed or cancelled):
                 # Completa, o parcial por cancelación del cliente («Detener», desconexión).
-                self._save_answer(conversation_id, "".join(parts), agent)
+                self._save_answer(conversation_id, "".join(parts), agent, model)
             else:
                 # Fallo del proveedor, flujo sin `done` o cancelación sin contenido.
                 self._discard_turn(conversation_id, turn)
@@ -400,6 +450,7 @@ class PersonalAIService:
                 SELECT
                     c.id,
                     c.created_at,
+                    c.model,
                     COUNT(m.id) AS message_count,
                     MAX(m.created_at) AS last_activity,
                     COALESCE(c.title, (SELECT content FROM messages
@@ -461,7 +512,7 @@ class PersonalAIService:
         with self._database.connect() as db:
             conversation = db.execute(
                 """
-                SELECT id, created_at, title FROM conversations
+                SELECT id, created_at, title, model FROM conversations
                 WHERE id = ? AND user_id = ? AND (? IS NULL OR organization_id = ?)
                 """,
                 (conversation_id, user_id, organization_id, organization_id),

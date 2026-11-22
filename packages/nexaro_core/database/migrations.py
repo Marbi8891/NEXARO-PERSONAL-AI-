@@ -72,7 +72,11 @@ def platform_migrations() -> list[Migration]:
         sql_migration(
             8, "conversation_title", MIGRATIONS_DIR / "sqlite" / "0008_conversation_title.sql"
         ),
-        sql_migration(9, "prompt_library", MIGRATIONS_DIR / "sqlite" / "0009_prompt_library.sql"),
+        sql_migration(
+            9, "conversation_model", MIGRATIONS_DIR / "sqlite" / "0009_conversation_model.sql"
+        ),
+        sql_migration(10, "user_agents", MIGRATIONS_DIR / "sqlite" / "0010_user_agents.sql"),
+        sql_migration(11, "prompt_library", MIGRATIONS_DIR / "sqlite" / "0011_prompt_library.sql"),
     ]
 
 

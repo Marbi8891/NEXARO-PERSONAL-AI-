@@ -22,7 +22,7 @@ proveedores en la nube. Monolito modular en Python (FastAPI) con frontend HTML/C
 | Finance, Business | Solo identidad de marca; sin funcionalidad (no aparecen en la navegación) |
 | Agentes: 6 especializados + tutor, herramientas con permiso por agente y usuario, auditoría `agent.tool`, selector en el chat | Implementado y probado (ADR-0022) |
 | Tareas, embeddings | Solo esquema (sin API) |
-| Migraciones versionadas | Implementado (SQLite, hasta la 8), con copia verificada antes de migrar |
+| Migraciones versionadas | Implementado (SQLite, hasta la 10), con copia verificada antes de migrar |
 | PostgreSQL | DDL validado con un servidor real; la app aún no ejecuta sobre él |
 | AWS (Terraform) | Aparcado por decisión del propietario; **no se crea nada en AWS sin autorización expresa** |
 
