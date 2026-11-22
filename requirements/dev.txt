@@ -1,0 +1,10 @@
+-r aws.txt
+ruff>=0.6
+mypy>=1.11
+pytest>=8
+pytest-cov>=5
+pip-audit>=2.7
+pre-commit>=3.8
+pgserver==0.1.4
+psycopg[binary]==3.3.8
+python-hcl2>=8

@@ -1,0 +1,115 @@
+/* Estructura: pantallas de acceso y marco de la aplicación (barra lateral + contenido). */
+
+.auth {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  padding: var(--space-6);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+.auth-card h1 { font-size: var(--fs-xl); margin: var(--space-5) 0 var(--space-2); }
+.auth-card p { color: var(--muted); }
+.auth-card .button { width: 100%; margin-top: var(--space-5); }
+.auth-alt { margin-top: var(--space-4); font-size: var(--fs-sm); text-align: center; }
+
+/* Marca: símbolo + logotipo tipográfico */
+.logo { display: inline-flex; align-items: center; gap: var(--space-3); }
+.logo img { width: 32px; height: 32px; display: block; }
+.wordmark { font-weight: 750; font-size: var(--fs-lg); letter-spacing: 0.16em; }
+.auth-card .wordmark { color: var(--text); }
+.sidebar .wordmark { color: var(--sidebar-text); }
+
+.app {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  background: var(--sidebar);
+  color: var(--sidebar-text);
+  padding: var(--space-5) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+  max-height: 100vh;
+  overflow-y: auto;
+}
+.sidebar a { color: inherit; }
+
+.status { color: var(--sidebar-muted); font-size: var(--fs-sm); margin-top: var(--space-4); }
+
+.nav { display: flex; flex-direction: column; gap: var(--space-1); }
+.nav a {
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  font-size: var(--fs-md);
+}
+.nav a:hover { background: var(--sidebar-active); }
+.nav a[aria-current="page"] { background: var(--sidebar-active); box-shadow: inset 3px 0 0 var(--sidebar-text); font-weight: 600; }
+
+.sidebar-slot { min-height: 0; flex: 1; }
+
+.content { display: flex; flex-direction: column; min-width: 0; height: 100vh; }
+.main { display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; }
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-6);
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.topbar h1 { font-size: var(--fs-lg); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topbar-actions { display: flex; align-items: center; gap: var(--space-2); }
+.menu-button {
+  display: none;
+  min-width: 40px;
+  min-height: 40px;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-size: var(--fs-lg);
+}
+.scrim { display: none; }
+.sidebar-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-3); }
+.drawer-close { display: none; min-width: 36px; min-height: 36px; border: 1px solid var(--sidebar-muted); border-radius: var(--radius-sm); background: transparent; color: var(--sidebar-text); }
+
+.page-body { flex: 1; overflow-y: auto; padding: var(--space-5) var(--space-6); }
+.page-body > * + * { margin-top: var(--space-5); }
+.page-body.stack > * + * { margin-top: 0; }
+
+@media (max-width: 760px) {
+  .app { grid-template-columns: 1fr; }
+  .content { height: 100dvh; }
+  .topbar { padding: var(--space-3) var(--space-4); }
+  .drawer-close { display: inline-flex; align-items: center; justify-content: center; }
+  .menu-button { display: inline-flex; align-items: center; justify-content: center; }
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(290px, 86vw);
+    max-height: none;
+    z-index: 30;
+    visibility: hidden;
+    transform: translateX(-100%);
+    transition: transform .2s ease, visibility .2s;
+  }
+  .app[data-nav-open="true"] .sidebar { visibility: visible; transform: none; }
+  .app[data-nav-open="true"] .scrim { display: block; position: fixed; inset: 0; z-index: 20; background: var(--scrim); }
+  .page-body { padding: var(--space-4); }
+  .auth-card { padding: var(--space-5); }
+}

@@ -1,0 +1,190 @@
+import json
+from collections.abc import AsyncIterator
+from typing import Any
+
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import StreamingResponse
+
+from ai_gateway.errors import PolicyError, ProviderError
+from nexaro_api.deps import (
+    Ctx,
+    CurrentUser,
+    acquire_generation,
+    check_org_permission,
+    client_ip,
+    validate_origin,
+)
+from nexaro_api.schemas import ChatRequest
+from nexaro_core.audit import record_event
+from nexaro_core.audit.service import Outcome
+from products.personal_ai.agents import TOOL_PERMISSIONS, get_agent, public_agents
+from products.personal_ai.service import ConversationNotFoundError
+
+router = APIRouter(prefix="/api", tags=["personal-ai"])
+
+NOT_FOUND = HTTPException(status_code=404, detail="Conversación no encontrada")
+
+
+@router.get("/agents")
+def list_agents(user: CurrentUser) -> dict[str, Any]:
+    """Agentes disponibles y sus herramientas (ADR-0022)."""
+    return {"agents": public_agents()}
+
+
+@router.post("/chat")
+async def chat(request: Request, body: ChatRequest, user: CurrentUser, ctx: Ctx) -> dict[str, Any]:
+    validate_origin(request, ctx)
+    document_org = _document_scope(request, ctx, user, body)
+    lease = acquire_generation(ctx, f"user:{user['id']}")
+
+    try:
+        outcome = await ctx.personal_ai.chat(
+            user["id"],
+            body.message,
+            body.conversation_id,
+            document_organization_id=document_org,
+            agent=body.agent_id,
+        )
+    except ConversationNotFoundError:
+        raise NOT_FOUND from None
+    except PolicyError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except ProviderError as exc:
+        # El detalle del proveedor (URLs internas, etc.) no se devuelve al cliente.
+        raise HTTPException(status_code=502, detail="Error al consultar el servicio de IA") from exc
+    finally:
+        lease.release()
+
+    response: dict[str, Any] = {
+        "conversation_id": outcome.conversation_id,
+        "answer": outcome.answer,
+        "agent": body.agent_id,
+    }
+    if outcome.sources is not None:
+        response["sources"] = outcome.sources
+        _record_tool(request, ctx, user, body, "success", sources=len(outcome.sources))
+    return response
+
+
+def _record_tool(
+    request: Request,
+    ctx: Ctx,
+    user: dict[str, Any],
+    body: ChatRequest,
+    outcome: Outcome,
+    **details: Any,
+) -> None:
+    """Acción de un agente con una herramienta: quién, qué agente, qué herramienta y sobre qué
+    organización. Nunca el contenido del mensaje ni de los documentos."""
+    with ctx.database.connect() as db:
+        record_event(
+            db,
+            "agent.tool",
+            outcome,
+            actor_user_id=user["id"],
+            target_type="organization",
+            target_id=body.document_organization_id,
+            ip=client_ip(request),
+            details={"agent": body.agent_id, "tool": "documents", **details},
+        )
+
+
+def _document_scope(
+    request: Request, ctx: Ctx, user: dict[str, Any], body: ChatRequest
+) -> str | None:
+    """Documentos solo si el usuario los pide, el agente tiene la herramienta y el usuario es
+    miembro con el permiso que exige."""
+    if body.document_organization_id is None:
+        return None
+    if "documents" not in get_agent(body.agent_id).tools:
+        _record_tool(request, ctx, user, body, "denied", reason="agent_without_tool")
+        raise HTTPException(status_code=403, detail="Este agente no puede consultar documentos")
+    check_org_permission(
+        ctx, request, user, body.document_organization_id, TOOL_PERMISSIONS["documents"]
+    )
+    return body.document_organization_id
+
+
+def _sse(payload: dict[str, Any]) -> str:
+    return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+
+@router.post("/chat/stream")
+async def chat_stream(
+    request: Request, body: ChatRequest, user: CurrentUser, ctx: Ctx
+) -> StreamingResponse:
+    """Respuesta en streaming (SSE): start, token*, done | error."""
+    validate_origin(request, ctx)
+    document_org = _document_scope(request, ctx, user, body)
+    lease = acquire_generation(ctx, f"user:{user['id']}")
+    try:
+        conversation_id, events = await ctx.personal_ai.open_stream(
+            user["id"],
+            body.message,
+            body.conversation_id,
+            document_organization_id=document_org,
+            agent=body.agent_id,
+        )
+    except BaseException as exc:
+        lease.release()
+        if isinstance(exc, ConversationNotFoundError):
+            raise NOT_FOUND from None
+        raise
+
+    if document_org is not None:
+        _record_tool(request, ctx, user, body, "success")
+
+    async def body_iter() -> AsyncIterator[str]:
+        yield _sse({"event": "start", "conversation_id": conversation_id, "agent": body.agent_id})
+        try:
+            async for event in events:
+                yield _sse(event)
+        finally:
+            # Cierra el flujo del modelo (y con él la conexión con Ollama) si el cliente se va.
+            await events.aclose()  # type: ignore[attr-defined]
+            lease.release()
+
+    return StreamingResponse(
+        body_iter(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.get("/conversations")
+def list_conversations(user: CurrentUser, ctx: Ctx) -> dict[str, Any]:
+    return {"conversations": ctx.personal_ai.list_conversations(user["id"])}
+
+
+@router.get("/conversations/{conversation_id}")
+def get_conversation(conversation_id: str, user: CurrentUser, ctx: Ctx) -> dict[str, Any]:
+    try:
+        return ctx.personal_ai.get_conversation(user["id"], conversation_id)
+    except ConversationNotFoundError:
+        raise NOT_FOUND from None
+
+
+@router.delete("/conversations/{conversation_id}", status_code=204)
+def delete_conversation(
+    conversation_id: str, request: Request, user: CurrentUser, ctx: Ctx
+) -> None:
+    validate_origin(request, ctx)
+    # Mismo tope de operaciones simultáneas por usuario que el chat, sin gastar su ritmo por minuto.
+    lease = acquire_generation(ctx, f"user:{user['id']}", rate_limit=False)
+    try:
+        try:
+            ctx.personal_ai.delete_conversation(user["id"], conversation_id)
+        except ConversationNotFoundError:
+            raise NOT_FOUND from None
+        with ctx.database.connect() as db:
+            record_event(
+                db,
+                "conversation.delete",
+                "success",
+                actor_user_id=user["id"],
+                target_type="conversation",
+                target_id=conversation_id,
+                ip=client_ip(request),
+            )
+    finally:
+        lease.release()

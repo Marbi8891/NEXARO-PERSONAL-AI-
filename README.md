@@ -1,41 +1,65 @@
-# NEXARO Personal AI
+# NEXARO
 
-Local-first personal AI assistant built around Ollama, FastAPI, SQLite and Docker.
+Plataforma de IA propia, local primero: chat con modelos locales (Ollama), cuentas con
+aprobación manual, auditoría y una base preparada para varias organizaciones y para
+proveedores en la nube. Monolito modular en Python (FastAPI) con frontend HTML/CSS/ES Modules.
 
-> **Project status:** architecture and Agent Hub foundation in progress. The files in this branch define the proposed multi-agent foundation and configuration catalogue. They are not a claim that every agent or execution capability is already implemented.
+## Estado
 
-## Product direction
+| Área | Estado |
+|---|---|
+| Autenticación, sesiones, auditoría, administración | Implementado y probado |
+| Chat con Ollama (`products/personal_ai`) | Implementado y probado |
+| Docker: Ollama externo o incluido (perfil), `make model`, `make smoke`, salud del modelo | Implementado. Verificado en el Mac con Ollama y `qwen2.5:3b` reales (modo externo, `make smoke`); modo incluido probado solo con un Ollama simulado (ADR-0021) |
+| AWS (Terraform: red, KMS, ECR, S3, ALB+Fargate, Aurora, alarmas, presupuesto) | Escrito, **no validado ni aplicado** (ADR-0006) |
+| AI Gateway: políticas, respaldo, registro de uso, proveedores Bedrock/SageMaker | Implementado; AWS probado solo con dobles (ADR-0004) |
+| Multiorganización: organizaciones, miembros, roles y permisos | Implementado y probado |
+| Interfaz (sistema de diseño, tema claro/oscuro, panel con datos reales, avisos, PWA) | Implementado; probado con jsdom y Chromium |
+| Developer: claves de API por organización con permisos, `/api/v1/chat` y `/api/v1/conversations`, límite y uso por clave | Implementado y probado |
+| Documentos: subida de texto, búsqueda BM25 y preguntas con fuentes | Implementado y probado |
+| Finanzas: gastos con resumen mensual y exportación CSV | Implementado y probado |
+| Security: resumen de seguridad derivado de la auditoría (solo administradores) | Implementado y probado |
+| Finance, Business | Solo identidad de marca; sin funcionalidad (no aparecen en la navegación) |
+| Agentes: 6 especializados + tutor, herramientas con permiso por agente y usuario, auditoría `agent.tool`, selector en el chat | Implementado y probado (ADR-0022) |
+| Tareas, embeddings | Solo esquema (sin API) |
+| Migraciones versionadas | Implementado (SQLite, hasta la 7) |
+| PostgreSQL | DDL validado con un servidor real; la app aún no ejecuta sobre él |
+| AWS (Terraform) | Aparcado por decisión del propietario; **no se crea nada en AWS sin autorización expresa** |
 
-- Persistent chat and model management.
-- Configurable specialist agents.
-- User-controlled memory and project workspaces.
-- A permissioned tool registry.
-- Multi-agent orchestration.
-- Local document retrieval (RAG).
-- Task and automation management.
+## Arranque rápido (Docker)
 
-## Planned stack
+```bash
+make up        # comprueba el entorno, construye y espera a que todo esté sano: http://127.0.0.1:8001
+make model     # descarga qwen2.5:3b solo si falta
+make smoke     # servicios, salud, modelo, respuesta real y persistencia tras reiniciar
+docker exec -it nexaro-backend python -m nexaro_api.bootstrap_admin \
+    --confirm-database /data/nexaro.db --email TU_CORREO
+```
 
-- Backend: Python, FastAPI, Pydantic, SQLAlchemy.
-- Frontend: HTML, CSS and JavaScript ES modules.
-- Local inference: Ollama.
-- Persistence: SQLite initially, with a migration path to PostgreSQL.
-- Runtime: Docker Compose.
+Por defecto usa el Ollama de `~/Docker/ollama-local`; en una máquina sin él, el perfil `ollama` lo
+incluye ([DEPLOYMENT.md](DEPLOYMENT.md)). No hay administradores ni registro público por defecto; ver
+[SECURITY.md](SECURITY.md).
 
-## Important status distinction
+## Desarrollo
 
-The Agent Hub documents and seed configurations are a design foundation. Agent execution, persistent CRUD, tool calling, memory, RAG, and frontend screens must be implemented and tested before being described as available.
+```bash
+make install   # dependencias de desarrollo
+make check     # ruff + mypy + pytest con cobertura
+make run       # API local con recarga en 127.0.0.1:8001
+```
 
-## Security and privacy
+Detalles en [DEVELOPMENT.md](DEVELOPMENT.md). Arquitectura en [ARCHITECTURE.md](ARCHITECTURE.md),
+diseño en [docs/design-system.md](docs/design-system.md), decisiones en [docs/decisions](docs/decisions), API en [API.md](API.md), despliegue en
+[DEPLOYMENT.md](DEPLOYMENT.md).
 
-- Never commit .env files, credentials, tokens, certificates, personal conversation history, live databases, or private logs.
-- Do not expose Ollama or SQLite directly to the public internet.
-- Treat retrieved documents and tool output as untrusted input.
-- Enforce tool permissions in backend code, not prompts alone.
-- Default agents to read-only access and disable terminal/network access.
+## Estructura
 
-See [SECURITY.md](SECURITY.md) and [docs/security/agent-security-model.md](docs/security/agent-security-model.md).
-
-## License
-
-No license has been added. Until one is added, no reuse rights are granted.
+```
+apps/api/nexaro_api/   FastAPI: app factory, rutas, dependencias, CLI bootstrap_admin
+packages/nexaro_core/  config, security, database, identity, audit, organizations, api_keys
+packages/ai_gateway/   gateway, políticas, registro de uso y proveedores (Ollama, Bedrock, SageMaker)
+products/personal_ai/  caso de uso de chat (sin FastAPI)
+frontend/              HTML/CSS/ES Modules (js/, css/, views/), PWA; sistema de diseño en docs/design-system.md
+tests/                 unit, integration, security, frontend (E2E jsdom: tests/frontend/run.sh)
+docs/decisions/        ADRs
+```

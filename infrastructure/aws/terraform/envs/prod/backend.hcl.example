@@ -1,0 +1,6 @@
+# Estado remoto: el bucket se crea una vez, a mano y con tu autorización (ver DEPLOYMENT.md).
+bucket       = "nexaro-tfstate-<tu-cuenta>"
+key          = "prod/terraform.tfstate"
+region       = "eu-west-1"
+encrypt      = true
+use_lockfile = true

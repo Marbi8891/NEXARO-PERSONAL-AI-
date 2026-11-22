@@ -1,0 +1,8 @@
+# Copia a terraform.tfvars (ignorado por git). Sin secretos: solo identificadores.
+alert_email     = "alertas@ejemplo.com"
+certificate_arn = "arn:aws:acm:eu-west-1:123456789012:certificate/00000000-0000-0000-0000-000000000000"
+image_tag       = "0.1.0"
+allowed_origins = ["https://staging.ejemplo.com"]
+
+# Bedrock: ARNs exactos, nunca comodines. VERIFY: el acceso al modelo se solicita en la consola de Bedrock.
+# bedrock_model_arns = ["arn:aws:bedrock:eu-west-1::foundation-model/<model-id>"]
