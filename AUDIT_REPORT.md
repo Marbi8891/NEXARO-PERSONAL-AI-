@@ -76,7 +76,7 @@ del MVP definido por el propietario (20 pasos): **8 verificados de 20 (40 %)**.
 | ID | Prioridad | Defecto | Evidencia |
 |---|---|---|---|
 | BUG-01 | P0 | La aplicación no está en `main`; solo en ramas `backup/*` | §1 |
-| BUG-02 | P3 | `tests/frontend/run.sh` no tiene bit de ejecución (`100644`); la documentación dice ejecutarlo directamente | `git ls-files -s tests/frontend/run.sh`; `Permission denied` |
+| BUG-02 (corregido) | P3 | `tests/frontend/run.sh` no tiene bit de ejecución (`100644`); la documentación dice ejecutarlo directamente | `git ls-files -s tests/frontend/run.sh`; `Permission denied` |
 | BUG-03 | P2 | No se puede renombrar una conversación (no hay endpoint) | No existe `PATCH /api/conversations/{id}` |
 | BUG-04 | P2 | El README del linaje B en `main` describe una arquitectura «planned» que no coincide con la real | `README.md` de `main` |
 
