@@ -17,7 +17,7 @@ export function createShell({ user }) {
     { nav: "chat", href: "#/chat", label: "Chat" },
     { nav: "agents", href: "#/agents", label: "Agentes" },
     { nav: "documents", href: "#/documents", label: "Documentos" },
-    { nav: "prompts", href: "#/prompts", label: "Prompts" },
+    { nav: "prompts", href: "#/prompts", label: "Prompt Library" },
     { nav: "finance", href: "#/finance", label: "Finanzas" },
     { nav: "organizations", href: "#/organizations", label: "Organizaciones" },
     { nav: "developer", href: "#/developer", label: "Developer" },
