@@ -116,9 +116,11 @@ def backup_before_migrations(
     target = path.with_name(
         f"{path.stem}.pre-migration-v{pending[0]}-{stamp}-{uuid.uuid4().hex[:8]}{path.suffix}"
     )
+    created = False
     try:
         # Creación exclusiva: nunca sobrescribir una copia preexistente.
         target.touch(exist_ok=False)
+        created = True
         with closing(sqlite3.connect(path)) as source, closing(sqlite3.connect(target)) as copy:
             source.backup(copy)
             result = copy.execute("PRAGMA integrity_check").fetchone()[0]
@@ -127,7 +129,8 @@ def backup_before_migrations(
         return target
     except Exception:
         # No dejar una copia parcial si el backup o su validación fallan.
-        target.unlink(missing_ok=True)
+        if created:
+            target.unlink(missing_ok=True)
         raise
 
 
