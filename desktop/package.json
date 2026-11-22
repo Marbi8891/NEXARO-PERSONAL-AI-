@@ -14,11 +14,73 @@
     "start": "electron .",
     "dev": "electron . --dev",
     "test": "node --test \"test/*.test.js\"",
-    "dist:win": "electron-builder --win nsis",
+    "dist:win": "electron-builder --win nsis --publish never",
     "pack:dir": "electron-builder --dir"
   },
   "devDependencies": {
     "electron": "45.2.3",
     "electron-builder": "26.18.1"
+  },
+  "build": {
+    "appId": "ai.nexaro.desktop",
+    "productName": "NEXARO AI",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "build/icon.png",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "compose",
+        "to": "compose",
+        "filter": [
+          "*.yaml"
+        ]
+      },
+      {
+        "from": "..",
+        "to": "nexaro",
+        "filter": [
+          "compose.yaml",
+          "Dockerfile",
+          ".dockerignore",
+          "requirements/**",
+          "packages/**",
+          "products/**",
+          "apps/api/**",
+          "frontend/**",
+          "!**/__pycache__/**",
+          "!**/*.pyc",
+          "!**/.env",
+          "!**/.env.*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "NEXARO AI",
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true
+    },
+    "publish": null
   }
 }
