@@ -391,6 +391,7 @@ def test_12e_no_route_exposes_agents_tasks_or_embeddings_without_a_scoped_test(a
         ("POST", "/api/admin/users/{user_id}/approve"),
         ("POST", "/api/admin/users/{user_id}/reject"),
         ("PATCH", "/api/admin/users/{user_id}/active"),
+        ("GET", "/api/obsidian/note/{note_path:path}"),
     }
     routes = list(_flatten_routes(app.routes))
     found = {
