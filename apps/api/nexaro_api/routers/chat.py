@@ -31,6 +31,25 @@ def list_agents(user: CurrentUser) -> dict[str, Any]:
     return {"agents": public_agents()}
 
 
+@router.get("/models")
+async def list_models(user: CurrentUser, ctx: Ctx) -> dict[str, Any]:
+    """Modelos que el usuario puede elegir en el chat, descubiertos en el proveedor (no fijos
+    en código). `available` false: el proveedor no responde; no se inventa la lista."""
+    describe = getattr(ctx.provider, "available_models", None)
+    if describe is None:
+        return {
+            "provider": None,
+            "default_model": ctx.personal_ai.model,
+            "selectable": False,
+            "available": None,
+            "default_installed": None,
+            "fallback": [],
+            "models": [],
+        }
+    info: dict[str, Any] = await describe()
+    return info
+
+
 @router.post("/chat")
 async def chat(request: Request, body: ChatRequest, user: CurrentUser, ctx: Ctx) -> dict[str, Any]:
     validate_origin(request, ctx)
@@ -44,6 +63,7 @@ async def chat(request: Request, body: ChatRequest, user: CurrentUser, ctx: Ctx)
             body.conversation_id,
             document_organization_id=document_org,
             agent=body.agent_id,
+            model=body.model,
         )
     except ConversationNotFoundError:
         raise NOT_FOUND from None
@@ -124,6 +144,7 @@ async def chat_stream(
             body.conversation_id,
             document_organization_id=document_org,
             agent=body.agent_id,
+            model=body.model,
         )
     except BaseException as exc:
         lease.release()

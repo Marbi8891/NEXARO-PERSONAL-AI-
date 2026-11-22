@@ -99,6 +99,29 @@ await check("renombrar conversación desde el historial: título propio y Cancel
   await until(() => $(".history-title")?.textContent === "Mi primera charla", "título nuevo en el historial");
   // El historial se vuelve a pedir a la API tras renombrar: el título viene del servidor.
 });
+await check("modelo: la lista viene del proveedor, el elegido se usa y la conversación lo recuerda", async () => {
+  [...document.querySelectorAll("button")].find((b) => b.textContent.includes("Nueva")).click();
+  await until(() => $(".welcome") && $("#chat-model") && !$("#chat-model").closest("label").hidden && $("#chat-model").options.length === 3, "selector de modelo");
+  const options = [...$("#chat-model").options].map((o) => o.value);
+  assert.deepEqual(options, ["auto", "qwen2.5:3b", "llama3.2:latest"]);
+  assert.match($("#chat-model-hint").textContent, /Activo: qwen2\.5:3b/);
+  $("#chat-model").value = "llama3.2:latest";
+  $("#chat-model").dispatchEvent(new window.Event("change"));
+  assert.match($("#chat-model-hint").textContent, /Activo: llama3\.2:latest/);
+  $("#message").value = "quemodelo";
+  submit($(".composer"));
+  await until(() => text().includes("respondo con llama3.2:latest"), "respuesta del modelo elegido");
+  const id = decodeURIComponent(location.hash.split("/").pop());
+  await until(() => $(".history-item"), "historial");
+  [...document.querySelectorAll("button")].find((b) => b.textContent.includes("Nueva")).click();
+  await until(() => $(".welcome"), "nueva");
+  location.hash = `#/chat/${encodeURIComponent(id)}`;
+  await until(() => text().includes("respondo con llama3.2:latest") && $("#chat-model").value === "llama3.2:latest", "la conversación reabre con su modelo");
+  // Se borra para no alterar las cifras que comprueban los pasos siguientes.
+  assert.equal((await fetch(`/api/conversations/${encodeURIComponent(id)}`, { method: "DELETE" })).status, 204);
+  [...document.querySelectorAll("button")].find((b) => b.textContent.includes("Nueva")).click();
+  await until(() => $(".welcome") && document.querySelectorAll(".history-item").length === 1, "historial original");
+});
 await check("panel: cifras reales del usuario, sin sección de plataforma", async () => {
   location.hash = "#/dashboard";
   await until(() => $(".stats") && text().includes("Tu actividad"), "dashboard");

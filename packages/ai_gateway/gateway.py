@@ -12,7 +12,12 @@ from dataclasses import dataclass
 from typing import Any
 
 from ai_gateway.breaker import CircuitBreaker
-from ai_gateway.errors import PolicyError, ProviderError, ProviderUnavailableError
+from ai_gateway.errors import (
+    ModelNotAvailableError,
+    PolicyError,
+    ProviderError,
+    ProviderUnavailableError,
+)
 from ai_gateway.policy import GatewayPolicy
 from ai_gateway.providers.base import ChatProvider
 from ai_gateway.schemas import CompletionRequest, CompletionResult, InferenceMetrics, StreamChunk
@@ -102,6 +107,49 @@ class Gateway:
             return False, None
         return True, model_installed(self.model, installed)
 
+    async def available_models(self) -> dict[str, Any]:
+        """Lo que un usuario puede elegir: proveedor principal, modelo por defecto y, si el
+        proveedor sabe listarlos, los modelos instalados. Sin URLs ni detalles internos."""
+        provider = self._providers[self.name]
+        lister = getattr(provider, "list_models", None)
+        models: list[dict[str, Any]] = []
+        available = True
+        if lister is not None:
+            try:
+                models = await lister()
+            except ProviderError:
+                available = False
+        else:
+            available = await provider.health()
+        return {
+            "provider": self.name,
+            "default_model": self.model,
+            "selectable": lister is not None,
+            "available": available,
+            "default_installed": (
+                model_installed(self.model, models) if lister is not None and available else None
+            ),
+            "fallback": [r.provider for r in self._routes[1:]],
+            "models": models,
+        }
+
+    async def _routes_for(self, request: CompletionRequest) -> list[Route]:
+        """Rutas de esta petición. Sin modelo elegido: la cadena configurada (con respaldo).
+        Con modelo elegido: solo el proveedor principal con ese modelo, comprobado antes."""
+        model = request.model_override
+        if model is None:
+            return self._routes
+        provider = self._providers[self.name]
+        lister = getattr(provider, "list_models", None)
+        if lister is None:
+            raise ModelNotAvailableError("El proveedor configurado no permite elegir modelo")
+        installed = await lister()  # ProviderError si el proveedor está caído
+        if not model_installed(model, installed):
+            raise ModelNotAvailableError(
+                f"El modelo «{model}» no está instalado. Elige otro o vuelve a «Automático»."
+            )
+        return [Route(self.name, model)]
+
     async def aclose(self) -> None:
         """Cierra los clientes HTTP de los proveedores que los mantienen abiertos."""
         for provider in self._providers.values():
@@ -166,7 +214,7 @@ class Gateway:
         El uso se registra al terminar, fallar o cancelarse (cancelado = `ok` con error_kind)."""
         self._check_input(request)
         last_error: ProviderError | None = None
-        for route in self._routes:
+        for route in await self._routes_for(request):
             denial = await self._denial(route)
             if denial is not None:
                 await self._record(request, route, "denied", error_kind=denial)
@@ -247,7 +295,7 @@ class Gateway:
             raise PolicyError("La entrada supera el límite permitido")
 
         last_error: ProviderError | None = None
-        for route in self._routes:
+        for route in await self._routes_for(request):
             denial = await self._denial(route)
             if denial is not None:
                 await self._record(request, route, "denied", error_kind=denial)

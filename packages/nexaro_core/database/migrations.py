@@ -72,6 +72,9 @@ def platform_migrations() -> list[Migration]:
         sql_migration(
             8, "conversation_title", MIGRATIONS_DIR / "sqlite" / "0008_conversation_title.sql"
         ),
+        sql_migration(
+            9, "conversation_model", MIGRATIONS_DIR / "sqlite" / "0009_conversation_model.sql"
+        ),
     ]
 
 

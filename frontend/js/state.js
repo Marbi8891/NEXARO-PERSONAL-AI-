@@ -47,3 +47,21 @@ export function rememberedAgent() {
     return "general";
   }
 }
+
+// Modelo elegido para las conversaciones nuevas («auto» = el configurado con sus respaldos).
+// El de cada conversación lo guarda el servidor.
+const MODEL_KEY = "nexaro_chat_model";
+export function rememberModel(model) {
+  try {
+    localStorage.setItem(MODEL_KEY, model);
+  } catch {
+    // Sin almacenamiento: las conversaciones nuevas empiezan en «auto».
+  }
+}
+export function rememberedModel() {
+  try {
+    return localStorage.getItem(MODEL_KEY) || "auto";
+  } catch {
+    return "auto";
+  }
+}

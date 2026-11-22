@@ -179,7 +179,7 @@ td.mono, .mono { font-family: var(--font-mono); font-size: var(--fs-xs); }
 }
 .composer .button { padding: 0 var(--space-5); }
 .mode-toggle, .docs-toggle { display: flex; align-items: center; gap: var(--space-2); max-width: 850px; margin: var(--space-2) auto 0; color: var(--muted); font-size: var(--fs-xs); }
-.docs-toggle[hidden], .docs-toggle select[hidden] { display: none; }
+.docs-toggle[hidden], .docs-toggle select[hidden], .mode-toggle[hidden] { display: none; }
 .mode-toggle select, .docs-toggle select { font-size: var(--fs-xs); max-width: 14rem; }
 .docs-toggle:has(input:disabled) { opacity: 0.6; cursor: not-allowed; }
 .message-sources { margin-top: var(--space-3); font-size: var(--fs-xs); color: var(--muted); }

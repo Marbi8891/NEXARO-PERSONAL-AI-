@@ -3,6 +3,7 @@
 ## [Sin publicar] — rama `refactor/nexaro-platform`
 
 ### Añadido
+- Selección de modelo (Fase 3): `GET /api/models` descubre los modelos instalados en Ollama; campo `model` en `/api/chat`, `/api/chat/stream` y `/api/v1/chat` (nombre instalado o `auto`); la conversación recuerda su modelo (migración 9, SQLite y PostgreSQL). Un modelo elegido se usa sin respaldo y, si no está instalado, el error es claro y no se guarda el turno. Selector «Modelo» en el chat que muestra el modelo activo.
 - Renombrar conversaciones: `PATCH /api/conversations/{id}` (`{title}`, 1–120 caracteres, solo el propietario, auditoría `conversation.rename` sin el título), botón ✎ en el historial con diálogo propio, y migración 8 (`conversations.title`, SQLite y PostgreSQL).
 - Copia automática y verificada de la base SQLite antes de aplicar migraciones pendientes sobre datos existentes (`<nombre>.pre-migration-v<N>-<fecha>.db`); sin copia válida no se migra.
 - Auditoría de la Fase 0 (2026-11-22): `AUDIT_REPORT.md`, `IMPLEMENTATION_STATUS.md` (progreso verificado del MVP: 8 de 20) y `ROADMAP.md`. Versión canónica consolidada: `backup/macbook` fusionada con la documentación de `main`.

@@ -14,6 +14,11 @@ class ChatRequest(BaseModel):
     # Agente especializado (ADR-0022). Sin él, `mode` (ADR-0020) elige general o tutor.
     agent: AgentId | None = None
     mode: Mode = "general"
+    # Modelo de la conversación: nombre de un modelo instalado, «auto» (configurado con
+    # respaldo) o nada (se mantiene el que tenga la conversación).
+    model: str | None = Field(
+        default=None, min_length=1, max_length=200, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$"
+    )
 
     @property
     def agent_id(self) -> str:

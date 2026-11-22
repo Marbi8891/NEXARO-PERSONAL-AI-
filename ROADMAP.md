@@ -10,7 +10,7 @@ pequeños sobre la versión canónica (linaje `backup/macbook`), sin cambiar de 
 | 1 | P0 | Consolidar la versión canónica en `main` (fusión de `backup/macbook` + documentación de `main`) y pasar el CI completo en GitHub por primera vez | Sí: aprobar y fusionar el PR |
 | 2 | P0 | Verificar Docker + Ollama real: `make up`, `make model`, `make smoke` (pasos 1, 6, 18, 19 del MVP) | Sí: se ejecuta en su Mac o ThinkPad |
 | 3 | P0 | PR #3: no fusionar tal cual. Añadir autenticación, quitar `python`/`pip`/`npx`/`docker` de la lista o exigir aprobación previa, y llevarlo al monolito como herramienta del registro | Decidir si se integra |
-| 4 | P1 | Selección de modelo en tiempo real: descubrir modelos de Ollama, modelo por defecto, modelo por conversación, error claro si no está instalado (sin cambio silencioso) | No |
+| 4 | P1 | ✅ (falta por usuario y por agente) Selección de modelo en tiempo real: descubrir modelos de Ollama, modelo por defecto, modelo por conversación, error claro si no está instalado (sin cambio silencioso) | No |
 | 5 | P1 | Agentes persistentes con propietario: CRUD sobre la tabla `agents`, duplicar, activar/desactivar; los 7 actuales como semilla | No |
 | 6 | P2 | ✅ Renombrar conversaciones (`PATCH /api/conversations/{id}`) | No |
 | 7 | P2 | Tareas: API sobre la tabla `tasks` (crear, estado, listar, propietario) | No |

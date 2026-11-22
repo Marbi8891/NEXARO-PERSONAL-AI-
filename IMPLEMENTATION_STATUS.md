@@ -14,7 +14,7 @@ El MVP son los 20 pasos que definió el propietario. Cada paso cuenta una vez.
 | 1 | Instalar o iniciar NEXARO | NOT_VERIFIED | `make up` y `compose.yaml` existen; Docker no disponible en la auditoría |
 | 2 | Acceder a la aplicación | IMPLEMENTED | E2E jsdom 35 OK (`tests/frontend/run.sh`); la API sirve `frontend/` |
 | 3 | Autenticarse | IMPLEMENTED | `tests/integration/test_auth_flow.py`, `tests/security/test_access_control.py` |
-| 4 | Seleccionar un modelo | IMPLEMENTED_PARTIALLY | `GET /api/admin/models` lista los modelos instalados (solo admin); el modelo se fija con `OLLAMA_MODEL`; el chat no acepta `model` |
+| 4 | Seleccionar un modelo | IMPLEMENTED | `GET /api/models` + campo `model` + selector del chat; `tests/unit/test_model_selection.py`, `tests/integration/test_model_selection.py` y E2E «modelo: la lista viene del proveedor…». Con Ollama real: NOT_VERIFIED (como el paso 6). Falta modelo por defecto por usuario y por agente |
 | 5 | Crear una conversación | IMPLEMENTED | `test_chat.py`, `test_conversation_lifecycle.py` |
 | 6 | Conversar con el modelo | NOT_VERIFIED | Flujo verificado con modelo simulado (`test_chat_stream.py`); Ollama real no disponible aquí |
 | 7 | Crear un agente | NOT_IMPLEMENTED | Los agentes son constantes en `products/personal_ai/agents.py`; la tabla `agents` no tiene API |
@@ -36,13 +36,13 @@ El MVP son los 20 pasos que definió el propietario. Cada paso cuenta una vez.
 
 ```
 Total pasos del MVP:               20
-Implementados y verificados:        8   (2, 3, 5, 11, 12, 13, 17, 20)
-Implementados parcialmente:         3   (4, 10, 14)
+Implementados y verificados:        9   (2, 3, 4, 5, 11, 12, 13, 17, 20)
+Implementados parcialmente:         2   (10, 14)
 No implementados:                   5   (7, 8, 9, 15, 16)
 No verificados:                     4   (1, 6, 18, 19)
 Rotos:                              0
 
-Progreso verificado = 8 / 20 = 40 %
+Progreso verificado = 9 / 20 = 45 %
 ```
 
 Los parciales y los no verificados no suman. Los pasos 1, 6, 18 y 19 pasarían a verificados con
@@ -76,7 +76,7 @@ una ejecución de `make up && make model && make smoke` en el Mac o el ThinkPad.
 | Resumen de seguridad (admin) | IMPLEMENTED | `test_security_summary.py` |
 | Panel y avisos | IMPLEMENTED | `test_dashboard.py` |
 | PWA | IMPLEMENTED_PARTIALLY | `manifest.webmanifest`, `sw.js`; instalación no probada |
-| Migraciones SQLite (1–8) | IMPLEMENTED | `test_startup_migration.py` |
+| Migraciones SQLite (1–9) | IMPLEMENTED | `test_startup_migration.py` |
 | Copia verificada antes de migrar | IMPLEMENTED | `test_migrations.py`, `test_startup_backs_up_legacy_database_before_migrating` |
 | PostgreSQL | IMPLEMENTED_PARTIALLY | DDL validado (6 tests con pgserver); la app no lo usa |
 | Terraform AWS | NOT_VERIFIED | Escrito, no aplicado; aparcado por el propietario |
