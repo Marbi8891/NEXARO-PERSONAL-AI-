@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import Any
+from collections.abc import Iterator\nfrom typing import Any
 
 DEFAULT_EXCLUDED_DIRS = frozenset({".obsidian", ".trash", ".git", "node_modules"})
 
@@ -44,7 +44,7 @@ class ObsidianVault:
         except ValueError:
             return False
 
-    def _iter_notes(self, root: Path):
+    def _iter_notes(self, root: Path) -> Iterator[tuple[Path, Path]]:
         for candidate in root.rglob("*.md"):
             relative = candidate.relative_to(root)
             if not candidate.is_file() or self._is_excluded(relative):
@@ -60,7 +60,7 @@ class ObsidianVault:
             root = self._root()
         except VaultNotConfiguredError:
             return {"configured": True, "available": False, "note_count": 0}
-        return {"configured": True, "available": True, "note_count": sum(1 for _ in self._iter_notes(root))}
+        count = sum(1 for _ in self._iter_notes(root))\n        return {"configured": True, "available": True, "note_count": count}
 
     def list_notes(self, *, limit: int = 200, offset: int = 0) -> list[dict[str, Any]]:
         root = self._root()
