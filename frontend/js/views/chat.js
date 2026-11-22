@@ -24,7 +24,8 @@ export async function chatView({ container, sidebar, params, shell }) {
   const agentBar = h("label", { class: "mode-toggle" }, h("span", {}, "Agente"), agentSelect, agentHint);
   const currentAgent = () => agents.find((a) => a.id === agentSelect.value) || agents[0];
   function renderAgents(selected) {
-    agentSelect.replaceChildren(...agents.map((a) => h("option", { value: a.id, title: a.description }, a.name)));
+    // Los de organización llevan su nombre: dos organizaciones pueden tener un agente igual.
+    agentSelect.replaceChildren(...agents.map((a) => h("option", { value: a.id, title: a.description }, a.scope === "organization" ? `${a.name} · ${a.organization_name}` : a.name)));
     agentSelect.value = agents.some((a) => a.id === selected) ? selected : "general";
   }
   renderAgents("general");
