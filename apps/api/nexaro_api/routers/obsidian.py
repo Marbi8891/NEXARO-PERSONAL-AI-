@@ -1,4 +1,5 @@
 """Authenticated, read-only Obsidian endpoints for the local NEXARO Vault connector."""
+
 from __future__ import annotations
 
 from typing import Any
