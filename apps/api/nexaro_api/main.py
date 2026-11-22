@@ -22,8 +22,8 @@ from nexaro_api.routers import (
     documents,
     expenses,
     health,
-    organizations,
     obsidian,
+    organizations,
 )
 from nexaro_core.config import Settings, get_settings
 from nexaro_core.database import Database
