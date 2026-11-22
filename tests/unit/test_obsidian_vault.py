@@ -9,7 +9,8 @@ from nexaro_core.obsidian.vault import (
 )
 
 
-def test_unconfigured_vault_status() -> None:
+def test_unconfigured_vault_status(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OBSIDIAN_VAULT_PATH", raising=False)
     vault = ObsidianVault(None)
     assert vault.status() == {"configured": False, "available": False, "note_count": 0}
 
