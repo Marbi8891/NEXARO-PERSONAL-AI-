@@ -32,7 +32,8 @@ def list_notes(
 ) -> dict[str, Any]:
     vault = _vault()
     try:
-        return {"notes": vault.list_notes(limit=limit, offset=offset), "limit": limit, "offset": offset}
+        notes = vault.list_notes(limit=limit, offset=offset)
+        return {"notes": notes, "limit": limit, "offset": offset}
     except VaultNotConfiguredError as exc:
         raise _handle_config_error(exc) from exc
 
