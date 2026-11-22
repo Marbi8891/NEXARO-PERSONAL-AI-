@@ -1,0 +1,64 @@
+/* Pantalla de arranque/error del escritorio. Colores tomados de frontend/css/tokens.css. */
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#f3f5f9, #0a1424);
+  --panel: light-dark(#ffffff, #101f36);
+  --border: light-dark(#cbd3df, #26405f);
+  --text: light-dark(#0e1a2b, #e8eef7);
+  --muted: light-dark(#475569, #a5b4c8);
+  --primary: light-dark(#12305a, #7fa9de);
+  --primary-text: light-dark(#ffffff, #0a1424);
+  --accent: light-dark(#2b5c97, #8db4e8);
+  --ok: light-dark(#146c43, #5fd1a0);
+  --warn: light-dark(#8a5300, #e6b35e);
+  --danger: light-dark(#b42318, #ff9b93);
+  --danger-bg: light-dark(#fdeceb, #3a1614);
+  --warn-bg: light-dark(#fdf1dc, #33260d);
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  display: grid; place-items: center; padding: 24px;
+  background: var(--bg); color: var(--text);
+  font: 15px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+.card {
+  width: min(640px, 100%); background: var(--panel); border: 1px solid var(--border);
+  border-radius: 16px; padding: 28px 32px; box-shadow: 0 10px 40px rgb(0 0 0 / 0.12);
+}
+.brand { display: flex; gap: 14px; align-items: center; margin-bottom: 24px; }
+.brand h1 { font-size: 22px; margin: 0; letter-spacing: 0.02em; }
+.brand .sub { margin: 0; color: var(--muted); font-size: 13px; }
+.status { display: flex; gap: 14px; align-items: center; }
+.state-label { margin: 0; font-size: 11px; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+.message { margin: 2px 0 0; font-size: 17px; font-weight: 600; }
+.spinner {
+  width: 28px; height: 28px; flex: none; border-radius: 50%;
+  border: 3px solid var(--border); border-top-color: var(--accent);
+  animation: spin 0.9s linear infinite;
+}
+.status[data-state="READY"] .spinner { animation: none; border-color: var(--ok); }
+.status[data-state="DEGRADED"] .spinner { animation: none; border-color: var(--warn); }
+.status[data-state="ERROR"] .spinner,
+.status[data-state="STOPPED"] .spinner { animation: none; border-color: var(--danger); }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+.detail {
+  white-space: pre-wrap; margin: 18px 0 0; padding: 12px 14px; border-radius: 10px;
+  background: var(--warn-bg); font-size: 14px;
+}
+.status[data-state="ERROR"] ~ .detail { background: var(--danger-bg); }
+.checks { list-style: none; padding: 0; margin: 20px 0 0; display: grid; gap: 6px; }
+.checks li { display: grid; grid-template-columns: 22px 150px 1fr; gap: 8px; font-size: 14px; }
+.checks .name { color: var(--muted); }
+.checks .icon[data-status="ok"] { color: var(--ok); }
+.checks .icon[data-status="warn"] { color: var(--warn); }
+.checks .icon[data-status="fail"] { color: var(--danger); }
+.checks .icon[data-status="pending"], .checks .icon[data-status="skip"] { color: var(--muted); }
+.actions { display: flex; gap: 10px; margin-top: 24px; flex-wrap: wrap; }
+button {
+  font: inherit; padding: 8px 16px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--border); background: transparent; color: var(--text);
+}
+button.primary { background: var(--primary); color: var(--primary-text); border-color: var(--primary); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

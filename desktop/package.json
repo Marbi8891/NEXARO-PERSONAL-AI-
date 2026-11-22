@@ -1,0 +1,24 @@
+{
+  "name": "nexaro-desktop",
+  "productName": "NEXARO AI",
+  "version": "0.1.0",
+  "description": "Aplicación de escritorio de NEXARO AI para Windows: gestiona Docker, Ollama y el backend y abre el Command Center.",
+  "main": "src/main/main.js",
+  "private": true,
+  "license": "SEE LICENSE IN ../LICENSE",
+  "author": "NEXARO",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "test": "node --test \"test/*.test.js\"",
+    "dist:win": "electron-builder --win nsis",
+    "pack:dir": "electron-builder --dir"
+  },
+  "devDependencies": {
+    "electron": "45.2.3",
+    "electron-builder": "26.18.1"
+  }
+}
