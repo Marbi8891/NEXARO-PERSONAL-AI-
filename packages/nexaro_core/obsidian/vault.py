@@ -1,0 +1,138 @@
+"""Read-only Obsidian Vault connector for NEXARO.
+
+The connector deliberately accesses only Markdown notes and never writes to the Vault.
+"""
+from __future__ import annotations
+
+import os
+import re
+from pathlib import Path
+from typing import Any
+
+DEFAULT_EXCLUDED_DIRS = frozenset({".obsidian", ".trash", ".git", "node_modules"})
+
+
+class VaultNotConfiguredError(RuntimeError):
+    """Raised when the Vault path is not configured."""
+
+
+class VaultPathError(ValueError):
+    """Raised when a requested note path is invalid or outside the Vault."""
+
+
+class ObsidianVault:
+    def __init__(self, vault_path: str | Path | None = None) -> None:
+        configured = vault_path if vault_path is not None else os.getenv("OBSIDIAN_VAULT_PATH")
+        self.path = Path(configured).expanduser() if configured else None
+
+    def _root(self) -> Path:
+        if self.path is None:
+            raise VaultNotConfiguredError("OBSIDIAN_VAULT_PATH no está configurado")
+        root = self.path.resolve()
+        if not root.is_dir():
+            raise VaultNotConfiguredError("La ruta configurada no es un Vault accesible")
+        return root
+
+    @staticmethod
+    def _is_excluded(relative: Path) -> bool:
+        return any(part in DEFAULT_EXCLUDED_DIRS or part.startswith(".") for part in relative.parts)
+
+    def status(self) -> dict[str, Any]:
+        if self.path is None:
+            return {"configured": False, "available": False, "note_count": 0}
+        try:
+            root = self._root()
+        except VaultNotConfiguredError:
+            return {"configured": True, "available": False, "note_count": 0}
+        count = sum(
+            1
+            for candidate in root.rglob("*.md")
+            if candidate.is_file() and not self._is_excluded(candidate.relative_to(root))
+        )
+        return {"configured": True, "available": True, "note_count": count}
+
+    def list_notes(self, *, limit: int = 200, offset: int = 0) -> list[dict[str, Any]]:
+        root = self._root()
+        notes = []
+        for candidate in root.rglob("*.md"):
+            if not candidate.is_file():
+                continue
+            relative = candidate.relative_to(root)
+            if self._is_excluded(relative):
+                continue
+            notes.append(relative.as_posix())
+        notes.sort()
+        selected = notes[offset : offset + limit]
+        return [self._metadata(root / note, note) for note in selected]
+
+    def read_note(self, note_path: str) -> dict[str, Any]:
+        root = self._root()
+        target = self._resolve_note(root, note_path)
+        content = target.read_text(encoding="utf-8")
+        return {"path": target.relative_to(root).as_posix(), "content": content}
+
+    def search(self, query: str, *, limit: int = 20) -> list[dict[str, Any]]:
+        root = self._root()
+        needle = query.strip().casefold()
+        if not needle:
+            return []
+        results: list[dict[str, Any]] = []
+        for candidate in root.rglob("*.md"):
+            if not candidate.is_file():
+                continue
+            relative = candidate.relative_to(root)
+            if self._is_excluded(relative):
+                continue
+            try:
+                content = candidate.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+            index = content.casefold().find(needle)
+            if index < 0:
+                continue
+            start = max(0, index - 100)
+            end = min(len(content), index + len(query) + 180)
+            results.append({
+                "path": relative.as_posix(),
+                "title": self._title(content, candidate.stem),
+                "snippet": content[start:end].replace("\\n", " ").strip(),
+            })
+            if len(results) >= limit:
+                break
+        return results
+
+    def _resolve_note(self, root: Path, note_path: str) -> Path:
+        if not note_path or "\\x00" in note_path:
+            raise VaultPathError("Ruta de nota no válida")
+        requested = Path(note_path)
+        if requested.is_absolute():
+            raise VaultPathError("No se permiten rutas absolutas")
+        target = (root / requested).resolve()
+        try:
+            target.relative_to(root)
+        except ValueError as exc:
+            raise VaultPathError("La ruta está fuera del Vault") from exc
+        if self._is_excluded(target.relative_to(root)):
+            raise VaultPathError("Ruta excluida")
+        if target.suffix.lower() != ".md" or not target.is_file():
+            raise VaultPathError("La nota no existe o no es Markdown")
+        return target
+
+    @staticmethod
+    def _title(content: str, fallback: str) -> str:
+        match = re.search(r"^#\\s+(.+)$", content, re.MULTILINE)
+        return match.group(1).strip() if match else fallback
+
+    @classmethod
+    def _metadata(cls, file_path: Path, relative: str) -> dict[str, Any]:
+        try:
+            content = file_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            content = ""
+        tags = sorted(set(re.findall(r"(?<![\\w])#([\\w/-]+)", content)))
+        return {
+            "path": relative,
+            "title": cls._title(content, file_path.stem),
+            "tags": tags,
+            "size_bytes": file_path.stat().st_size,
+        }
