@@ -9,6 +9,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app:/app/packages:/app/apps/api
 
+# Parches de seguridad de Debian publicados después de la imagen base (p. ej. zlib1g,
+# CVE-2026-85091, mientras el digest de arriba no los incluya).
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN groupadd --gid 10001 nexaro \
     && useradd --uid 10001 --gid nexaro --create-home nexaro
 

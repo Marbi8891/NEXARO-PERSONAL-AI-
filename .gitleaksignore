@@ -1,0 +1,8 @@
+# Falsos positivos revisados a mano el 2026-11-22: contraseñas ficticias de tests y el marcador
+# «TU_CLAVE» de los ejemplos de curl. Ninguno es un secreto real.
+991d9031e708c17fe026cc703d4944dbe4c86765:tests/security/test_logging.py:generic-api-key:71
+e22f1a8e6f906003d2fe3a6fb80b71d5cba41081:tests/frontend/browser.mjs:generic-api-key:150
+b91b548ddf9927541ddcb5ee5b5d63c5c0771ec9:API.md:curl-auth-header:61
+aad4259189fba7fecd0af8f76bb972f0e3a04336:frontend/js/views/developer.js:curl-auth-header:124
+3497a03320fa9a993bdd95d2277aae7022ebeb24:tests/frontend/e2e.mjs:generic-api-key:52
+3497a03320fa9a993bdd95d2277aae7022ebeb24:tests/frontend/e2e.mjs:generic-api-key:131
