@@ -155,7 +155,9 @@ def test_backup_covers_unversioned_legacy_databases(database: Database) -> None:
     assert backup_before_migrations(database, numbered(create_table("a"))) is not None
 
 
-def test_backup_never_overwrites_an_existing_copy(database: Database, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_backup_never_overwrites_an_existing_copy(
+    database: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
     run_migrations(database, numbered(create_table("a")))
     migrations = numbered(create_table("a"), create_table("b"))
     when = datetime(2026, 11, 22, 15, 0, tzinfo=timezone.utc)
