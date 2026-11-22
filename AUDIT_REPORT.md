@@ -64,7 +64,10 @@ Linaje B (ramas de PR, **fuera** del monolito):
 No ejecutado aquí: Docker, Ollama real, `make smoke`, navegador Chromium (`BROWSER=1`),
 Terraform, Bandit, pip-audit, gitleaks. El job `ci.yml` del linaje A solo se dispara en `main`,
 `refactor/**`, `security/**` y en PR: **la rama `backup/macbook` nunca ha pasado CI en GitHub**.
-El PR de consolidación lo ejecutará por primera vez.
+El PR de consolidación lo ejecutó por primera vez (2026-11-22): `quality` y `terraform` pasaron;
+`security` falló por 10 avisos de pip-audit en `starlette 0.49.3` (SEC-05) y `docker` y
+`terraform-scan` no arrancaron porque la etiqueta `aquasecurity/trivy-action@0.28.0` ya no existe
+(BUG-05). Ambos se corrigen en el mismo PR.
 
 ## 4. Funcionalidades
 
@@ -77,6 +80,7 @@ del MVP definido por el propietario (20 pasos): **8 verificados de 20 (40 %)**.
 |---|---|---|---|
 | BUG-01 | P0 | La aplicación no está en `main`; solo en ramas `backup/*` | §1 |
 | BUG-02 (corregido) | P3 | `tests/frontend/run.sh` no tiene bit de ejecución (`100644`); la documentación dice ejecutarlo directamente | `git ls-files -s tests/frontend/run.sh`; `Permission denied` |
+| BUG-05 (corregido) | P1 | El CI referenciaba `aquasecurity/trivy-action@0.28.0`, que ya no existe | CI `docker`, `terraform-scan` |
 | BUG-03 | P2 | No se puede renombrar una conversación (no hay endpoint) | No existe `PATCH /api/conversations/{id}` |
 | BUG-04 | P2 | El README del linaje B en `main` describe una arquitectura «planned» que no coincide con la real | `README.md` de `main` |
 
@@ -87,6 +91,7 @@ del MVP definido por el propietario (20 pasos): **8 verificados de 20 (40 %)**.
 | SEC-01 | P0 (si se fusiona o expone) | PR #3: el servicio `agent-hub` no tiene autenticación y su herramienta `run_command` permite al modelo ejecutar `python`, `pip`, `npm`, `npx`, `docker`, `make`, `git`… sin aprobación del usuario. `python -c` ya es ejecución arbitraria de código dentro del contenedor | `agent-hub/app/tools.py:10` (`ALLOWED_COMMANDS`), `agent-hub/app/main.py` sin dependencias de auth |
 | SEC-02 | P1 | PR #2: API sin autenticación ni propietario de los datos | `app/main.py`, rutas `@app.*` sin `Depends` |
 | SEC-03 | P2 | El limitador de intentos es en memoria (no se comparte entre instancias) | `ARCHITECTURE.md`, límites conocidos |
+| SEC-05 (corregido) | P0 | `starlette 0.49.3` con 10 avisos conocidos (arreglados en 1.3.1); FastAPI 0.120.4 no permitía subirlo | CI `security`, pip-audit |
 | SEC-04 | P2 | La imagen de Ollama por defecto es `ollama/ollama:latest` (sin fijar) | `compose.yaml` |
 
 Lo que sí está implementado y probado en el linaje A: sesiones con token guardado solo como

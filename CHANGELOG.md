@@ -39,6 +39,8 @@
 - Módulo Security (F15): `GET /api/admin/security` y vista `#/security` (solo administradores) con accesos fallidos, denegaciones, bloqueos, IP de origen e incidencias, calculados desde la auditoría existente (sin tablas nuevas); ADR-0010.
 
 ### Cambiado
+- Seguridad de dependencias: `fastapi` 0.120.4 → 0.160.0 y `starlette` fijado en 1.10.0 (pip-audit encontraba 10 avisos en starlette 0.49.3: PYSEC-2026-161, -248, -249, -2280, -2281).
+- CI: `aquasecurity/trivy-action` fijado por commit a v0.36.0; la etiqueta `0.28.0` ya no existe y los jobs `docker` y `terraform-scan` no podían arrancar.
 - La app pasa a `create_app()` (factory); el comando de admin es `python -m nexaro_api.bootstrap_admin`.
 - Prompt del asistente generado desde proveedor y modelo configurados (sin modelo fijo en código).
 - Índice `idx_messages_conversation_id`.

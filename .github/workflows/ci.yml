@@ -80,7 +80,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Escaneo de configuración (informativo en la primera ejecución)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: config
           scan-ref: infrastructure/aws/terraform
@@ -94,7 +94,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: docker build -t nexaro-api:ci .
       - name: Escaneo de la imagen (HIGH/CRITICAL con parche disponible)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: nexaro-api:ci
           severity: HIGH,CRITICAL
