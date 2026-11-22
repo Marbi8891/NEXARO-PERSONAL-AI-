@@ -92,15 +92,11 @@ def _row(row: sqlite3.Row) -> dict[str, Any]:
     return item
 
 
-COLUMNS = (
-    "id, owner_user_id, name, description, category, base_agent, instructions, tools, model,"
-    " status, created_at, updated_at"
-)
-
-
 def list_agents(db: sqlite3.Connection, user_id: str) -> list[dict[str, Any]]:
     rows = db.execute(
-        f"SELECT {COLUMNS} FROM user_agents WHERE owner_user_id = ? ORDER BY name",  # noqa: S608
+        "SELECT id, owner_user_id, name, description, category, base_agent, instructions, tools,"
+        " model, status, created_at, updated_at FROM user_agents"
+        " WHERE owner_user_id = ? ORDER BY name",
         (user_id,),
     ).fetchall()
     return [_row(r) for r in rows]
@@ -108,7 +104,9 @@ def list_agents(db: sqlite3.Connection, user_id: str) -> list[dict[str, Any]]:
 
 def get_agent(db: sqlite3.Connection, user_id: str, agent_id: str) -> dict[str, Any]:
     row = db.execute(
-        f"SELECT {COLUMNS} FROM user_agents WHERE id = ? AND owner_user_id = ?",  # noqa: S608
+        "SELECT id, owner_user_id, name, description, category, base_agent, instructions, tools,"
+        " model, status, created_at, updated_at FROM user_agents"
+        " WHERE id = ? AND owner_user_id = ?",
         (agent_id, user_id),
     ).fetchone()
     if row is None:
