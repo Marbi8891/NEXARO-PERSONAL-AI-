@@ -133,6 +133,11 @@ export const api = {
 
   agents: () => request("/api/agents"),
   models: () => request("/api/models"),
+  customAgents: () => request("/api/agents/custom"),
+  createCustomAgent: (body) => request("/api/agents/custom", { method: "POST", body }),
+  updateCustomAgent: (agentId, body) => request(`/api/agents/custom/${id(agentId)}`, { method: "PATCH", body }),
+  duplicateCustomAgent: (agentId) => request(`/api/agents/custom/${id(agentId)}/duplicate`, { method: "POST" }),
+  deleteCustomAgent: (agentId) => request(`/api/agents/custom/${id(agentId)}`, { method: "DELETE" }),
   conversations: () => request("/api/conversations"),
   conversation: (conversationId) => request(`/api/conversations/${id(conversationId)}`),
   renameConversation: (conversationId, title) => request(`/api/conversations/${id(conversationId)}`, { method: "PATCH", body: { title } }),

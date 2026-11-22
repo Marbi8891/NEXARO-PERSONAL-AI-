@@ -17,6 +17,7 @@ from nexaro_core.database import Database, begin_write
 from nexaro_core.timeseries import fill_days, last_days
 from products.personal_ai import documents as docs
 from products.personal_ai.agents import get_agent
+from products.personal_ai.custom_agents import AgentProfile
 from products.personal_ai.guard import REFUSAL, restricted_topic
 from products.personal_ai.prompts import build_system_prompt
 
@@ -61,10 +62,12 @@ def _output_class(message: str, agent: str) -> str:
     return category
 
 
-def _effective_model(requested: str | None, stored: str | None) -> str | None:
-    """Modelo fijado para este turno: el pedido ahora o, si no se pide, el de la conversación.
-    `auto` (o nada guardado) deja que el gateway use el configurado con sus respaldos."""
-    choice = requested if requested is not None else stored
+def _effective_model(
+    requested: str | None, stored: str | None, agent_model: str | None = None
+) -> str | None:
+    """Modelo fijado para este turno: el pedido ahora; si no, el de la conversación; si no, el
+    del agente. `auto` (o nada) deja que el gateway use el configurado con sus respaldos."""
+    choice = next((m for m in (requested, stored, agent_model) if m is not None), None)
     return None if choice in (None, AUTO_MODEL) else choice
 
 
@@ -135,11 +138,15 @@ class PersonalAIService:
         document_organization_id: str | None = None,
         agent: str = "general",
         model: str | None = None,
+        profile: AgentProfile | None = None,
     ) -> ChatOutcome:
         conversation_id = conversation_id or str(uuid.uuid4())
+        profile = profile or AgentProfile(agent, agent, "", get_agent(agent).tools, None)
+        agent = profile.base_agent
+        record = profile.record_id
         if _is_restricted(message):
             await asyncio.to_thread(
-                self._record_refusal, user_id, message, conversation_id, organization_id, agent
+                self._record_refusal, user_id, message, conversation_id, organization_id, record
             )
             return ChatOutcome(conversation_id, REFUSAL)
         hits = await asyncio.to_thread(self._retrieve, document_organization_id, message)
@@ -147,8 +154,15 @@ class PersonalAIService:
             self._begin_turn, user_id, message, conversation_id, organization_id
         )
         request = self._build_request(
-            user_id, message, turn.history, organization_id, api_key_id, hits, agent
-        ).model_copy(update={"model_override": _effective_model(model, turn.model)})
+            user_id,
+            message,
+            turn.history,
+            organization_id,
+            api_key_id,
+            hits,
+            agent,
+            profile.instructions,
+        ).model_copy(update={"model_override": _effective_model(model, turn.model, profile.model)})
         try:
             result = await self._provider.complete(request)
         except BaseException:
@@ -156,7 +170,7 @@ class PersonalAIService:
             self._discard_turn(conversation_id, turn)
             raise
 
-        await asyncio.to_thread(self._save_answer, conversation_id, result.content, agent, model)
+        await asyncio.to_thread(self._save_answer, conversation_id, result.content, record, model)
         sources = None if hits is None else [_source(h) for h in hits]
         return ChatOutcome(conversation_id, result.content, sources)
 
@@ -171,13 +185,17 @@ class PersonalAIService:
         document_organization_id: str | None = None,
         agent: str = "general",
         model: str | None = None,
+        profile: AgentProfile | None = None,
     ) -> tuple[str, AsyncIterator[dict[str, Any]]]:
         """Prepara el turno (lanza ConversationNotFoundError antes de emitir nada) y devuelve
         el id de la conversación y el flujo de eventos: [sources], token*, done o error."""
         conversation_id = conversation_id or str(uuid.uuid4())
+        profile = profile or AgentProfile(agent, agent, "", get_agent(agent).tools, None)
+        agent = profile.base_agent
+        record = profile.record_id
         if _is_restricted(message):
             await asyncio.to_thread(
-                self._record_refusal, user_id, message, conversation_id, organization_id, agent
+                self._record_refusal, user_id, message, conversation_id, organization_id, record
             )
             return conversation_id, _refusal_events()
         hits = await asyncio.to_thread(self._retrieve, document_organization_id, message)
@@ -185,10 +203,17 @@ class PersonalAIService:
             self._begin_turn, user_id, message, conversation_id, organization_id
         )
         request = self._build_request(
-            user_id, message, turn.history, organization_id, api_key_id, hits, agent
-        ).model_copy(update={"model_override": _effective_model(model, turn.model)})
+            user_id,
+            message,
+            turn.history,
+            organization_id,
+            api_key_id,
+            hits,
+            agent,
+            profile.instructions,
+        ).model_copy(update={"model_override": _effective_model(model, turn.model, profile.model)})
         sources = None if hits is None else [_source(h) for h in hits]
-        return conversation_id, self._events(conversation_id, request, turn, sources, agent, model)
+        return conversation_id, self._events(conversation_id, request, turn, sources, record, model)
 
     def _build_request(
         self,
@@ -199,11 +224,12 @@ class PersonalAIService:
         api_key_id: str | None,
         hits: list[docs.Hit] | None = None,
         agent: str = "general",
+        instructions: str = "",
     ) -> CompletionRequest:
         """`hits` None: documentos desactivados. Lista (aunque vacía): activados. Los fragmentos
         solo viajan al modelo en este mensaje; en la base se guarda el texto tal cual lo escribió
         el usuario."""
-        system = build_system_prompt(agent)
+        system = build_system_prompt(agent, instructions)
         content = message
         if hits is not None:
             if hits:

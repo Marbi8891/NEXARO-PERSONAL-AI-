@@ -17,9 +17,9 @@ El MVP son los 20 pasos que definió el propietario. Cada paso cuenta una vez.
 | 4 | Seleccionar un modelo | IMPLEMENTED | `GET /api/models` + campo `model` + selector del chat; `tests/unit/test_model_selection.py`, `tests/integration/test_model_selection.py` y E2E «modelo: la lista viene del proveedor…». Con Ollama real: NOT_VERIFIED (como el paso 6). Falta modelo por defecto por usuario y por agente |
 | 5 | Crear una conversación | IMPLEMENTED | `test_chat.py`, `test_conversation_lifecycle.py` |
 | 6 | Conversar con el modelo | NOT_VERIFIED | Flujo verificado con modelo simulado (`test_chat_stream.py`); Ollama real no disponible aquí |
-| 7 | Crear un agente | NOT_IMPLEMENTED | Los agentes son constantes en `products/personal_ai/agents.py`; la tabla `agents` no tiene API |
-| 8 | Configurar sus instrucciones | NOT_IMPLEMENTED | Reglas fijas en `products/personal_ai/prompts.py` |
-| 9 | Configurar sus herramientas | NOT_IMPLEMENTED | Herramientas fijas por agente (`TOOL_PERMISSIONS`); el usuario solo activa «documentos» por mensaje |
+| 7 | Crear un agente | IMPLEMENTED | `POST /api/agents/custom`, pantalla `#/agents`; `tests/integration/test_custom_agents.py` y E2E «agentes: crear uno personal…» |
+| 8 | Configurar sus instrucciones | IMPLEMENTED | `instructions` delimitadas tras las reglas fijas; test «custom_agent_is_really_used_in_chat» comprueba el prompt enviado y que no pueden cerrar su delimitador |
+| 9 | Configurar sus herramientas | IMPLEMENTED_PARTIALLY | `tools` ⊆ herramientas del agente base, comprobado en el servidor (test 403 sin «documents»); hoy solo existe la herramienta «documents», falta el registro de herramientas |
 | 10 | Ejecutar el agente | IMPLEMENTED_PARTIALLY | Selector de agente en el chat (`test_agents.py`, E2E); un agente es un perfil de prompt, no un ejecutor con herramientas propias |
 | 11 | Consultar el resultado | IMPLEMENTED | `messages.agent` (migración 7) y respuesta guardada; `test_agents.py` |
 | 12 | Recuperar el historial | IMPLEMENTED | `GET /api/conversations/{id}`; E2E «al reabrir la conversación está el texto parcial» |
@@ -36,13 +36,13 @@ El MVP son los 20 pasos que definió el propietario. Cada paso cuenta una vez.
 
 ```
 Total pasos del MVP:               20
-Implementados y verificados:        9   (2, 3, 4, 5, 11, 12, 13, 17, 20)
-Implementados parcialmente:         2   (10, 14)
-No implementados:                   5   (7, 8, 9, 15, 16)
+Implementados y verificados:       11   (2, 3, 4, 5, 7, 8, 11, 12, 13, 17, 20)
+Implementados parcialmente:         3   (9, 10, 14)
+No implementados:                   2   (15, 16)
 No verificados:                     4   (1, 6, 18, 19)
 Rotos:                              0
 
-Progreso verificado = 9 / 20 = 45 %
+Progreso verificado = 11 / 20 = 55 %
 ```
 
 Los parciales y los no verificados no suman. Los pasos 1, 6, 18 y 19 pasarían a verificados con
@@ -62,7 +62,8 @@ una ejecución de `make up && make model && make smoke` en el Mac o el ThinkPad.
 | Cortacircuitos y estado de modelos | IMPLEMENTED | `test_gateway_wiring.py`, `GET /api/admin/models` |
 | Agentes predefinidos (7) | IMPLEMENTED | `GET /api/agents`, `test_agents.py` |
 | Catálogo de 86 agentes | DOCUMENTED_ONLY | `docs/agents/catalogue.json` (`"status": "proposed_catalogue"`) |
-| Agent Builder | NOT_IMPLEMENTED | — |
+| Agentes personales (CRUD, duplicar, activar) | IMPLEMENTED | `test_custom_agents.py` (12 tests, incluido aislamiento entre usuarios) |
+| Agent Builder con IA | NOT_IMPLEMENTED | Solo creación manual |
 | Orquestación multiagente | DOCUMENTED_ONLY | `docs/architecture/system-overview.md`; PR #3 tiene `POST /api/orchestrator/plan` fuera del monolito, no evaluado |
 | Equipos de agentes | NOT_IMPLEMENTED | — |
 | Registro de herramientas | IMPLEMENTED_PARTIALLY | Una herramienta (`documents`) con permiso por agente y usuario y auditoría `agent.tool` |
@@ -76,7 +77,7 @@ una ejecución de `make up && make model && make smoke` en el Mac o el ThinkPad.
 | Resumen de seguridad (admin) | IMPLEMENTED | `test_security_summary.py` |
 | Panel y avisos | IMPLEMENTED | `test_dashboard.py` |
 | PWA | IMPLEMENTED_PARTIALLY | `manifest.webmanifest`, `sw.js`; instalación no probada |
-| Migraciones SQLite (1–9) | IMPLEMENTED | `test_startup_migration.py` |
+| Migraciones SQLite (1–10) | IMPLEMENTED | `test_startup_migration.py` |
 | Copia verificada antes de migrar | IMPLEMENTED | `test_migrations.py`, `test_startup_backs_up_legacy_database_before_migrating` |
 | PostgreSQL | IMPLEMENTED_PARTIALLY | DDL validado (6 tests con pgserver); la app no lo usa |
 | Terraform AWS | NOT_VERIFIED | Escrito, no aplicado; aparcado por el propietario |

@@ -122,6 +122,36 @@ await check("modelo: la lista viene del proveedor, el elegido se usa y la conver
   [...document.querySelectorAll("button")].find((b) => b.textContent.includes("Nueva")).click();
   await until(() => $(".welcome") && document.querySelectorAll(".history-item").length === 1, "historial original");
 });
+await check("agentes: crear uno personal, usarlo en el chat, desactivarlo y borrarlo", async () => {
+  location.hash = "#/agents";
+  await until(() => $("#agent-form"), "formulario de agentes");
+  fill("#agent-name", "Revisor E2E");
+  $("#agent-base").value = "developer";
+  $("#agent-base").dispatchEvent(new window.Event("change"));
+  $("#agent-instructions").value = "Sé breve.";
+  submit($("#agent-form"));
+  await until(() => [...document.querySelectorAll(".data-table td")].some((td) => td.textContent === "Revisor E2E"), "agente listado");
+
+  location.hash = "#/chat";
+  await until(() => $("#chat-agent") && [...$("#chat-agent").options].some((o) => o.textContent === "Revisor E2E"), "agente en el selector del chat");
+  const option = [...$("#chat-agent").options].find((o) => o.textContent === "Revisor E2E");
+  $("#chat-agent").value = option.value;
+  $("#chat-agent").dispatchEvent(new window.Event("change"));
+  assert.equal($("#chat-agent").value, option.value);
+  $("#chat-agent").value = "general";
+  $("#chat-agent").dispatchEvent(new window.Event("change"));
+
+  location.hash = "#/agents";
+  await until(() => document.querySelector('button[aria-label="Desactivar Revisor E2E"]'), "botón desactivar");
+  document.querySelector('button[aria-label="Desactivar Revisor E2E"]').click();
+  await until(() => document.querySelector('button[aria-label="Activar Revisor E2E"]'), "agente desactivado");
+  document.querySelector('button[aria-label="Borrar Revisor E2E"]').click();
+  await until(() => document.querySelector("dialog"), "confirmación");
+  [...document.querySelectorAll("dialog button")].find((b) => b.textContent === "Borrar").click();
+  await until(() => text().includes("Aún no tienes agentes"), "agente borrado");
+  location.hash = "#/chat";
+  await until(() => $("#chat-model"), "chat");
+});
 await check("panel: cifras reales del usuario, sin sección de plataforma", async () => {
   location.hash = "#/dashboard";
   await until(() => $(".stats") && text().includes("Tu actividad"), "dashboard");

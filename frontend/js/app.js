@@ -2,6 +2,7 @@ import { api, onUnauthorized } from "./api.js";
 import { defineRoutes, dropShell, navigate, startRouter } from "./router.js";
 import { rememberConversation, setNotice, setUser } from "./state.js";
 import { adminView } from "./views/admin.js";
+import { agentsView } from "./views/agents.js";
 import { chatView } from "./views/chat.js";
 import { dashboardView } from "./views/dashboard.js";
 import { documentsView } from "./views/documents.js";
@@ -19,6 +20,7 @@ export async function boot(root) {
     { pattern: /^\/register$/, guest: true, view: registerView },
     { pattern: /^\/dashboard$/, nav: "dashboard", view: dashboardView },
     { pattern: /^\/chat(?:\/([^/]+))?$/, nav: "chat", view: chatView },
+    { pattern: /^\/agents$/, nav: "agents", view: agentsView },
     { pattern: /^\/documents$/, nav: "documents", view: documentsView },
     { pattern: /^\/finance$/, nav: "finance", view: financeView },
     { pattern: /^\/developer$/, nav: "developer", view: developerView },

@@ -75,6 +75,7 @@ def platform_migrations() -> list[Migration]:
         sql_migration(
             9, "conversation_model", MIGRATIONS_DIR / "sqlite" / "0009_conversation_model.sql"
         ),
+        sql_migration(10, "user_agents", MIGRATIONS_DIR / "sqlite" / "0010_user_agents.sql"),
     ]
 
 
