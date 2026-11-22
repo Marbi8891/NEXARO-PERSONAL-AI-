@@ -49,7 +49,7 @@ export async function render() {
 
   // Guardas: invitados solo ven acceso/registro; usuarios ven la app; administración exige rol.
   if (!user && !route?.guest) return navigate("/login");
-  if (user && (route?.guest || !route)) return navigate("/chat");
+  if (user && route?.guest) return navigate("/chat");\n  if (user && !route) return navigate("/dashboard");
   if (route?.admin && user.role !== "admin") return navigate("/chat");
 
   leave();
