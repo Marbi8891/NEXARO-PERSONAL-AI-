@@ -76,3 +76,22 @@ def test_version_restore_creates_new_version():
     restored = restore_prompt_version(created["id"],1)
     assert restored["user_template"] == "Original {{x}}"
     assert restored["version"] == 3
+
+
+def test_create_prompt_rejects_unsafe_id():
+    from fastapi.testclient import TestClient
+    from app.main import app
+
+    with TestClient(app) as client:
+        unsafe = client.post("/api/prompts", json={"id": 'x"><img src=x onerror=alert(1)>', "name": "Unsafe", "category": "Test", "user_template": "t"})
+        assert unsafe.status_code == 422
+        safe = client.post("/api/prompts", json={"id": "safe-id_1.0", "name": "Safe", "category": "Test", "user_template": "t"})
+        assert safe.status_code == 200 and safe.json()["id"] == "safe-id_1.0"
+
+
+def test_frontend_escapes_ids_in_attributes():
+    import re
+
+    source = (Path(__file__).resolve().parents[1] / "app" / "static" / "app.js").read_text(encoding="utf-8")
+    assert not re.search(r"\$\{(p|r|w|x)\.id\}", source), "IDs must go through esc() before reaching innerHTML"
+    assert 'name="${name}"' not in source
