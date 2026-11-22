@@ -29,6 +29,7 @@ En producción `/docs` está desactivado. En desarrollo, la referencia generada 
 | POST | `/chat/stream` | sesión | mismo cuerpo; respuesta `text/event-stream` con eventos JSON `start` (`conversation_id`, `agent`), `sources` (solo con documentos; `sources`), `token` (`content`), `done` (`truncated`, `metrics`) o `error` (`message`). 404 antes de emitir si la conversación es ajena. Cerrar la conexión cancela la generación y se guarda lo generado |
 | GET | `/conversations` | sesión | solo las del usuario |
 | GET | `/conversations/{id}` | sesión | 404 si no es del usuario. Cada mensaje lleva `agent`: el agente que dio la respuesta (`null` en los del usuario y en respuestas anteriores a la migración 7) |
+| PATCH | `/conversations/{id}` | sesión + `Origin` | `{title}` (1–120 caracteres tras normalizar espacios; 422 si queda vacío o es más largo). Devuelve `{id, title}`. 404 si no es del usuario. Queda `conversation.rename` en la auditoría, sin el título. Sin título propio, la lista usa el primer mensaje |
 | DELETE | `/conversations/{id}` | sesión + `Origin` | 204. Borra la conversación y todos sus mensajes (incluidas las creadas con claves de API); 404 si no es del usuario. Queda `conversation.delete` en la auditoría |
 
 ## Panel y avisos

@@ -1,5 +1,5 @@
 import { api } from "../api.js";
-import { confirmDialog } from "../components/dialog.js";
+import { confirmDialog, promptDialog } from "../components/dialog.js";
 import { toast } from "../components/toast.js";
 import { clear, formatDate, h } from "../dom.js";
 import { renderMarkdown } from "../markdown.js";
@@ -163,13 +163,27 @@ export async function chatView({ container, sidebar, params, shell }) {
               h("span", { class: "history-title" }, title),
               h("span", { class: "history-meta" }, `${item.message_count} mensajes · ${formatDate(item.last_activity)}`),
             ),
-            h("button", { class: "history-delete", type: "button", "aria-label": `Eliminar la conversación: ${title}`, title: "Eliminar", onclick: () => removeConversation(item.id) }, "×"),
+            h("button", { class: "history-action history-rename", type: "button", "aria-label": `Renombrar la conversación: ${title}`, title: "Renombrar", onclick: () => renameConversation(item.id, title) }, "✎"),
+            h("button", { class: "history-action history-delete", type: "button", "aria-label": `Eliminar la conversación: ${title}`, title: "Eliminar", onclick: () => removeConversation(item.id) }, "×"),
           ),
         );
       }
     } catch (error) {
       clear(list).append(h("div", { class: "history-empty" }, error.message));
     }
+  }
+
+  async function renameConversation(id, current) {
+    const title = await promptDialog({ title: "Renombrar conversación", label: "Título", value: current, confirmLabel: "Renombrar", maxLength: 120 });
+    if (title === null || title === current) return;
+    try {
+      await api.renameConversation(id, title);
+    } catch (error) {
+      toast(error.message, { error: true });
+      return;
+    }
+    toast("Conversación renombrada.");
+    await loadHistory();
   }
 
   async function removeConversation(id) {

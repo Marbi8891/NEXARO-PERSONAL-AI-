@@ -52,7 +52,7 @@ una pantalla entra en la navegación solo si tiene API real. Sistema de diseño:
 ## Migraciones y multitenencia (ADR-0005)
 
 `schema_migrations` registra versión y checksum; el lote pendiente se aplica en una transacción.
-La 1 es la línea base (esquema anterior); la 3 añade las claves de API y `model_usage.api_key_id` (ADR-0009); la 4 los permisos por clave (ADR-0011); la 5 los gastos (ADR-0013); la 6 las métricas de inferencia (ADR-0014); la 2 crea organizaciones, roles/permisos, membresías,
+La 1 es la línea base (esquema anterior); la 3 añade las claves de API y `model_usage.api_key_id` (ADR-0009); la 4 los permisos por clave (ADR-0011); la 5 los gastos (ADR-0013); la 6 las métricas de inferencia (ADR-0014); la 7 el agente de cada respuesta (ADR-0022); la 8 el título propio de las conversaciones; la 2 crea organizaciones, roles/permisos, membresías,
 suscripciones, proveedores de modelos, documentos, fragmentos, embeddings, agentes, ejecuciones y
 tareas. Hay un juego de SQL por dialecto (`migrations/sqlite`, `migrations/postgresql`) y un test
 de paridad contra un PostgreSQL real.

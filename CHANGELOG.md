@@ -3,6 +3,7 @@
 ## [Sin publicar] — rama `refactor/nexaro-platform`
 
 ### Añadido
+- Renombrar conversaciones: `PATCH /api/conversations/{id}` (`{title}`, 1–120 caracteres, solo el propietario, auditoría `conversation.rename` sin el título), botón ✎ en el historial con diálogo propio, y migración 8 (`conversations.title`, SQLite y PostgreSQL).
 - Copia automática y verificada de la base SQLite antes de aplicar migraciones pendientes sobre datos existentes (`<nombre>.pre-migration-v<N>-<fecha>.db`); sin copia válida no se migra.
 - Auditoría de la Fase 0 (2026-11-22): `AUDIT_REPORT.md`, `IMPLEMENTATION_STATUS.md` (progreso verificado del MVP: 8 de 20) y `ROADMAP.md`. Versión canónica consolidada: `backup/macbook` fusionada con la documentación de `main`.
 - Agentes (F27, ADR-0022): `general`, `developer`, `security`, `research`, `productivity`, `data` y `tutor` (el modo tutor pasa a ser un agente). `GET /api/agents`; campo `agent` en `/api/chat`, `/api/chat/stream` y `/api/v1/chat` (`mode` sigue valiendo). Cada agente añade reglas al prompt general y declara sus herramientas: los documentos exigen que el agente tenga la herramienta y que el usuario tenga `documents:read`; el tutor no la tiene. Usos y denegaciones quedan en la auditoría (`agent.tool`, sin contenido). Migración 7: `messages.agent` registra qué agente dio cada respuesta. Selector «Agente» en el chat, que recuerda la elección (también la del antiguo selector de modo) y retoma el agente al reabrir una conversación.

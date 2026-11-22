@@ -21,6 +21,11 @@ class ChatRequest(BaseModel):
         return self.agent or self.mode
 
 
+class ConversationRenameRequest(BaseModel):
+    # El servicio normaliza espacios y vuelve a comprobar el límite (MAX_TITLE_CHARS).
+    title: str = Field(min_length=1, max_length=200)
+
+
 class LoginRequest(BaseModel):
     email: str = Field(min_length=3, max_length=254)
     password: str = Field(min_length=1, max_length=1024)

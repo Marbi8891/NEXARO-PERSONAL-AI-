@@ -55,7 +55,7 @@ una ejecución de `make up && make model && make smoke` en el Mac o el ThinkPad.
 | Streaming (SSE) | IMPLEMENTED | `test_chat_stream.py`, E2E |
 | Cancelar respuesta («Detener») | IMPLEMENTED | E2E «botón Detener corta la respuesta» |
 | Eliminar conversación | IMPLEMENTED | `DELETE /api/conversations/{id}`, `test_conversation_lifecycle.py` |
-| Renombrar conversación | NOT_IMPLEMENTED | No hay endpoint |
+| Renombrar conversación | IMPLEMENTED | `PATCH /api/conversations/{id}`; `test_conversation_lifecycle.py` (propietario, 404 ajeno, origen, límites) y E2E «renombrar conversación» |
 | Proveedor Ollama | NOT_VERIFIED | Cliente real en `packages/ai_gateway/providers/ollama`; probado con dobles |
 | OpenAI / Gemini | NOT_IMPLEMENTED | No hay proveedor |
 | Bedrock / SageMaker | IMPLEMENTED_PARTIALLY | Probados solo con dobles (ADR-0004) |
@@ -76,7 +76,7 @@ una ejecución de `make up && make model && make smoke` en el Mac o el ThinkPad.
 | Resumen de seguridad (admin) | IMPLEMENTED | `test_security_summary.py` |
 | Panel y avisos | IMPLEMENTED | `test_dashboard.py` |
 | PWA | IMPLEMENTED_PARTIALLY | `manifest.webmanifest`, `sw.js`; instalación no probada |
-| Migraciones SQLite (1–7) | IMPLEMENTED | `test_startup_migration.py` |
+| Migraciones SQLite (1–8) | IMPLEMENTED | `test_startup_migration.py` |
 | Copia verificada antes de migrar | IMPLEMENTED | `test_migrations.py`, `test_startup_backs_up_legacy_database_before_migrating` |
 | PostgreSQL | IMPLEMENTED_PARTIALLY | DDL validado (6 tests con pgserver); la app no lo usa |
 | Terraform AWS | NOT_VERIFIED | Escrito, no aplicado; aparcado por el propietario |

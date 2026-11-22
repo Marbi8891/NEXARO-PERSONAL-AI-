@@ -82,6 +82,23 @@ await check("abrir conversación del historial restaura mensajes", async () => {
   $(".history-item").click();
   await until(() => document.querySelectorAll(".message").length === 2, "restore");
 });
+await check("renombrar conversación desde el historial: título propio y Cancelar no cambia nada", async () => {
+  await until(() => $(".history-rename"), "botón renombrar");
+  $(".history-rename").click();
+  await until(() => document.querySelector("dialog #dialog-input"), "diálogo de título");
+  [...document.querySelectorAll("dialog button")].find((b) => b.textContent === "Cancelar").click();
+  await until(() => !document.querySelector("dialog"), "diálogo cerrado");
+  assert.equal($(".history-title").textContent, "hola");
+
+  $(".history-rename").click();
+  await until(() => document.querySelector("dialog #dialog-input"), "diálogo de título");
+  const input = document.querySelector("dialog #dialog-input");
+  assert.equal(input.value, "hola", "el campo empieza con el título actual");
+  input.value = "  Mi primera charla ";
+  submit(document.querySelector("dialog form"));
+  await until(() => $(".history-title")?.textContent === "Mi primera charla", "título nuevo en el historial");
+  // El historial se vuelve a pedir a la API tras renombrar: el título viene del servidor.
+});
 await check("panel: cifras reales del usuario, sin sección de plataforma", async () => {
   location.hash = "#/dashboard";
   await until(() => $(".stats") && text().includes("Tu actividad"), "dashboard");

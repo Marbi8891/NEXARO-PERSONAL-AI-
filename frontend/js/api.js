@@ -134,6 +134,7 @@ export const api = {
   agents: () => request("/api/agents"),
   conversations: () => request("/api/conversations"),
   conversation: (conversationId) => request(`/api/conversations/${id(conversationId)}`),
+  renameConversation: (conversationId, title) => request(`/api/conversations/${id(conversationId)}`, { method: "PATCH", body: { title } }),
   deleteConversation: (conversationId) => request(`/api/conversations/${id(conversationId)}`, { method: "DELETE" }),
   chatStream,
   chat: (message, conversationId) => request("/api/chat", { method: "POST", body: { message, conversation_id: conversationId } }),

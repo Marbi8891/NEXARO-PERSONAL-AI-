@@ -23,6 +23,7 @@ from products.personal_ai.prompts import build_system_prompt
 logger = logging.getLogger("nexaro.chat")
 
 HISTORY_LIMIT = 12
+MAX_TITLE_CHARS = 120  # título propio de una conversación
 DOCUMENT_FRAGMENTS = 4  # fragmentos que se pasan al modelo cuando el usuario activa documentos
 SHORT_QUERY_CHARS = 80
 _CODE_HINTS = re.compile(
@@ -401,9 +402,9 @@ class PersonalAIService:
                     c.created_at,
                     COUNT(m.id) AS message_count,
                     MAX(m.created_at) AS last_activity,
-                    (SELECT content FROM messages
+                    COALESCE(c.title, (SELECT content FROM messages
                       WHERE conversation_id = c.id AND role = 'user'
-                      ORDER BY id ASC LIMIT 1) AS title,
+                      ORDER BY id ASC LIMIT 1)) AS title,
                     (SELECT content FROM messages
                       WHERE conversation_id = c.id
                       ORDER BY id DESC LIMIT 1) AS preview
@@ -460,7 +461,7 @@ class PersonalAIService:
         with self._database.connect() as db:
             conversation = db.execute(
                 """
-                SELECT id, created_at FROM conversations
+                SELECT id, created_at, title FROM conversations
                 WHERE id = ? AND user_id = ? AND (? IS NULL OR organization_id = ?)
                 """,
                 (conversation_id, user_id, organization_id, organization_id),
@@ -477,6 +478,24 @@ class PersonalAIService:
             ).fetchall()
 
         return {"conversation": dict(conversation), "messages": [dict(r) for r in rows]}
+
+    def rename_conversation(self, user_id: str, conversation_id: str, title: str) -> str:
+        """Pone un título propio a una conversación del usuario y devuelve el título guardado.
+        Misma respuesta (no encontrada) si no existe o es de otro usuario."""
+        clean = " ".join(title.split())
+        if not clean:
+            raise ValueError("El título no puede estar vacío")
+        if len(clean) > MAX_TITLE_CHARS:
+            raise ValueError(f"El título no puede superar {MAX_TITLE_CHARS} caracteres")
+        with self._database.connect() as db:
+            begin_write(db)
+            updated = db.execute(
+                "UPDATE conversations SET title = ? WHERE id = ? AND user_id = ?",
+                (clean, conversation_id, user_id),
+            )
+            if updated.rowcount == 0:
+                raise ConversationNotFoundError
+        return clean
 
     def delete_conversation(self, user_id: str, conversation_id: str) -> None:
         """Borra una conversación propia y todos sus mensajes. Misma respuesta (no encontrada)

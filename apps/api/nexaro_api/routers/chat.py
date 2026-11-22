@@ -14,7 +14,7 @@ from nexaro_api.deps import (
     client_ip,
     validate_origin,
 )
-from nexaro_api.schemas import ChatRequest
+from nexaro_api.schemas import ChatRequest, ConversationRenameRequest
 from nexaro_core.audit import record_event
 from nexaro_core.audit.service import Outcome
 from products.personal_ai.agents import TOOL_PERMISSIONS, get_agent, public_agents
@@ -162,6 +162,36 @@ def get_conversation(conversation_id: str, user: CurrentUser, ctx: Ctx) -> dict[
         return ctx.personal_ai.get_conversation(user["id"], conversation_id)
     except ConversationNotFoundError:
         raise NOT_FOUND from None
+
+
+@router.patch("/conversations/{conversation_id}")
+def rename_conversation(
+    conversation_id: str,
+    body: ConversationRenameRequest,
+    request: Request,
+    user: CurrentUser,
+    ctx: Ctx,
+) -> dict[str, Any]:
+    """Título propio para una conversación del usuario; 404 si no existe o es de otro."""
+    validate_origin(request, ctx)
+    try:
+        title = ctx.personal_ai.rename_conversation(user["id"], conversation_id, body.title)
+    except ConversationNotFoundError:
+        raise NOT_FOUND from None
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from None
+    with ctx.database.connect() as db:
+        # Sin el título en la auditoría: es contenido del usuario.
+        record_event(
+            db,
+            "conversation.rename",
+            "success",
+            actor_user_id=user["id"],
+            target_type="conversation",
+            target_id=conversation_id,
+            ip=client_ip(request),
+        )
+    return {"id": conversation_id, "title": title}
 
 
 @router.delete("/conversations/{conversation_id}", status_code=204)

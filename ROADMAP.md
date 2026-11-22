@@ -12,7 +12,7 @@ pequeños sobre la versión canónica (linaje `backup/macbook`), sin cambiar de 
 | 3 | P0 | PR #3: no fusionar tal cual. Añadir autenticación, quitar `python`/`pip`/`npx`/`docker` de la lista o exigir aprobación previa, y llevarlo al monolito como herramienta del registro | Decidir si se integra |
 | 4 | P1 | Selección de modelo en tiempo real: descubrir modelos de Ollama, modelo por defecto, modelo por conversación, error claro si no está instalado (sin cambio silencioso) | No |
 | 5 | P1 | Agentes persistentes con propietario: CRUD sobre la tabla `agents`, duplicar, activar/desactivar; los 7 actuales como semilla | No |
-| 6 | P2 | Renombrar conversaciones (`PATCH /api/conversations/{id}`) | No |
+| 6 | P2 | ✅ Renombrar conversaciones (`PATCH /api/conversations/{id}`) | No |
 | 7 | P2 | Tareas: API sobre la tabla `tasks` (crear, estado, listar, propietario) | No |
 | 8 | P2 | Registro de herramientas: contrato común (nombre, schema, permiso, timeout, auditoría) y herramientas desactivadas si no están configuradas | No |
 | 9 | P2 | Documentos: extractores Markdown, CSV y DOCX; embeddings locales con Ollama como opción junto a BM25 | No |
