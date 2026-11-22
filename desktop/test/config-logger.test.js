@@ -93,7 +93,7 @@ test("paths: carpetas separadas fuera de la instalación", (t) => {
   assert.equal(dirs.configFile, path.join(dir, "config", "desktop-config.json"));
   const res = path.join(path.sep, "app", "resources");
   assert.equal(composeProjectDir({ isPackaged: true, resourcesPath: res, appPath: "/x" }), path.join(res, "nexaro"));
-  assert.equal(composeProjectDir({ isPackaged: false, resourcesPath: res, appPath: path.join(path.sep, "repo", "desktop") }), path.join(path.sep, "repo"));
+  assert.equal(composeProjectDir({ isPackaged: false, resourcesPath: res, appPath: path.join(path.sep, "repo", "desktop") }), path.resolve(path.sep, "repo"));
   assert.equal(composeProjectDir({ isPackaged: true, resourcesPath: res, configured: "/custom", exists: () => true }), "/custom");
   assert.equal(overrideFile({ isPackaged: true, resourcesPath: res }), path.join(res, "compose", "compose.desktop.yaml"));
 });

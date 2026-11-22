@@ -8,6 +8,15 @@ const { waitFor, probeBackend } = require("./health");
 const { classifyPort } = require("./ports");
 
 const S = STATES;
+
+/** Espera `promise` como mucho `ms`; el temporizador se cancela siempre (no retiene el proceso). */
+function withTimeout(promise, ms, fallback) {
+  let timer;
+  const timeout = new Promise((resolve) => {
+    timer = setTimeout(() => resolve(fallback), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
 const COMPOSE_PORT = 8001; // fijo en compose.yaml (127.0.0.1:8001:8000)
 
 class Lifecycle {
@@ -228,16 +237,13 @@ class Lifecycle {
   /** Parada segura (Fase 14). Nunca borra volúmenes ni datos. */
   async shutdown({ stopServices } = {}) {
     const m = this.machine;
-    if (this._running) await Promise.race([this._running, new Promise((r) => setTimeout(r, 5000))]);
+    if (this._running) await withTimeout(this._running, 5000);
     if (m.state === S.STOPPED || m.state === S.STOPPING) return { stopped: false };
     const shouldStop = stopServices ?? this.getConfig().services.onExit === "stop";
     m.transition(S.STOPPING);
     let stopped = false;
     if (shouldStop && this.managed && this.startedByApp) {
-      const res = await Promise.race([
-        this.docker.stop({ timeoutSec: 30 }),
-        new Promise((r) => setTimeout(() => r({ ok: false, error: "TIMEOUT" }), 75_000)),
-      ]);
+      const res = await withTimeout(this.docker.stop({ timeoutSec: 30 }), 75_000, { ok: false, error: "TIMEOUT" });
       stopped = res.ok;
       if (!res.ok) this.logger.warn("No se pudieron detener los servicios", { error: res.error });
       else this.startedByApp = false;
