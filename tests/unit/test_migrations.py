@@ -1,4 +1,5 @@
 import sqlite3
+import uuid
 from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
@@ -136,7 +137,8 @@ def test_backup_copies_existing_data_before_pending_migrations(database: Databas
     copy = backup_before_migrations(database, migrations, now=when)
 
     assert copy is not None
-    assert copy.name == "m.pre-migration-v2-20261122T150000Z.db"
+    assert copy.name.startswith("m.pre-migration-v2-20261122T150000000Z-")
+    assert copy.name.endswith(".db")
     with closing(sqlite3.connect(copy)) as db:
         assert db.execute("SELECT COUNT(*) FROM a").fetchone()[0] == 1
         assert db.execute("SELECT MAX(version) FROM schema_migrations").fetchone()[0] == 1
@@ -153,13 +155,15 @@ def test_backup_covers_unversioned_legacy_databases(database: Database) -> None:
     assert backup_before_migrations(database, numbered(create_table("a"))) is not None
 
 
-def test_backup_never_overwrites_an_existing_copy(database: Database) -> None:
+def test_backup_never_overwrites_an_existing_copy(database: Database, monkeypatch: pytest.MonkeyPatch) -> None:
     run_migrations(database, numbered(create_table("a")))
     migrations = numbered(create_table("a"), create_table("b"))
     when = datetime(2026, 11, 22, 15, 0, tzinfo=timezone.utc)
+    fixed_uuid = uuid.UUID("00000000-0000-0000-0000-000000000001")
+    monkeypatch.setattr("nexaro_core.database.migrations.uuid.uuid4", lambda: fixed_uuid)
     first = backup_before_migrations(database, migrations, now=when)
     assert first is not None
     before = first.read_bytes()
-    with pytest.raises(MigrationError, match="no se sobrescribe"):
+    with pytest.raises(FileExistsError):
         backup_before_migrations(database, migrations, now=when)
     assert first.read_bytes() == before
