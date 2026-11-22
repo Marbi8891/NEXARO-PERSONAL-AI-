@@ -66,6 +66,11 @@ def platform_migrations() -> list[Migration]:
         sql_migration(
             6, "inference_metrics", MIGRATIONS_DIR / "sqlite" / "0006_inference_metrics.sql"
         ),
+        sql_migration(
+            7,
+            "conversation_ownership",
+            MIGRATIONS_DIR / "sqlite" / "0007_conversation_ownership.sql",
+        ),
     ]
 
 

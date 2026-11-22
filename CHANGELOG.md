@@ -3,6 +3,7 @@
 ## [Sin publicar] — rama `refactor/nexaro-platform`
 
 ### Añadido
+- Aislamiento estricto de conversaciones por usuario: acceso único con propietario en SQL, sin ids elegidos por el cliente, migración 0007 (propiedad obligatoria e inmutable), tests de seguridad (`docs/security/CONVERSATION_ISOLATION.md`).
 - Documentos PDF con texto: `POST /api/organizations/{id}/documents/pdf` (cuerpo binario) y subida desde Documentos; extracción con `pypdf==7.0.0`, sin OCR, con límites de tamaño, páginas y texto (ADR-0018).
 - Documentos en el chat (Fase 4): interruptor «Consultar mis documentos» (opt-in por mensaje) que añade al modelo los mejores fragmentos BM25 de la organización elegida y muestra las fuentes; exige `documents:read` (ADR-0017).
 - Gateway (Fase 2): cortacircuitos por proveedor (`AI_BREAKER_THRESHOLD`, `AI_BREAKER_COOLDOWN_SECONDS`) que falla en el acto si Ollama está caído y lo vuelve a probar tras el enfriamiento, `GET /api/admin/models` (salud, modelo configurado, instalado o no, modelos instalados) y pestaña «Modelos» en Administración (ADR-0016).

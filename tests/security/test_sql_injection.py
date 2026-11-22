@@ -82,11 +82,15 @@ def test_conversation_ids_and_chat_inputs_are_parameters(
     client = logged_in("a@example.com")
     for payload in PAYLOADS:
         assert client.get(f"/api/conversations/{payload}").status_code == 404
-        created = client.post(
+        continued = client.post(
             "/api/chat", json={"message": payload, "conversation_id": payload}, headers=HEADERS
         )
-        assert created.status_code == 200  # el id es un valor más, no SQL
+        # El id es un valor más, no SQL: no coincide con nada y no crea nada (V-01).
+        assert continued.status_code == 404
+        created = client.post("/api/chat", json={"message": payload}, headers=HEADERS)
+        assert created.status_code == 200
     assert count(database, "users") == 1
+    assert count(database, "conversations") == len(PAYLOADS)
 
 
 def test_every_interpolated_sql_fragment_is_a_fixed_constant() -> None:
