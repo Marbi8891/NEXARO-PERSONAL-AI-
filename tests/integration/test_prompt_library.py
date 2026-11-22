@@ -123,7 +123,7 @@ def test_render_then_chat_uses_the_real_chat_pipeline(
 
     missing = admin.post(path, json={"values": {}}, headers=HEADERS)
     assert missing.status_code == 422
-    assert missing.json()["detail"] == {"missing_variables": ["codigo"]}
+    assert missing.json()["detail"] == "Faltan variables: codigo"
 
     rendered = admin.post(
         path, json={"values": {"codigo": "print({{lenguaje}})"}}, headers=HEADERS

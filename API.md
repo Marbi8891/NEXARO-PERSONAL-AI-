@@ -97,6 +97,21 @@ Bajo `/organizations/{id}/expenses`. Solo propietario y administrador (`expenses
 | GET | `/expenses/summary?month=AAAA-MM` | total, IVA, número, `by_category` y `history` de 6 meses |
 | GET | `/expenses/export.csv?start=&end=&category=` | CSV `;` con coma decimal y BOM; auditado |
 
+## Biblioteca de prompts
+
+Bajo `/organizations/{id}/prompts`. `prompts:read` (todos los roles) y `prompts:write` (propietario, administrador y miembro); quien no es miembro recibe 404. Ver [ADR-0023](docs/decisions/0023-prompt-library.md).
+
+| Método | Ruta | Notas |
+|---|---|---|
+| GET | `/prompts?q=&category=&tag=&limit=100&offset=0` | `items`, `total` y `categories`. `limit` ≤ 200 |
+| POST | `/prompts` | `{name, category, user_template, description?, tags?, system_prompt?, variables?}`. 422 si la plantilla usa variables no declaradas o un nombre de variable no es un identificador |
+| GET / PATCH / DELETE | `/prompts/{pid}` | PATCH crea una versión nueva (`changelog` opcional); DELETE borra también el historial |
+| GET | `/prompts/{pid}/versions` | Versiones, la más reciente primero |
+| POST | `/prompts/{pid}/versions/{n}/restore` | Crea una versión nueva con el contenido de la `n` |
+| POST | `/prompts/{pid}/render` | `{values}` → `{message}` listo para `POST /api/chat`. No llama al modelo. 422 si faltan variables o el mensaje supera el máximo del chat |
+| POST | `/prompts/install` | `{catalogue_id}`; idempotente (`installed_now`) |
+| GET | `/api/prompt-catalogue?category=` | Catálogo de solo lectura; requiere sesión |
+
 ## Administración de plataforma
 
 | Método | Ruta | Acceso | Notas |

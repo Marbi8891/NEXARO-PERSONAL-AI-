@@ -47,3 +47,14 @@ export function rememberedAgent() {
     return "general";
   }
 }
+
+// Borrador para el chat (biblioteca de prompts → chat). Solo en memoria: se consume una vez.
+let chatDraft = "";
+export function setChatDraft(text) {
+  chatDraft = text;
+}
+export function takeChatDraft() {
+  const text = chatDraft;
+  chatDraft = "";
+  return text;
+}

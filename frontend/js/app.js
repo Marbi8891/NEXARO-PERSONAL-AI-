@@ -10,6 +10,7 @@ import { developerView } from "./views/developer.js";
 import { loginView } from "./views/login.js";
 import { organizationsView } from "./views/organizations.js";
 import { profileView } from "./views/profile.js";
+import { promptsView } from "./views/prompts.js";
 import { securityView } from "./views/security.js";
 import { registerView } from "./views/register.js";
 
@@ -20,6 +21,7 @@ export async function boot(root) {
     { pattern: /^\/dashboard$/, nav: "dashboard", view: dashboardView },
     { pattern: /^\/chat(?:\/([^/]+))?$/, nav: "chat", view: chatView },
     { pattern: /^\/documents$/, nav: "documents", view: documentsView },
+    { pattern: /^\/prompts$/, nav: "prompts", view: promptsView },
     { pattern: /^\/finance$/, nav: "finance", view: financeView },
     { pattern: /^\/developer$/, nav: "developer", view: developerView },
     { pattern: /^\/organizations$/, nav: "organizations", view: organizationsView },

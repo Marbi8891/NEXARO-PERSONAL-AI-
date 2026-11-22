@@ -3,6 +3,7 @@
 ## [Sin publicar] — rama `refactor/nexaro-platform`
 
 ### Añadido
+- Biblioteca de prompts (ADR-0023): integra la Prompt Library del PR #2 como módulo. Migración 9 (`prompts`, `prompt_versions`, permisos `prompts:read`/`prompts:write`), API `/api/organizations/{id}/prompts` (CRUD, versiones, restaurar, `render`, `install`) y `/api/prompt-catalogue` (100 prompts de solo lectura), pantalla «Prompts» y «Usar en el chat», que deja el mensaje renderizado como borrador en el chat.
 - Renombrar conversaciones: `PATCH /api/conversations/{id}` (`{title}`, 1–120 caracteres, solo el propietario, auditoría `conversation.rename` sin el título), botón ✎ en el historial con diálogo propio, y migración 8 (`conversations.title`, SQLite y PostgreSQL).
 - Copia automática y verificada de la base SQLite antes de aplicar migraciones pendientes sobre datos existentes (`<nombre>.pre-migration-v<N>-<fecha>.db`); sin copia válida no se migra.
 - Auditoría de la Fase 0 (2026-11-22): `AUDIT_REPORT.md`, `IMPLEMENTATION_STATUS.md` (progreso verificado del MVP: 8 de 20) y `ROADMAP.md`. Versión canónica consolidada: `backup/macbook` fusionada con la documentación de `main`.

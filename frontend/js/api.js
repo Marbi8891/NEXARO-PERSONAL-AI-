@@ -168,6 +168,16 @@ export const api = {
   updateExpense: (orgId, expenseId, body) => request(`/api/organizations/${id(orgId)}/expenses/${id(expenseId)}`, { method: "PATCH", body }),
   deleteExpense: (orgId, expenseId) => request(`/api/organizations/${id(orgId)}/expenses/${id(expenseId)}`, { method: "DELETE" }),
 
+  prompts: (orgId, query = "") => request(`/api/organizations/${id(orgId)}/prompts?limit=200${query ? `&${query}` : ""}`),
+  promptCatalogue: () => request("/api/prompt-catalogue"),
+  createPrompt: (orgId, body) => request(`/api/organizations/${id(orgId)}/prompts`, { method: "POST", body }),
+  updatePrompt: (orgId, promptId, body) => request(`/api/organizations/${id(orgId)}/prompts/${id(promptId)}`, { method: "PATCH", body }),
+  deletePrompt: (orgId, promptId) => request(`/api/organizations/${id(orgId)}/prompts/${id(promptId)}`, { method: "DELETE" }),
+  promptVersions: (orgId, promptId) => request(`/api/organizations/${id(orgId)}/prompts/${id(promptId)}/versions`),
+  restorePrompt: (orgId, promptId, version) => request(`/api/organizations/${id(orgId)}/prompts/${id(promptId)}/versions/${Number(version)}/restore`, { method: "POST" }),
+  renderPrompt: (orgId, promptId, values) => request(`/api/organizations/${id(orgId)}/prompts/${id(promptId)}/render`, { method: "POST", body: { values } }),
+  installPrompt: (orgId, catalogueId) => request(`/api/organizations/${id(orgId)}/prompts/install`, { method: "POST", body: { catalogue_id: catalogueId } }),
+
   organizations: () => request("/api/organizations"),
   createOrganization: (name, slug) => request("/api/organizations", { method: "POST", body: { name, slug } }),
   members: (orgId) => request(`/api/organizations/${id(orgId)}/members`),

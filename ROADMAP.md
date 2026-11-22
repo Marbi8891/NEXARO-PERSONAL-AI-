@@ -16,7 +16,7 @@ pequeños sobre la versión canónica (linaje `backup/macbook`), sin cambiar de 
 | 7 | P2 | Tareas: API sobre la tabla `tasks` (crear, estado, listar, propietario) | No |
 | 8 | P2 | Registro de herramientas: contrato común (nombre, schema, permiso, timeout, auditoría) y herramientas desactivadas si no están configuradas | No |
 | 9 | P2 | Documentos: extractores Markdown, CSV y DOCX; embeddings locales con Ollama como opción junto a BM25 | No |
-| 10 | P2 | Integrar la biblioteca de prompts (PR #2) como módulo `products/prompts` con autenticación, en lugar de una app aparte | Decidir si se integra |
+| 10 | P2 | ✅ Integrar la biblioteca de prompts (PR #2) como módulo con autenticación (ADR-0023) | Decidido: integrar |
 
 ## Después (no empezar hasta cerrar lo anterior)
 

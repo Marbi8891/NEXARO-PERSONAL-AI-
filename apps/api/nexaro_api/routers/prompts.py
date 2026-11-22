@@ -35,8 +35,6 @@ CHAT_MAX_CHARS: int = next(
 
 
 def _invalid(exc: svc.PromptError) -> HTTPException:
-    if isinstance(exc, svc.MissingVariablesError):
-        return HTTPException(status_code=422, detail={"missing_variables": exc.missing})
     return HTTPException(status_code=422, detail=str(exc))
 
 

@@ -4,7 +4,7 @@ import { toast } from "../components/toast.js";
 import { clear, formatDate, h } from "../dom.js";
 import { renderMarkdown } from "../markdown.js";
 import { navigate } from "../router.js";
-import { rememberAgent, rememberConversation, rememberedAgent, rememberedConversation } from "../state.js";
+import { rememberAgent, rememberConversation, rememberedAgent, rememberedConversation, takeChatDraft } from "../state.js";
 
 export async function chatView({ container, sidebar, params, shell }) {
   shell.setTitle("Chat");
@@ -335,5 +335,8 @@ export async function chatView({ container, sidebar, params, shell }) {
   } else await openConversation(conversationId);
   await loadHistory();
   await loadOrganizations();
+  // Borrador preparado desde la biblioteca de prompts: se coloca en el cuadro, no se envía solo.
+  const draft = takeChatDraft();
+  if (draft) input.value = draft;
   input.focus();
 }

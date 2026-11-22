@@ -347,6 +347,35 @@ await check("finanzas: alta con importes exactos, resumen, edición, borrado y e
   [...document.querySelectorAll("dialog button")].find((b) => b.textContent === "Borrar").click();
   await until(() => text().includes("Sin gastos este mes"), "borrado");
 });
+await check("prompts: crear, instalar del catálogo y usar en el chat como borrador", async () => {
+  const { variablesFor } = await import(pathToFileURL(`${REPO}/frontend/js/views/prompts.js`).href);
+  assert.deepEqual(variablesFor("{{a}} y {{ b }} y {{a}}", [{ name: "a", label: "A", type: "textarea", required: true }]).map((v) => [v.name, v.type]), [["a", "textarea"], ["b", "text"]]);
+
+  location.hash = "#/prompts";
+  await until(() => $("#pr-name"), "formulario de prompts");
+  fill("#pr-name", "Traductor"); fill("#pr-category", "Idiomas"); fill("#pr-tags", "inglés, <b>x</b>");
+  fill("#pr-template", "Traduce al inglés: {{texto}}");
+  submit($("#pr-name").closest("form"));
+  const tables = () => [...document.querySelectorAll(".data-table")].map((t) => t.textContent).join(" ");
+  await until(() => tables().includes("Traductor"), "prompt listado");
+  assert.ok(tables().includes("<b>x</b>"), "las etiquetas se pintan como texto, no como HTML");
+  assert.equal(document.querySelector(".data-table b"), null);
+
+  const install = () => [...document.querySelectorAll("button")].find((b) => (b.getAttribute("aria-label") || "").startsWith("Instalar "));
+  await until(install, "botón de instalar del catálogo");
+  const installedName = install().getAttribute("aria-label").slice("Instalar ".length);
+  install().click();
+  await until(() => [...document.querySelectorAll("button")].some((b) => b.getAttribute("aria-label") === `Usar ${installedName} en el chat`), "prompt del catálogo instalado");
+
+  [...document.querySelectorAll("button")].find((b) => b.getAttribute("aria-label") === "Usar Traductor en el chat").click();
+  await until(() => $("#pv-0"), "diálogo de variables");
+  fill("#pv-0", "hola mundo");
+  [...document.querySelectorAll("dialog button")].find((b) => b.textContent === "Preparar mensaje").click();
+  await until(() => $("#message") && $("#message").value.includes("hola mundo"), "borrador en el chat");
+  assert.equal($("#message").value, "Traduce al inglés: hola mundo");
+  assert.ok(location.hash.startsWith("#/chat"));
+  $("#message").value = "";
+});
 await check("chat en streaming: Markdown y bloques de código como nodos seguros", async () => {
   location.hash = "#/chat";
   await until(() => $("#message"), "chat");
