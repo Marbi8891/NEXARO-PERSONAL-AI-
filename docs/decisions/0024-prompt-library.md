@@ -29,7 +29,7 @@ módulo en lugar de mantener servicios separados.
   `/api/organizations/{id}/prompts` y `/api/prompt-catalogue`.
 - Cada cambio crea una versión; restaurar crea una versión nueva con el contenido antiguo (el historial
   no se reescribe). Borrar un prompt borra su historial.
-- El catálogo de 100 prompts se incluye en el código (`products/personal_ai/data/prompt_catalogue.json`) y
+- El catálogo de 100 prompts se incluye en el código (`products/personal_ai/catalogue/prompts.json`) y
   es de solo lectura; «Instalar» lo copia a la organización (idempotente por `catalogue_id`).
 - `POST .../render` sustituye `{{variable}}` con valores literales (no se reinterpretan) y antepone las
   instrucciones del prompt **dentro del mensaje del usuario**. El frontend deja el resultado como borrador

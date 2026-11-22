@@ -14,7 +14,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-CATALOGUE_PATH = Path(__file__).parent / "data" / "prompt_catalogue.json"
+CATALOGUE_PATH = Path(__file__).parent / "catalogue" / "prompts.json"
 VARIABLE_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,39}$")
 PLACEHOLDER = re.compile(r"{{\s*([A-Za-z_][A-Za-z0-9_]*)\s*}}")
 VARIABLE_TYPES = {"text", "textarea"}
@@ -304,7 +304,7 @@ def list_prompts(
         params.append(category)
     where = " AND ".join(clauses)
     rows = db.execute(
-        f"SELECT * FROM prompts WHERE {where} ORDER BY COALESCE(updated_at, created_at) DESC, name",  # noqa: S608 (cláusulas fijas)
+        f"SELECT * FROM prompts WHERE {where} ORDER BY COALESCE(updated_at, created_at) DESC, name",  # noqa: S608  # nosec B608
         params,
     ).fetchall()
     items = [_public(r) for r in rows]

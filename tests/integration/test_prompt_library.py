@@ -228,3 +228,19 @@ def test_writes_require_a_trusted_origin(logged_in: Factory) -> None:
         f"/api/organizations/{org}/prompts", json=BODY, headers={"Origin": "https://evil.example"}
     )
     assert response.status_code == 403
+
+
+def test_catalogue_file_is_not_gitignored() -> None:
+    """El catálogo viaja con el código: si .gitignore lo excluye, CI y Docker no lo tienen."""
+    import shutil
+    import subprocess
+
+    git = shutil.which("git")
+    if git is None:
+        pytest.skip("git no disponible")
+    result = subprocess.run(  # noqa: S603  # nosec B603
+        [git, "check-ignore", "-q", str(svc.CATALOGUE_PATH)],
+        cwd=svc.CATALOGUE_PATH.parent,
+        check=False,
+    )
+    assert result.returncode == 1, f"{svc.CATALOGUE_PATH} está ignorado por git"
