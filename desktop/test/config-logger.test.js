@@ -107,7 +107,9 @@ test("logger: redacta secretos por clave y por patrón", () => {
   assert.doesNotMatch(redactString("token=s3cr3tvalue other"), /s3cr3tvalue/);
   assert.doesNotMatch(redactString("http://user:pa55@127.0.0.1:8001/"), /pa55/);
   assert.doesNotMatch(redactString("clave nxr_live_ABCDEFGHIJKLMNOP"), /ABCDEFGHIJKLMNOP/);
-  assert.doesNotMatch(redactString("AKIAABCDEFGHIJKLMNOP"), /AKIAABCDEFGHIJKLMNOP/);
+  // Clave ficticia construida en tiempo de ejecución para que gitleaks no la confunda con una real.
+  const fakeAwsKey = ["AKIA", "ABCDEFGHIJKLMNOP"].join("");
+  assert.ok(!redactString(fakeAwsKey).includes(fakeAwsKey));
 });
 
 test("logger: escribe JSON por línea, redacta y rota por tamaño", (t) => {
