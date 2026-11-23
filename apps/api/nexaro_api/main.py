@@ -15,6 +15,7 @@ from nexaro_api.limits import BodyLimitMiddleware
 from nexaro_api.request_context import RequestContextMiddleware
 from nexaro_api.routers import (
     admin,
+    agents,
     api_keys,
     auth,
     chat,
@@ -23,7 +24,9 @@ from nexaro_api.routers import (
     expenses,
     health,
     obsidian,
+    org_agents,
     organizations,
+    prompts,
 )
 from nexaro_core.config import Settings, get_settings
 from nexaro_core.database import Database
@@ -188,14 +191,18 @@ def create_app(
         admin,
         api_keys,
         chat,
+        agents,
         dashboard,
         documents,
         expenses,
         health,
         organizations,
         obsidian,
+        org_agents,
+        prompts,
     ):
         app.include_router(module.router)
+    app.include_router(prompts.catalogue_router)
 
     if settings.frontend_path.is_dir():
         app.mount("/", StaticFiles(directory=settings.frontend_path, html=True), name="frontend")

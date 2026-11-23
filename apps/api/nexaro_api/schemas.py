@@ -12,13 +12,46 @@ class ChatRequest(BaseModel):
     # Opt-in: organización cuyos documentos se consultan para responder a este mensaje.
     document_organization_id: str | None = Field(default=None, max_length=64)
     # Agente especializado (ADR-0022). Sin él, `mode` (ADR-0020) elige general o tutor.
-    agent: AgentId | None = None
+    # Agente predefinido (ADR-0022) o id de un agente personal activo del usuario.
+    agent: str | None = Field(default=None, min_length=1, max_length=64, pattern=r"^[a-z0-9-]+$")
     mode: Mode = "general"
+    # Modelo de la conversación: nombre de un modelo instalado, «auto» (configurado con
+    # respaldo) o nada (se mantiene el que tenga la conversación).
+    model: str | None = Field(
+        default=None, min_length=1, max_length=200, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$"
+    )
 
     @property
     def agent_id(self) -> str:
         """`agent` manda; `mode` se mantiene por compatibilidad (Python Learning Dashboard)."""
         return self.agent or self.mode
+
+
+class UserAgentCreateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    description: str = Field(default="", max_length=300)
+    category: str = Field(default="general", max_length=40)
+    base_agent: AgentId = "general"
+    instructions: str = Field(default="", max_length=4000)
+    tools: list[str] | None = Field(default=None, max_length=10)  # None: las del agente base
+    model: str | None = Field(default=None, max_length=200)
+    status: str = Field(default="active", pattern=r"^(active|disabled)$")
+
+
+class UserAgentUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=80)
+    description: str | None = Field(default=None, max_length=300)
+    category: str | None = Field(default=None, max_length=40)
+    base_agent: AgentId | None = None
+    instructions: str | None = Field(default=None, max_length=4000)
+    tools: list[str] | None = Field(default=None, max_length=10)
+    model: str | None = Field(default=None, max_length=200)
+    status: str | None = Field(default=None, pattern=r"^(active|disabled)$")
+
+
+class ConversationRenameRequest(BaseModel):
+    # El servicio normaliza espacios y vuelve a comprobar el límite (MAX_TITLE_CHARS).
+    title: str = Field(min_length=1, max_length=200)
 
 
 class LoginRequest(BaseModel):
@@ -97,3 +130,40 @@ class ExpenseUpdateRequest(BaseModel):
     category: str | None = Field(default=None, min_length=1, max_length=40)
     vat_cents: int | None = Field(default=None, ge=0, le=100_000_000)
     vendor: str | None = Field(default=None, max_length=120)
+
+
+class PromptVariable(BaseModel):
+    name: str = Field(min_length=1, max_length=40)
+    label: str | None = Field(default=None, max_length=80)
+    type: str = Field(default="text", max_length=20)
+    required: bool = False
+    default: str | None = Field(default=None, max_length=20_000)
+
+
+class PromptCreateRequest(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    description: str = Field(default="", max_length=1000)
+    category: str = Field(min_length=1, max_length=80)
+    tags: list[str] = Field(default_factory=list, max_length=12)
+    system_prompt: str = Field(default="", max_length=20_000)
+    user_template: str = Field(min_length=1, max_length=20_000)
+    variables: list[PromptVariable] = Field(default_factory=list, max_length=20)
+
+
+class PromptUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=120)
+    description: str | None = Field(default=None, max_length=1000)
+    category: str | None = Field(default=None, min_length=1, max_length=80)
+    tags: list[str] | None = Field(default=None, max_length=12)
+    system_prompt: str | None = Field(default=None, max_length=20_000)
+    user_template: str | None = Field(default=None, min_length=1, max_length=20_000)
+    variables: list[PromptVariable] | None = Field(default=None, max_length=20)
+    changelog: str = Field(default="Cambios", max_length=200)
+
+
+class PromptRenderRequest(BaseModel):
+    values: dict[str, str] = Field(default_factory=dict, max_length=20)
+
+
+class PromptInstallRequest(BaseModel):
+    catalogue_id: str = Field(min_length=1, max_length=80, pattern=r"^[A-Za-z0-9_.-]+$")

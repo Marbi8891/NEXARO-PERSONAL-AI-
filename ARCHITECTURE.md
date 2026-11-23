@@ -52,7 +52,7 @@ una pantalla entra en la navegación solo si tiene API real. Sistema de diseño:
 ## Migraciones y multitenencia (ADR-0005)
 
 `schema_migrations` registra versión y checksum; el lote pendiente se aplica en una transacción.
-La 1 es la línea base (esquema anterior); la 3 añade las claves de API y `model_usage.api_key_id` (ADR-0009); la 4 los permisos por clave (ADR-0011); la 5 los gastos (ADR-0013); la 6 las métricas de inferencia (ADR-0014); la 2 crea organizaciones, roles/permisos, membresías,
+La 1 es la línea base (esquema anterior); la 3 añade las claves de API y `model_usage.api_key_id` (ADR-0009); la 4 los permisos por clave (ADR-0011); la 5 los gastos (ADR-0013); la 6 las métricas de inferencia (ADR-0014); la 7 el agente de cada respuesta (ADR-0022); la 8 el título propio de las conversaciones; la 9 el modelo elegido de cada conversación; la 10 los agentes personales (`user_agents`); la 2 crea organizaciones, roles/permisos, membresías,
 suscripciones, proveedores de modelos, documentos, fragmentos, embeddings, agentes, ejecuciones y
 tareas. Hay un juego de SQL por dialecto (`migrations/sqlite`, `migrations/postgresql`) y un test
 de paridad contra un PostgreSQL real.
@@ -70,9 +70,9 @@ de paridad contra un PostgreSQL real.
 ## Límites conocidos
 
 - La aplicación solo ejecuta sobre SQLite: el DDL de PostgreSQL está validado, pero falta la capa de acceso (ADR-0005).
-- Organizaciones, miembros, claves de API, documentos (búsqueda BM25, ADR-0012; consultables desde el chat, ADR-0017) y gastos tienen API; agentes, tareas y embeddings son solo esquema.
+- Organizaciones, miembros, claves de API, documentos (búsqueda BM25, ADR-0012; consultables desde el chat, ADR-0017) y gastos tienen API; los agentes personales tienen API (`/api/agents/custom`); la tabla `agents` por organización, tareas y embeddings siguen siendo solo esquema.
 - Las conversaciones siguen siendo personales (`organization_id` solo se rellena en el uso por clave de API).
 - Con funcionalidad: Personal AI, Developer (claves de API con scopes `chat:write` y `conversations:read`), documentos, gastos (Finance) y el resumen de Security. Business es solo identidad de marca.
-- El modelo se fija por variable de entorno (`OLLAMA_MODEL`): no hay selección de modelo ni de agente en tiempo de ejecución.
+- Modelo: `OLLAMA_MODEL` es el modelo por defecto (modo «auto», con respaldo). Cada conversación puede fijar un modelo instalado del proveedor principal (`GET /api/models`, migración 9, ADR-0023); un modelo fijado no tiene respaldo ni se sustituye en silencio. Aún no hay modelo por defecto por usuario ni por agente.
 - SQLite en modo WAL (ADR-0015): un solo escritor a la vez; suficiente para una instancia.
 - El limitador de intentos es en memoria del proceso: no se comparte entre instancias.

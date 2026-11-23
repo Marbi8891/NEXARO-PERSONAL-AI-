@@ -28,7 +28,7 @@ NEXARO usa una arquitectura de marca corporativa con productos bajo una marca ma
 | Finance, Business | Solo identidad de marca; sin funcionalidad (no aparecen en la navegación) |
 | Agentes: 6 especializados + tutor, herramientas con permiso por agente y usuario, auditoría `agent.tool`, selector en el chat | Implementado y probado (ADR-0022) |
 | Tareas, embeddings | Solo esquema (sin API) |
-| Migraciones versionadas | Implementado (SQLite, hasta la 7); actualización desde v1…v6 probada |
+| Migraciones versionadas | Implementado (SQLite, hasta la 13), con copia verificada antes de migrar; actualización desde versiones anteriores probada |
 | Copias de seguridad y restauración (Windows, PowerShell) | Implementado; prueba completa de restauración en entorno temporal: PASS ([BACKUP_RESTORE.md](BACKUP_RESTORE.md)) |
 | Operaciones: estado de servicios, recursos, errores y copias (Administración → Operaciones) | Implementado y probado |
 | Obsidian (solo lectura, solo propietario) | Implementado y probado |

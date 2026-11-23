@@ -15,6 +15,9 @@ class CompletionRequest(BaseModel):
     messages: list[ChatMessage] = Field(min_length=1)
     max_output_tokens: int | None = Field(default=None, gt=0)
     timeout_seconds: float | None = Field(default=None, gt=0)
+    # Modelo elegido por el usuario. El gateway lo usa en el proveedor principal y nunca lo
+    # cambia por otro: si no está instalado falla con ModelNotAvailableError (sin respaldo).
+    model_override: str | None = Field(default=None, min_length=1, max_length=200)
     # Solo para el registro de uso; los proveedores los ignoran.
     user_id: str | None = None
     organization_id: str | None = None
