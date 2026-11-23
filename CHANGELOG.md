@@ -1,5 +1,25 @@
 # Changelog
 
+Formato: secciones `## [X.Y.Z] — fecha`; el flujo de release publica la sección de cada versión
+([proceso de release](docs/development/release-process.md)).
+
+## [Unreleased]
+
+### Documentación
+- README reescrito como página de producto (en inglés): qué es, estado real, capacidades, arquitectura,
+  proveedores, privacidad, instalación y hoja de ruta.
+- Documentación reorganizada en `docs/` (getting-started, product, architecture, security, deployment,
+  development, releases) con `git mv`; guías nuevas en inglés y matriz de capacidades verificada.
+- Identidad de marca (`docs/product/brand.md`), logotipos SVG y capturas reales reproducibles con
+  `make screenshots`.
+- ROADMAP reescrito con la prioridad v1.0 → Model Manager → Router → Agent Runtime → tareas → orquestador.
+
+### Desarrollo y CI
+- `make help` (objetivo por defecto), `make docs-check` y `make screenshots`; test de enlaces de la
+  documentación.
+- GitHub: plantillas de issues y PR, Dependabot, flujo de release por etiqueta, acciones fijadas por SHA
+  y permisos mínimos por trabajo.
+
 ## [1.0.0-rc] — rama `claude/nexaro-v1-consolidation-921fe0` (2026-11-23)
 
 Detalle: [RELEASE_NOTES_V1.md](docs/releases/v1.0-notes.md).

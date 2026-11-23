@@ -1,4 +1,37 @@
-# Seguridad
+# Security policy
+
+## Reporting a vulnerability
+
+**Do not open a public issue, pull request or discussion for a vulnerability.**
+
+E-mail **mrabehfathiprofesional@gmail.com** with:
+
+- a description of the issue and its impact;
+- steps to reproduce or a proof of concept (against your own installation only);
+- the affected version or commit.
+
+The maintainer aims to acknowledge reports promptly and to coordinate the fix with you before any
+public disclosure. Please do not access data that is not yours, degrade service, or test against
+deployments you do not own.
+
+## Supported versions
+
+| Version | Supported |
+|---|---|
+| 1.0.x (`main`) | Yes |
+| Earlier lineages and prototype branches (`backup/*`, prompt-library and coding-agent prototypes) | No |
+
+## Scope
+
+In scope: the code in this repository (`apps/`, `packages/`, `products/`, `frontend/`, `scripts/`,
+`compose.yaml`, `Dockerfile`, CI workflows). Out of scope: Ollama and other third-party software,
+and misconfigured deployments (e.g. a backend published beyond `127.0.0.1` without HTTPS).
+
+Security model, controls and known limits: [docs/security/README.md](docs/security/README.md).
+
+---
+
+# Seguridad (detalle)
 
 ## Controles implementados
 

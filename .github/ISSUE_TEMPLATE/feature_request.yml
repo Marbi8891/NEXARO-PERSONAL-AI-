@@ -1,0 +1,49 @@
+name: Feature request
+description: Propose a capability or an improvement.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check the [roadmap](../blob/main/ROADMAP.md) and the [capability matrix](../blob/main/docs/product/capabilities.md) first.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do, and why is it hard today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What NEXARO should do. Mention API, UI and permission implications if you know them.
+    validations:
+      required: true
+  - type: dropdown
+    id: roadmap
+    attributes:
+      label: Related roadmap item
+      options:
+        - None / new
+        - Security audit findings
+        - Model Manager
+        - Intelligent Model Router
+        - Agent Runtime
+        - Persistent Task Engine
+        - Orchestrator / multi-agent
+        - Memory
+        - Advanced RAG
+        - Prompt library
+        - Secure coding agent
+  - type: checkboxes
+    id: principles
+    attributes:
+      label: Principles
+      options:
+        - label: This works without sending data off the host by default (local-first).
+        - label: Permissions for this feature can be enforced on the server, not only in prompts or the UI.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered

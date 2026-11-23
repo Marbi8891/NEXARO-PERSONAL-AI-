@@ -1,0 +1,45 @@
+# Actualizaciones de dependencias: semanales, agrupadas y con pocos PR abiertos a la vez.
+# Cada PR pasa por el CI completo (tests, pip-audit, Trivy). Las actualizaciones mayores se revisan a mano.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build(deps)"
+    groups:
+      python-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci(deps)"
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # Imagen base fijada por digest en el Dockerfile.
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "build(docker)"
+
+  # Solo herramientas de prueba del frontend (jsdom, Chromium); no se distribuyen.
+  - package-ecosystem: npm
+    directory: "/tests/frontend"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "test(deps)"
+    groups:
+      frontend-test-tools:
+        patterns: ["*"]

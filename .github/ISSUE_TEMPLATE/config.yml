@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability (private)
+    url: https://github.com/Marbi8891/NEXARO-PERSONAL-AI-/blob/main/SECURITY.md
+    about: Do not open a public issue for vulnerabilities. Follow the private reporting process in SECURITY.md.
+  - name: Documentation
+    url: https://github.com/Marbi8891/NEXARO-PERSONAL-AI-/blob/main/docs/README.md
+    about: Installation, configuration, troubleshooting and architecture.
