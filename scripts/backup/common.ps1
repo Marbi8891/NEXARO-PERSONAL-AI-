@@ -117,7 +117,11 @@ function Invoke-HelperInContainer {
 
 function Get-ContainerImage([string]$Container, [string]$Fallback) {
     if (Test-ContainerExists $Container) {
-        return (Invoke-Docker @('inspect', '-f', '{{.Image}}', $Container))
+        $id = Invoke-Docker @('inspect', '-f', '{{.Image}}', $Container)
+        # Un contenedor puede seguir en marcha aunque su imagen ya no exista (reconstruida o podada).
+        # El helper solo necesita Python y SQLite: cualquier imagen del backend sirve.
+        & docker image inspect $id *> $null
+        if ($LASTEXITCODE -eq 0) { return $id }
     }
     return $Fallback
 }
