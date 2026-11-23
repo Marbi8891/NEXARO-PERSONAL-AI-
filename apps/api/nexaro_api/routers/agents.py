@@ -33,6 +33,10 @@ def _validate_config(body: AgentCreateRequest) -> None:
         raise HTTPException(status_code=422, detail="Configuración de memoria no válida")
     if body.memory.get("scope", "none") not in _MEMORY_SCOPES:
         raise HTTPException(status_code=422, detail="Ámbito de memoria no válido")
+    if body.memory.get("enabled", False) or body.memory.get("scope", "none") != "none":
+        raise HTTPException(status_code=422, detail="La memoria operativa aún no está disponible")
+    if body.autonomy != "assisted":
+        raise HTTPException(status_code=422, detail="La autonomía ejecutable aún no está disponible")
 
 
 def _serialize(row: sqlite3.Row) -> dict[str, Any]:
