@@ -106,10 +106,6 @@ class AgentCreateRequest(BaseModel):
     autonomy: str = Field(default="assisted", pattern="^(assisted|supervised|autonomous)$")
     template_id: str | None = Field(default=None, max_length=80)
 
-    @classmethod
-    def validate_safe_defaults(cls, value):
-        return value
-
 
 class AgentUpdateRequest(AgentCreateRequest):
     status: str = Field(default="active", pattern="^(active|disabled)$")
