@@ -82,6 +82,28 @@ def test_lifespan_migrates_legacy_database_and_keeps_session_valid(
     assert_migrated(settings.database_path)
 
 
+def test_startup_backs_up_legacy_database_before_migrating(
+    settings: Settings, provider: FakeProvider
+) -> None:
+    create_legacy_database(settings.database_path)
+    original = counts(settings.database_path)
+
+    with TestClient(create_app(settings, chat_provider=provider)):
+        pass
+
+    copies = sorted(settings.database_path.parent.glob("*.pre-migration-v1-*.db"))
+    assert len(copies) == 1
+    assert counts(copies[0]) == original  # la copia guarda el estado anterior a migrar
+
+    with TestClient(create_app(settings, chat_provider=provider)):
+        pass  # sin migraciones pendientes no se hacen más copias
+    assert len(list(settings.database_path.parent.glob("*.pre-migration-*.db"))) == 1
+
+
+def test_fresh_database_gets_no_backup(client: TestClient, database: Database) -> None:
+    assert list(database.path.parent.glob("*.pre-migration-*.db")) == []
+
+
 def test_fresh_database_has_registration_closed_and_no_users(
     client: TestClient, database: Database
 ) -> None:

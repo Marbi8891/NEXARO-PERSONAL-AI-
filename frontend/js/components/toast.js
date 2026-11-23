@@ -5,7 +5,8 @@ const SUCCESS_MS = 5000;
 let region = null;
 
 function container() {
-  if (!region?.isConnected) {
+  // También si cambia el documento (las pruebas E2E abren una sesión jsdom nueva por usuario).
+  if (!region?.isConnected || region.ownerDocument !== document) {
     region = h("div", { class: "toasts", "aria-live": "polite" });
     document.body.append(region);
   }

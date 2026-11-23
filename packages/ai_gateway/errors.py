@@ -12,3 +12,7 @@ class ProviderUnavailableError(ProviderError):
 
 class PolicyError(Exception):
     """La política del gateway rechaza la solicitud (no es un fallo del proveedor)."""
+
+
+class ModelNotAvailableError(PolicyError):
+    """El modelo elegido no está disponible. El mensaje es apto para el usuario."""

@@ -1,8 +1,42 @@
 # Changelog
 
+## [1.0.0-rc] — rama `claude/nexaro-v1-consolidation-921fe0` (2026-11-23)
+
+Detalle: [RELEASE_NOTES_V1.md](RELEASE_NOTES_V1.md).
+
+### Seguridad
+- Obsidian: el Vault solo lo leen administradores y `OBSIDIAN_ALLOWED_EMAILS` (antes, cualquier usuario autenticado); topes de tamaño de nota, de archivos recorridos y de peticiones por usuario; denegaciones auditadas.
+- `POST /api/auth/password` y Perfil → Contraseña: cambio con la contraseña actual, revoca las demás sesiones, limitado y auditado.
+- La interfaz se sirve con `Cache-Control: no-cache` (las actualizaciones llegan al navegador al momento).
+
+### Añadido
+- Copias de seguridad para Windows: `scripts/backup_nexaro.ps1`, `verify_backup.ps1`, `restore_nexaro.ps1`, `register_backup_task.ps1` y `test_backup_restore.ps1` (prueba completa en entorno temporal).
+- Panel de operaciones: `GET /api/admin/status` y Administración → Operaciones.
+- `scripts/smoke_isolated.ps1`: imagen candidata contra el Ollama real con datos temporales.
+- Acceso remoto privado preparado: `scripts/remote_access.ps1` (Tailscale Serve, nunca Funnel).
+- Tests de actualización desde cada versión anterior del esquema y de rechazo de bases de otras ramas.
+- 2 casos de evaluación (agente de seguridad sin inventar vulnerabilidades; RAG con dos fragmentos).
+
+### Cambiado
+- `compose.yaml`: `NEXARO_PORT`, `ALLOWED_ORIGINS`, `COOKIE_SECURE`, `OBSIDIAN_ALLOWED_EMAILS` y `BACKUP_STATUS_PATH` configurables desde `.env` (mismos valores por defecto; el puerto sigue solo en 127.0.0.1).
+- Versión 1.0.0 en `pyproject.toml` y en la API.
+
+### Corregido
+- Tests y `scripts/quality_eval.py` en Windows (codificación UTF-8).
+- E2E del frontend en Windows (`NEXARO_E2E_PORT`; ya no «pasa» sin servidor).
+- Móvil: pestañas de Administración desplazables, selector de agente de 44 px; service worker en cualquier contexto seguro (también `127.0.0.1`); manifest con `id` y `apple-touch-icon`.
+- API.md: la sección de Obsidian estaba escrita con `\n` literales.
+
 ## [Sin publicar] — rama `refactor/nexaro-platform`
 
 ### Añadido
+- Aislamiento estricto de conversaciones por usuario: acceso único con propietario en SQL, sin ids elegidos por el cliente (un id desconocido ya no crea conversación: 404 idéntico para inexistente, ajena u otro origen, también en streaming y en las respuestas bloqueadas), migración 13 `conversation_ownership` (renumerada al integrar la v1.0) (propiedad obligatoria e inmutable, sin tocar datos existentes), tests de seguridad (`docs/security/CONVERSATION_ISOLATION.md`).
+- Biblioteca de prompts (ADR-0025): integra la Prompt Library del PR #2 como módulo. Migración 12 (`prompts`, `prompt_versions`, permisos `prompts:read`/`prompts:write`), API `/api/organizations/{id}/prompts` (CRUD, versiones, restaurar, `render`, `install`) y `/api/prompt-catalogue` (100 prompts de solo lectura), pantalla «Prompts» y «Usar en el chat», que deja el mensaje renderizado como borrador en el chat.
+- Agentes de organización (ADR-0024): `/api/organizations/{org}/agents` con los mismos campos que los personales; los gestionan propietario y administrador (`agents:manage`), los usan propietario, administrador y miembro (`agents:run`). Aparecen en el selector del chat como «Nombre · Organización» y dejan de estar disponibles al salir de la organización. Migración 11: columnas nuevas en la tabla `agents`, sin borrar datos.
+- Agentes personales (Fase 5): `/api/agents/custom` para crear, ver, editar, duplicar (nace desactivado), activar/desactivar y borrar; solo el propietario (404 para el resto). Parten de un agente predefinido, heredan sus reglas y como máximo sus herramientas; instrucciones propias delimitadas en el prompt y modelo por defecto opcional. Se eligen en el chat como cualquier agente. Pantalla «Agentes» (`#/agents`) y migración 10 (`user_agents`, SQLite y PostgreSQL).
+- Selección de modelo (Fase 3): `GET /api/models` descubre los modelos instalados en Ollama; campo `model` en `/api/chat`, `/api/chat/stream` y `/api/v1/chat` (nombre instalado o `auto`); la conversación recuerda su modelo (migración 9, SQLite y PostgreSQL). Un modelo elegido se usa sin respaldo y, si no está instalado, el error es claro y no se guarda el turno. Selector «Modelo» en el chat que muestra el modelo activo.
+- Renombrar conversaciones: `PATCH /api/conversations/{id}` (`{title}`, 1–120 caracteres, solo el propietario, auditoría `conversation.rename` sin el título), botón ✎ en el historial con diálogo propio, y migración 8 (`conversations.title`, SQLite y PostgreSQL).
+- Copia automática y verificada de la base SQLite antes de aplicar migraciones pendientes sobre datos existentes (`<nombre>.pre-migration-v<N>-<fecha>.db`); sin copia válida no se migra.
 - Auditoría de la Fase 0 (2026-11-22): `AUDIT_REPORT.md`, `IMPLEMENTATION_STATUS.md` (progreso verificado del MVP: 8 de 20) y `ROADMAP.md`. Versión canónica consolidada: `backup/macbook` fusionada con la documentación de `main`.
 - Agentes (F27, ADR-0022): `general`, `developer`, `security`, `research`, `productivity`, `data` y `tutor` (el modo tutor pasa a ser un agente). `GET /api/agents`; campo `agent` en `/api/chat`, `/api/chat/stream` y `/api/v1/chat` (`mode` sigue valiendo). Cada agente añade reglas al prompt general y declara sus herramientas: los documentos exigen que el agente tenga la herramienta y que el usuario tenga `documents:read`; el tutor no la tiene. Usos y denegaciones quedan en la auditoría (`agent.tool`, sin contenido). Migración 7: `messages.agent` registra qué agente dio cada respuesta. Selector «Agente» en el chat, que recuerda la elección (también la del antiguo selector de modo) y retoma el agente al reabrir una conversación.
 - Docker y Ollama (F26, ADR-0021): servicio `ollama` opcional con el perfil `ollama` (sin puertos, volumen `ollama_models`, healthcheck `ollama list`, endurecido) y el backend esperando a que esté sano solo con el perfil activo. `make up` (preflight de Docker, Compose >= 2.20, modo y red, y `--wait`), `make model` y `make model-check` (`scripts/ollama_model.py`, idempotente, con timeouts y reintentos) y `make smoke` (`scripts/stack.sh`: servicios, salud, modelo, generación real y persistencia tras recrear los contenedores).

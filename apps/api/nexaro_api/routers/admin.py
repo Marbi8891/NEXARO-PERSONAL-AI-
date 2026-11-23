@@ -4,6 +4,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 
 from ai_gateway.usage import UsageStore
+from nexaro_api import system_status
 from nexaro_api.deps import AdminUser, Ctx, client_ip, validate_origin
 from nexaro_api.schemas import (
     AdminCreateUserRequest,
@@ -207,3 +208,9 @@ def admin_usage(admin: AdminUser, ctx: Ctx, days: int = 30) -> dict[str, Any]:
         "inference": store.inference(min(max(days, 1), 365)),
         "month_cost_usd": store.month_cost_usd(),
     }
+
+
+@router.get("/status")
+async def admin_status(admin: AdminUser, ctx: Ctx) -> dict[str, Any]:
+    """Panel de operaciones: backend, Ollama, base de datos, recursos, peticiones y copias."""
+    return await system_status.collect(ctx, ctx.metrics)

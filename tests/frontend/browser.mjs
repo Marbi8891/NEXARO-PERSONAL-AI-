@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { mkdirSync } from "node:fs";
 import { chromium as playwright } from "playwright-core";
 
-const BASE = "http://127.0.0.1:8765";
+const BASE = `http://127.0.0.1:${process.env.NEXARO_E2E_PORT ?? "8765"}`;
 const OUT = new URL("../../docs/design/screenshots/", import.meta.url).pathname;
 mkdirSync(OUT, { recursive: true });
 const executablePath = await chromium.executablePath();

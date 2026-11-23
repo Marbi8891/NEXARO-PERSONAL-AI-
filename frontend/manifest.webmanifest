@@ -3,6 +3,7 @@
   "short_name": "NEXARO",
   "description": "Private AI infrastructure for organisations.",
   "lang": "es",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

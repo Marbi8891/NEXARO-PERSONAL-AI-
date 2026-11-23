@@ -7,7 +7,7 @@ import uuid
 
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from nexaro_core.observability import request_id_var
+from nexaro_core.observability import RequestMetrics, request_id_var
 
 logger = logging.getLogger("nexaro.access")
 VALID_ID = re.compile(r"^[A-Za-z0-9._-]{8,64}$")
@@ -15,8 +15,9 @@ QUIET_PATHS = frozenset({"/api/health/live"})  # el HEALTHCHECK de Docker, cada 
 
 
 class RequestContextMiddleware:
-    def __init__(self, app: ASGIApp) -> None:
+    def __init__(self, app: ASGIApp, metrics: RequestMetrics | None = None) -> None:
         self.app = app
+        self.metrics = metrics
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
@@ -44,6 +45,9 @@ class RequestContextMiddleware:
             await self.app(scope, receive, tracking_send)
         finally:
             path = scope["path"]
+            duration_ms = round((time.perf_counter() - started) * 1000, 1)
+            if self.metrics is not None:
+                self.metrics.record(scope["method"], path, status, duration_ms, request_id)
             level = logging.DEBUG if path in QUIET_PATHS else logging.INFO
             if status >= 500:
                 level = logging.ERROR
@@ -55,7 +59,7 @@ class RequestContextMiddleware:
                         "method": scope["method"],
                         "path": path,
                         "status": status,
-                        "duration_ms": round((time.perf_counter() - started) * 1000, 1),
+                        "duration_ms": duration_ms,
                         "ip": scope["client"][0] if scope.get("client") else None,
                     }
                 },

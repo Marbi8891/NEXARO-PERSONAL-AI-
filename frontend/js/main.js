@@ -2,7 +2,7 @@ import { boot } from "./app.js";
 
 boot(document.getElementById("app"));
 
-// El service worker solo se registra en contextos seguros (https o localhost).
-if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+// isSecureContext: HTTPS (Tailscale Serve), localhost y 127.0.0.1. En HTTP por IP de red no hay PWA.
+if ("serviceWorker" in navigator && window.isSecureContext) {
   navigator.serviceWorker.register("/sw.js").catch(() => {});
 }

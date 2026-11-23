@@ -1,4 +1,9 @@
-"""Read-only Obsidian Vault connector for NEXARO."""
+"""Read-only Obsidian Vault connector for NEXARO.
+
+Límites (SECURITY_REVIEW_V1.md, OBS-2/OBS-3): una nota mayor que `max_note_bytes` no se lee
+entera nunca (ni al abrirla, ni al buscar, ni al listar sus etiquetas) y cada recorrido del Vault
+se detiene tras `max_files` notas. Así un Vault enorme o un archivo gigante no bloquean el backend.
+"""
 
 from __future__ import annotations
 
@@ -9,6 +14,8 @@ from pathlib import Path
 from typing import Any
 
 DEFAULT_EXCLUDED_DIRS = frozenset({".obsidian", ".trash", ".git", "node_modules"})
+DEFAULT_MAX_NOTE_BYTES = 1024 * 1024
+DEFAULT_MAX_FILES = 5000
 
 
 class VaultNotConfiguredError(RuntimeError):
@@ -19,12 +26,24 @@ class VaultPathError(ValueError):
     """Raised when a requested note path is invalid or outside the Vault."""
 
 
+class VaultNoteTooLargeError(ValueError):
+    """Raised when a note exceeds the configured size limit."""
+
+
 class ObsidianVault:
     """Minimal, read-only access to Markdown notes in a local Obsidian Vault."""
 
-    def __init__(self, vault_path: str | Path | None = None) -> None:
+    def __init__(
+        self,
+        vault_path: str | Path | None = None,
+        *,
+        max_note_bytes: int = DEFAULT_MAX_NOTE_BYTES,
+        max_files: int = DEFAULT_MAX_FILES,
+    ) -> None:
         configured = vault_path if vault_path is not None else os.getenv("OBSIDIAN_VAULT_PATH")
         self.path = Path(configured).expanduser() if configured else None
+        self.max_note_bytes = max_note_bytes
+        self.max_files = max_files
 
     def _root(self) -> Path:
         if self.path is None:
@@ -47,13 +66,34 @@ class ObsidianVault:
             return False
 
     def _iter_notes(self, root: Path) -> Iterator[tuple[Path, Path]]:
-        for candidate in root.rglob("*.md"):
-            relative = candidate.relative_to(root)
-            if not candidate.is_file() or self._is_excluded(relative):
-                continue
-            if not self._within_root(root, candidate):
-                continue
-            yield candidate, relative
+        """Notas visibles, como mucho `max_files`. No entra en directorios excluidos ni sigue
+        enlaces simbólicos a directorios (os.walk con followlinks=False)."""
+        yielded = 0
+        for current, dirs, files in os.walk(root, followlinks=False):
+            base = Path(current)
+            # Poda en sitio: no se desciende a .obsidian, .git, ocultos, etc.
+            dirs[:] = sorted(d for d in dirs if d not in DEFAULT_EXCLUDED_DIRS and d[:1] != ".")
+            for name in sorted(files):
+                if not name.lower().endswith(".md"):
+                    continue
+                candidate = base / name
+                relative = candidate.relative_to(root)
+                if self._is_excluded(relative) or not candidate.is_file():
+                    continue
+                if not self._within_root(root, candidate):
+                    continue
+                yield candidate, relative
+                yielded += 1
+                if yielded >= self.max_files:
+                    return
+
+    def _read_limited(self, path: Path) -> str:
+        """Texto de la nota; VaultNoteTooLargeError si supera el tope (sin leerla entera)."""
+        with path.open("rb") as handle:
+            data = handle.read(self.max_note_bytes + 1)
+        if len(data) > self.max_note_bytes:
+            raise VaultNoteTooLargeError("La nota supera el tamaño máximo permitido")
+        return data.decode("utf-8")
 
     def status(self) -> dict[str, Any]:
         if self.path is None:
@@ -63,7 +103,12 @@ class ObsidianVault:
         except VaultNotConfiguredError:
             return {"configured": True, "available": False, "note_count": 0}
         count = sum(1 for _ in self._iter_notes(root))
-        return {"configured": True, "available": True, "note_count": count}
+        return {
+            "configured": True,
+            "available": True,
+            "note_count": count,
+            "truncated": count >= self.max_files,
+        }
 
     def list_notes(self, *, limit: int = 200, offset: int = 0) -> list[dict[str, Any]]:
         root = self._root()
@@ -76,7 +121,7 @@ class ObsidianVault:
     def read_note(self, note_path: str) -> dict[str, Any]:
         root = self._root()
         target = self._resolve_note(root, note_path)
-        content = target.read_text(encoding="utf-8")
+        content = self._read_limited(target)
         return {"path": target.relative_to(root).as_posix(), "content": content}
 
     def search(self, query: str, *, limit: int = 20) -> list[dict[str, Any]]:
@@ -87,8 +132,8 @@ class ObsidianVault:
         results: list[dict[str, Any]] = []
         for candidate, relative in self._iter_notes(root):
             try:
-                content = candidate.read_text(encoding="utf-8")
-            except (OSError, UnicodeDecodeError):
+                content = self._read_limited(candidate)
+            except (OSError, UnicodeDecodeError, VaultNoteTooLargeError):
                 continue
             index = content.casefold().find(needle)
             if index < 0:
@@ -111,7 +156,7 @@ class ObsidianVault:
         if not note_path or "\x00" in note_path:
             raise VaultPathError("Ruta de nota no válida")
         requested = Path(note_path)
-        if requested.is_absolute():
+        if requested.is_absolute() or requested.drive or note_path.startswith(("/", "\\")):
             raise VaultPathError("No se permiten rutas absolutas")
         target = (root / requested).resolve()
         try:
@@ -129,16 +174,15 @@ class ObsidianVault:
         match = re.search(r"^#\s+(.+)$", content, re.MULTILINE)
         return match.group(1).strip() if match else fallback
 
-    @classmethod
-    def _metadata(cls, file_path: Path, relative: str) -> dict[str, Any]:
+    def _metadata(self, file_path: Path, relative: str) -> dict[str, Any]:
         try:
-            content = file_path.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
+            content = self._read_limited(file_path)
+        except (OSError, UnicodeDecodeError, VaultNoteTooLargeError):
             content = ""
         tags = sorted(set(re.findall(r"(?<![\w])#([\w/-]+)", content)))
         return {
             "path": relative,
-            "title": cls._title(content, file_path.stem),
+            "title": self._title(content, file_path.stem),
             "tags": tags,
             "size_bytes": file_path.stat().st_size,
         }

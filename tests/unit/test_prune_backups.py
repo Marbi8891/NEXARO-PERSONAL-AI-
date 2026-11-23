@@ -34,6 +34,7 @@ def run(directory: Path, *args: str) -> subprocess.CompletedProcess[str]:
         [BASH, str(SCRIPT), "--dir", str(directory), *args],
         capture_output=True,
         text=True,
+        encoding="utf-8",  # el script escribe UTF-8; en Windows el locale sería cp1252
         check=False,
     )
 

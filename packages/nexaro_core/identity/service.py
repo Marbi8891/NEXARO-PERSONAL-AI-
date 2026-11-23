@@ -319,3 +319,35 @@ def ensure_not_last_admin(db: sqlite3.Connection, user_id: str) -> None:
         and count_active_admins(db, excluding_user_id=user_id) == 0
     ):
         raise LastAdminError("No se puede desactivar al último administrador activo")
+
+
+MIN_PASSWORD_LENGTH = 12
+
+
+def change_password(
+    db: sqlite3.Connection, user_id: str, current_password: str, new_password: str
+) -> bool:
+    """Cambia la contraseña si la actual es correcta. False si no lo es (sin revelar más)."""
+    if len(new_password) < MIN_PASSWORD_LENGTH:
+        raise ValueError(f"La contraseña debe tener al menos {MIN_PASSWORD_LENGTH} caracteres")
+    if new_password == current_password:
+        raise ValueError("La contraseña nueva debe ser distinta de la actual")
+    row = db.execute(
+        "SELECT password_hash FROM users WHERE id = ? AND is_active = 1", (user_id,)
+    ).fetchone()
+    if row is None or not verify_password(current_password, row["password_hash"]):
+        return False
+    db.execute(
+        "UPDATE users SET password_hash = ? WHERE id = ?", (hash_password(new_password), user_id)
+    )
+    return True
+
+
+def revoke_other_sessions(db: sqlite3.Connection, user_id: str, keep_token: str) -> int:
+    """Cierra las demás sesiones del usuario (p. ej. tras cambiar la contraseña)."""
+    cursor = db.execute(
+        "UPDATE sessions SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL"
+        " AND token_hash != ?",
+        (_utc_timestamp(), user_id, hash_session_token(keep_token)),
+    )
+    return cursor.rowcount

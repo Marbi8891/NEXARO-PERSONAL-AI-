@@ -6,14 +6,16 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from nexaro_api.deps import Ctx, CurrentUser, client_ip, validate_origin
-from nexaro_api.schemas import LoginRequest, RegisterRequest
+from nexaro_api.schemas import LoginRequest, PasswordChangeRequest, RegisterRequest
 from nexaro_core.audit import pseudonymize, record_event
 from nexaro_core.identity import (
     authenticate,
+    change_password,
     create_session,
     create_user,
     get_registration_enabled,
     get_session_user,
+    revoke_other_sessions,
     revoke_session,
 )
 
@@ -144,3 +146,45 @@ def logout(request: Request, ctx: Ctx) -> JSONResponse:
         samesite="strict",
     )
     return response
+
+
+@router.post("/password")
+def change_own_password(
+    request: Request, payload: PasswordChangeRequest, user: CurrentUser, ctx: Ctx
+) -> dict[str, Any]:
+    """Cambio de contraseña del propio usuario. Exige la actual, cierra las demás sesiones y se
+    limita como el login (5 intentos fallidos por cuenta y ventana) para que una sesión robada no
+    sirva para adivinar la contraseña. `def`: scrypt es CPU."""
+    validate_origin(request, ctx)
+    key = f"password:{user['id']}"
+    if ctx.limiter.is_limited(key):
+        raise HTTPException(status_code=429, detail="Demasiados intentos. Inténtalo más tarde.")
+    error: HTTPException | None = None
+    revoked = 0
+    with ctx.database.connect() as db:
+        try:
+            changed = change_password(
+                db, user["id"], payload.current_password, payload.new_password
+            )
+        except ValueError as exc:
+            changed, error = False, HTTPException(status_code=400, detail=str(exc))
+        if error is None and not changed:
+            error = HTTPException(status_code=403, detail="La contraseña actual no es correcta")
+        if changed:
+            revoked = revoke_other_sessions(
+                db, user["id"], request.cookies[ctx.settings.cookie_name]
+            )
+        record_event(
+            db,
+            "auth.password_change",
+            "success" if changed else "failure",
+            actor_user_id=user["id"],
+            ip=client_ip(request),
+            details={"other_sessions_revoked": revoked} if changed else None,
+        )
+    if error is not None:
+        if error.status_code == 403:
+            ctx.limiter.record(key)
+        raise error
+    ctx.limiter.clear(key)
+    return {"changed": True, "other_sessions_revoked": revoked}

@@ -16,6 +16,7 @@ export function adminView({ container, shell }) {
     ["audit", "Auditoría", auditPanel],
     ["models", "Modelos", modelsPanel],
     ["usage", "Uso del modelo", usagePanel],
+    ["ops", "Operaciones", opsPanel],
   ];
   const buttons = tabs.map(([key, label, render]) => h("button", { type: "button", role: "tab", "aria-selected": "false", onclick: () => select(key, render) }, label));
 
@@ -238,4 +239,74 @@ async function modelsPanel(panel) {
     rows: routes.flatMap((r) => r.installed_models ?? []),
   });
   clear(panel).append(status.element, installed.element);
+}
+
+// Panel de operaciones (OPERATIONS.md): estado real de cada componente; "—" si un dato no existe.
+const opsStat = (label, value, hint) => h("div", { class: "stat" }, h("dt", {}, label), h("dd", {}, value ?? "—"), hint ? h("small", {}, hint) : null);
+const opsBadge = (good, text, warn = false) => h("span", { class: `badge ${good ? "ok" : warn ? "warn" : "bad"}` }, text);
+const bytes = (n) => (typeof n === "number" ? (n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : `${(n / 1e6).toFixed(1)} MB`) : "—");
+const BACKUP = { ok: [true, "Al día"], stale: [false, "Antigua", true], failed: [false, "Falló"], never: [false, "Ninguna", true], not_configured: [false, "Sin configurar", true], unreadable: [false, "Ilegible"] };
+
+async function opsPanel(panel) {
+  const s = await api.adminStatus();
+  const { cpu, memory, disk } = s.system;
+  const backup = BACKUP[s.backups.status] ?? [false, s.backups.status];
+  const lat = s.requests.latency_ms;
+  const summary = h(
+    "section",
+    { class: "card" },
+    h("h2", {}, "Estado de los servicios"),
+    h(
+      "dl",
+      { class: "stats" },
+      opsStat("Backend", opsBadge(true, "En marcha"), `Activo ${Math.round(s.requests.uptime_seconds / 60)} min`),
+      opsStat("Ollama", opsBadge(s.ollama.status === "ok", s.ollama.status === "ok" ? "Conectado" : "Sin conexión"), s.ollama.model),
+      opsStat("Modelo", opsBadge(s.ollama.model_ready === true, s.ollama.model_ready === false ? "No instalado" : s.ollama.model_ready ? "Listo" : "Desconocido", s.ollama.model_ready === null)),
+      opsStat("Base de datos", opsBadge(s.database.status === "ok", s.database.status === "ok" ? "Íntegra" : s.database.status), `Esquema v${s.database.schema_version ?? "?"} · ${bytes(s.database.size_bytes)}`),
+      opsStat("Agentes", String(s.agents.length), s.agents.map((a) => a.id).join(", ")),
+      opsStat("Copia de seguridad", opsBadge(backup[0], backup[1], backup[2]), s.backups.finished_at ? `${formatDate(s.backups.finished_at)} · ${s.backups.age_hours ?? "?"} h` : "Programa scripts/backup_nexaro.ps1"),
+    ),
+  );
+  const resources = h(
+    "section",
+    { class: "card" },
+    h("h2", {}, "Recursos y peticiones"),
+    h(
+      "dl",
+      { class: "stats" },
+      opsStat("CPU (carga 1 min)", cpu.load_1m === null ? "—" : String(cpu.load_1m), cpu.cpu_quota ? `Límite: ${cpu.cpu_quota} CPU` : `${cpu.cpus_visible ?? "?"} CPU visibles`),
+      opsStat("Memoria del backend", memory.percent === null ? bytes(memory.process_rss_bytes) : `${memory.percent} %`, memory.container_limit_bytes ? `de ${bytes(memory.container_limit_bytes)}` : null),
+      opsStat("Disco de datos", disk.percent_used === null ? "—" : `${disk.percent_used} %`, `Libre: ${bytes(disk.free_bytes)}`),
+      opsStat("Peticiones", String(s.requests.requests_total), `5xx: ${s.requests.requests_by_class["5xx"]} · 4xx: ${s.requests.requests_by_class["4xx"]}`),
+      opsStat("Latencia API p50 / p95", lat.p50 === null ? "—" : `${lat.p50} / ${lat.p95} ms`, `${lat.samples} muestras`),
+    ),
+  );
+  const generation = dataTable({
+    caption: "Generación (últimas 24 h)",
+    empty: { title: "Sin generaciones", text: "Aparecerán cuando se use el modelo." },
+    search: false,
+    columns: [
+      { key: "model", label: "Modelo", className: "mono" },
+      { key: "requests", label: "Peticiones" },
+      { key: "avg_ttft_ms", label: "Primer token (ms)", value: (r) => r.avg_ttft_ms ?? "—" },
+      { key: "avg_total_ms", label: "Total (ms)", value: (r) => r.avg_total_ms ?? "—" },
+      { key: "avg_tokens_per_second", label: "Tokens/s", value: (r) => r.avg_tokens_per_second ?? "—" },
+    ],
+    rows: s.generation_last_24h,
+  });
+  const errors = dataTable({
+    caption: "Errores recientes del servidor (5xx)",
+    empty: { title: "Sin errores", text: "No ha habido errores 5xx desde el último arranque." },
+    search: false,
+    columns: [
+      { key: "ts", label: "Hora", value: (e) => formatDate(e.ts) },
+      { key: "method", label: "Método" },
+      { key: "path", label: "Ruta", className: "mono" },
+      { key: "status", label: "Estado" },
+      { key: "request_id", label: "ID de petición", className: "mono" },
+    ],
+    rows: s.requests.recent_errors,
+  });
+  const refresh = h("button", { class: "button secondary small", type: "button", onclick: () => opsPanel(panel).catch((e) => toast(e.message, { error: true })) }, "Actualizar");
+  clear(panel).append(h("div", { class: "stack" }, refresh, summary, resources, generation.element, errors.element));
 }

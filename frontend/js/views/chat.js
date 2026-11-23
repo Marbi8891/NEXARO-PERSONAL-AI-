@@ -1,10 +1,10 @@
 import { api } from "../api.js";
-import { confirmDialog } from "../components/dialog.js";
+import { confirmDialog, promptDialog } from "../components/dialog.js";
 import { toast } from "../components/toast.js";
 import { clear, formatDate, h } from "../dom.js";
 import { renderMarkdown } from "../markdown.js";
 import { navigate } from "../router.js";
-import { rememberAgent, rememberConversation, rememberedAgent, rememberedConversation } from "../state.js";
+import { rememberAgent, rememberConversation, rememberModel, rememberedAgent, rememberedConversation, rememberedModel, takeChatDraft } from "../state.js";
 
 export async function chatView({ container, sidebar, params, shell }) {
   shell.setTitle("Chat");
@@ -24,7 +24,8 @@ export async function chatView({ container, sidebar, params, shell }) {
   const agentBar = h("label", { class: "mode-toggle" }, h("span", {}, "Agente"), agentSelect, agentHint);
   const currentAgent = () => agents.find((a) => a.id === agentSelect.value) || agents[0];
   function renderAgents(selected) {
-    agentSelect.replaceChildren(...agents.map((a) => h("option", { value: a.id, title: a.description }, a.name)));
+    // Los de organización llevan su nombre: dos organizaciones pueden tener un agente igual.
+    agentSelect.replaceChildren(...agents.map((a) => h("option", { value: a.id, title: a.description }, a.scope === "organization" ? `${a.name} · ${a.organization_name}` : a.name)));
     agentSelect.value = agents.some((a) => a.id === selected) ? selected : "general";
   }
   renderAgents("general");
@@ -59,6 +60,46 @@ export async function chatView({ container, sidebar, params, shell }) {
   }
   // En paralelo con la conversación: no retrasa ni pisa lo que el usuario ya esté escribiendo.
   const agentsReady = loadAgents();
+
+  // Modelo: la lista se descubre en el proveedor (GET /api/models), nunca está fija aquí.
+  // «auto» = el modelo configurado con sus respaldos. Un modelo elegido no se cambia por otro:
+  // si deja de estar instalado, el servidor responde con un error claro.
+  const modelSelect = h("select", { id: "chat-model" });
+  const modelHint = h("span", { class: "hint", id: "chat-model-hint" });
+  const modelBar = h("label", { class: "mode-toggle", hidden: true }, h("span", {}, "Modelo"), modelSelect, modelHint);
+  let modelInfo = null;
+  function renderModels(selected) {
+    const installed = modelInfo?.models ?? [];
+    const options = [h("option", { value: "auto" }, `Automático (${modelInfo?.default_model ?? "predeterminado"})`)];
+    for (const m of installed) options.push(h("option", { value: m.name }, m.parameter_size ? `${m.name} · ${m.parameter_size}` : m.name));
+    if (selected && selected !== "auto" && !installed.some((m) => m.name === selected)) {
+      options.push(h("option", { value: selected }, `${selected} (no instalado)`));
+    }
+    modelSelect.replaceChildren(...options);
+    modelSelect.value = selected || "auto";
+    applyModel();
+  }
+  function applyModel() {
+    const value = modelSelect.value;
+    if (modelInfo && modelInfo.available === false) modelHint.textContent = "El proveedor de modelos no responde.";
+    else if (value === "auto") modelHint.textContent = `Activo: ${modelInfo?.default_model ?? "predeterminado"}${modelInfo?.fallback?.length ? " (con respaldo)" : ""}`;
+    else if (!(modelInfo?.models ?? []).some((m) => m.name === value)) modelHint.textContent = `«${value}» no está instalado: elige otro.`;
+    else modelHint.textContent = `Activo: ${value}`;
+  }
+  modelSelect.addEventListener("change", () => {
+    applyModel();
+    if (!conversationId) rememberModel(modelSelect.value);
+  });
+  async function loadModels() {
+    try {
+      modelInfo = await api.models();
+    } catch {
+      modelInfo = null; // sin la lista, el chat sigue en automático
+    }
+    modelBar.hidden = !modelInfo?.selectable;
+    renderModels(conversationId ? modelSelect.value || "auto" : rememberedModel());
+  }
+  const modelsReady = loadModels();
   const list = h("div", { class: "conversation-list" });
   const startNew = () => {
     rememberConversation(null);
@@ -163,13 +204,27 @@ export async function chatView({ container, sidebar, params, shell }) {
               h("span", { class: "history-title" }, title),
               h("span", { class: "history-meta" }, `${item.message_count} mensajes · ${formatDate(item.last_activity)}`),
             ),
-            h("button", { class: "history-delete", type: "button", "aria-label": `Eliminar la conversación: ${title}`, title: "Eliminar", onclick: () => removeConversation(item.id) }, "×"),
+            h("button", { class: "history-action history-rename", type: "button", "aria-label": `Renombrar la conversación: ${title}`, title: "Renombrar", onclick: () => renameConversation(item.id, title) }, "✎"),
+            h("button", { class: "history-action history-delete", type: "button", "aria-label": `Eliminar la conversación: ${title}`, title: "Eliminar", onclick: () => removeConversation(item.id) }, "×"),
           ),
         );
       }
     } catch (error) {
       clear(list).append(h("div", { class: "history-empty" }, error.message));
     }
+  }
+
+  async function renameConversation(id, current) {
+    const title = await promptDialog({ title: "Renombrar conversación", label: "Título", value: current, confirmLabel: "Renombrar", maxLength: 120 });
+    if (title === null || title === current) return;
+    try {
+      await api.renameConversation(id, title);
+    } catch (error) {
+      toast(error.message, { error: true });
+      return;
+    }
+    toast("Conversación renombrada.");
+    await loadHistory();
   }
 
   async function removeConversation(id) {
@@ -200,7 +255,9 @@ export async function chatView({ container, sidebar, params, shell }) {
       rememberConversation(id);
       clear(messages);
       for (const message of data.messages) addMessage(message.role === "user" ? "user" : "assistant", message.content);
-      // Al reabrir una conversación se continúa con el agente que dio la última respuesta.
+      // Al reabrir una conversación se continúa con su modelo y con el agente de la última respuesta.
+      await modelsReady;
+      renderModels(data.conversation.model || "auto");
       await agentsReady;
       const last = [...data.messages].reverse().find((m) => m.role === "assistant" && m.agent);
       if (last && agents.some((a) => a.id === last.agent)) {
@@ -243,6 +300,7 @@ export async function chatView({ container, sidebar, params, shell }) {
         signal: controller.signal,
         documentOrganizationId,
         agent: agentSelect.value,
+        model: modelBar.hidden ? null : modelSelect.value,
         onEvent(item) {
           if (item.event === "start") {
             const isNew = item.conversation_id !== conversationId;
@@ -305,6 +363,7 @@ export async function chatView({ container, sidebar, params, shell }) {
         { class: "composer-wrap" },
         h("form", { class: "composer", onsubmit: onSubmit }, input, send),
         agentBar,
+        modelBar,
         documentsBar,
         h("div", { class: "composer-hint" }, "Enter envía · Mayús+Enter salta de línea"),
       ),
@@ -321,5 +380,8 @@ export async function chatView({ container, sidebar, params, shell }) {
   } else await openConversation(conversationId);
   await loadHistory();
   await loadOrganizations();
+  // Borrador preparado desde la biblioteca de prompts: se coloca en el cuadro, no se envía solo.
+  const draft = takeChatDraft();
+  if (draft) input.value = draft;
   input.focus();
 }

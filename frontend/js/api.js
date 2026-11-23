@@ -61,14 +61,14 @@ export function parseSse(buffer) {
 // Chat en streaming: llama a onEvent por cada evento (start, sources, token, done, error) según llega.
 // `documentOrganizationId` (opcional) activa la consulta de los documentos de esa organización.
 // `agent`: agente especializado que responde (GET /api/agents).
-export async function chatStream(message, conversationId, { signal, onEvent, documentOrganizationId = null, agent = "general" }) {
+export async function chatStream(message, conversationId, { signal, onEvent, documentOrganizationId = null, agent = "general", model = null }) {
   let response;
   try {
     response = await fetch("/api/chat/stream", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, conversation_id: conversationId, document_organization_id: documentOrganizationId, agent }),
+      body: JSON.stringify({ message, conversation_id: conversationId, document_organization_id: documentOrganizationId, agent, model }),
       signal,
     });
   } catch (error) {
@@ -132,8 +132,15 @@ export const api = {
   notifications: () => request("/api/notifications"),
 
   agents: () => request("/api/agents"),
+  models: () => request("/api/models"),
+  customAgents: () => request("/api/agents/custom"),
+  createCustomAgent: (body) => request("/api/agents/custom", { method: "POST", body }),
+  updateCustomAgent: (agentId, body) => request(`/api/agents/custom/${id(agentId)}`, { method: "PATCH", body }),
+  duplicateCustomAgent: (agentId) => request(`/api/agents/custom/${id(agentId)}/duplicate`, { method: "POST" }),
+  deleteCustomAgent: (agentId) => request(`/api/agents/custom/${id(agentId)}`, { method: "DELETE" }),
   conversations: () => request("/api/conversations"),
   conversation: (conversationId) => request(`/api/conversations/${id(conversationId)}`),
+  renameConversation: (conversationId, title) => request(`/api/conversations/${id(conversationId)}`, { method: "PATCH", body: { title } }),
   deleteConversation: (conversationId) => request(`/api/conversations/${id(conversationId)}`, { method: "DELETE" }),
   chatStream,
   chat: (message, conversationId) => request("/api/chat", { method: "POST", body: { message, conversation_id: conversationId } }),
@@ -148,6 +155,8 @@ export const api = {
   adminSecurity: (days = 14) => request(`/api/admin/security?days=${days}`),
   adminUsage: () => request("/api/admin/usage"),
   adminModels: () => request("/api/admin/models"),
+  adminStatus: () => request("/api/admin/status"),
+  changePassword: (current_password, new_password) => request("/api/auth/password", { method: "POST", body: { current_password, new_password } }),
 
   apiKeys: (orgId) => request(`/api/organizations/${id(orgId)}/api-keys`),
   createApiKey: (orgId, name, expiresInDays, scopes) => request(`/api/organizations/${id(orgId)}/api-keys`, { method: "POST", body: { name, expires_in_days: expiresInDays, scopes } }),
@@ -166,6 +175,16 @@ export const api = {
   createExpense: (orgId, body) => request(`/api/organizations/${id(orgId)}/expenses`, { method: "POST", body }),
   updateExpense: (orgId, expenseId, body) => request(`/api/organizations/${id(orgId)}/expenses/${id(expenseId)}`, { method: "PATCH", body }),
   deleteExpense: (orgId, expenseId) => request(`/api/organizations/${id(orgId)}/expenses/${id(expenseId)}`, { method: "DELETE" }),
+
+  prompts: (orgId, query = "") => request(`/api/organizations/${id(orgId)}/prompts?limit=200${query ? `&${query}` : ""}`),
+  promptCatalogue: () => request("/api/prompt-catalogue"),
+  createPrompt: (orgId, body) => request(`/api/organizations/${id(orgId)}/prompts`, { method: "POST", body }),
+  updatePrompt: (orgId, promptId, body) => request(`/api/organizations/${id(orgId)}/prompts/${id(promptId)}`, { method: "PATCH", body }),
+  deletePrompt: (orgId, promptId) => request(`/api/organizations/${id(orgId)}/prompts/${id(promptId)}`, { method: "DELETE" }),
+  promptVersions: (orgId, promptId) => request(`/api/organizations/${id(orgId)}/prompts/${id(promptId)}/versions`),
+  restorePrompt: (orgId, promptId, version) => request(`/api/organizations/${id(orgId)}/prompts/${id(promptId)}/versions/${Number(version)}/restore`, { method: "POST" }),
+  renderPrompt: (orgId, promptId, values) => request(`/api/organizations/${id(orgId)}/prompts/${id(promptId)}/render`, { method: "POST", body: { values } }),
+  installPrompt: (orgId, catalogueId) => request(`/api/organizations/${id(orgId)}/prompts/install`, { method: "POST", body: { catalogue_id: catalogueId } }),
 
   organizations: () => request("/api/organizations"),
   createOrganization: (name, slug) => request("/api/organizations", { method: "POST", body: { name, slug } }),

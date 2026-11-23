@@ -10,13 +10,13 @@ pequeños sobre la versión canónica (linaje `backup/macbook`), sin cambiar de 
 | 1 | P0 | Consolidar la versión canónica en `main` (fusión de `backup/macbook` + documentación de `main`) y pasar el CI completo en GitHub por primera vez | Sí: aprobar y fusionar el PR |
 | 2 | P0 | Verificar Docker + Ollama real: `make up`, `make model`, `make smoke` (pasos 1, 6, 18, 19 del MVP) | Sí: se ejecuta en su Mac o ThinkPad |
 | 3 | P0 | PR #3: no fusionar tal cual. Añadir autenticación, quitar `python`/`pip`/`npx`/`docker` de la lista o exigir aprobación previa, y llevarlo al monolito como herramienta del registro | Decidir si se integra |
-| 4 | P1 | Selección de modelo en tiempo real: descubrir modelos de Ollama, modelo por defecto, modelo por conversación, error claro si no está instalado (sin cambio silencioso) | No |
-| 5 | P1 | Agentes persistentes con propietario: CRUD sobre la tabla `agents`, duplicar, activar/desactivar; los 7 actuales como semilla | No |
-| 6 | P2 | Renombrar conversaciones (`PATCH /api/conversations/{id}`) | No |
+| 4 | P1 | ✅ (falta por usuario y por agente) Selección de modelo en tiempo real: descubrir modelos de Ollama, modelo por defecto, modelo por conversación, error claro si no está instalado (sin cambio silencioso) | No |
+| 5 | P1 | ✅ Agentes personales (`user_agents`) y de organización (`agents`, ADR-0024): CRUD, duplicar, activar/desactivar; los 7 predefinidos son la base. Falta la pantalla de los de organización | No |
+| 6 | P2 | ✅ Renombrar conversaciones (`PATCH /api/conversations/{id}`) | No |
 | 7 | P2 | Tareas: API sobre la tabla `tasks` (crear, estado, listar, propietario) | No |
 | 8 | P2 | Registro de herramientas: contrato común (nombre, schema, permiso, timeout, auditoría) y herramientas desactivadas si no están configuradas | No |
 | 9 | P2 | Documentos: extractores Markdown, CSV y DOCX; embeddings locales con Ollama como opción junto a BM25 | No |
-| 10 | P2 | Integrar la biblioteca de prompts (PR #2) como módulo `products/prompts` con autenticación, en lugar de una app aparte | Decidir si se integra |
+| 10 | P2 | ✅ Integrar la biblioteca de prompts (PR #2) como módulo con autenticación (ADR-0025) | Decidido: integrar |
 
 ## Después (no empezar hasta cerrar lo anterior)
 
@@ -29,6 +29,8 @@ pequeños sobre la versión canónica (linaje `backup/macbook`), sin cambiar de 
 
 ## Decisiones pendientes del propietario
 
-- D1: ¿`backup/macbook` pasa a ser `main`? (propuesta: sí, por fusión, sin borrar ramas).
+- ~~D1~~: resuelta el 2026-11-22: `backup/macbook` es `main` (PR #4 fusionado).
 - D2: ¿Se integran PR #2 y PR #3 en el monolito o se cierran como prototipos?
+- D4: ¿El selector de modelo es para todos los usuarios o solo para administradores? (ADR-0023 frente a ADR-0019; ahora: todos).
+- ~~D5~~: resuelta el 2026-11-22: ambos (ADR-0024).
 - D3: ¿Se mantienen los módulos Finanzas, Developer y multiorganización dentro de «Personal AI»?

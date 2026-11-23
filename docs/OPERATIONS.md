@@ -23,7 +23,7 @@ make smoke
 - `make model-check`: comprueba el modelo.
 - `make smoke`: comprueba servicios, health, modelo, respuesta real y persistencia.
 
-Aplicación: `http://127.0.0.1:8001`
+Aplicación: `http://127.0.0.1:8001` (`NEXARO_PORT` si 8001 está ocupado; ajusta también `ALLOWED_ORIGINS`).
 
 Health:
 - `/api/health/live`: proceso vivo.
@@ -67,23 +67,40 @@ Los volúmenes se conservan al detener el proyecto. **No uses `docker compose do
 
 ## 6. Copias de seguridad
 
-Copia la base de datos con SQLite en modo backup:
+Procedimiento completo, restauración y resultado de la prueba: [BACKUP_RESTORE.md](../BACKUP_RESTORE.md).
 
-```bash
-sqlite3 nexaro.db ".backup copia.db"
+```powershell
+pwsh -File C:\Users\pc\NEXARO-PERSONAL-AI-\scripts\backup_nexaro.ps1 -Reason pre-update
 ```
 
-Guarda la copia fuera del repositorio y, preferiblemente, en un destino cifrado. Las copias contienen información de usuarios y conversaciones.
-
 Antes de una actualización:
-1. Comprueba que la aplicación está estable.
-2. Realiza una copia reciente de la base de datos.
-3. Ejecuta las pruebas del proyecto.
-4. Reconstruye el backend conservando el volumen.
-5. Verifica health, login y una consulta de chat.
-6. Conserva una imagen anterior para rollback.
+1. Copia `pre-update` y `verify_backup.ps1`.
+2. Ejecuta las pruebas del proyecto.
+3. Reconstruye solo el backend conservando el volumen (`docker compose up -d --build --no-deps backend`).
+4. Verifica health, login y una consulta de chat (Administración → Operaciones).
+5. Conserva la imagen anterior para rollback (`docker tag nexaro-personal-ai-backend nexaro-personal-ai-backend:rollback-<fecha>` antes de construir).
 
-Las migraciones son aditivas y se aplican al arranque. No existe un procedimiento general de downgrade; revertir una migración requiere restaurar la copia previa.
+Las migraciones son aditivas y se aplican al arranque en una transacción. No existe downgrade: volver
+atrás exige restaurar la copia previa. Una base de un esquema más nuevo (u otra rama) hace que el
+backend no arranque, sin modificarla.
+
+## 6 bis. Monitorización
+
+**Administración → Operaciones** (`GET /api/admin/status`, solo administradores): estado del backend,
+Ollama y el modelo, integridad y versión de la base, agentes, CPU/memoria del contenedor, disco del
+volumen, peticiones y latencia p50/p95, generación de las últimas 24 h, últimos errores 5xx (con su
+`request_id`) y estado de la última copia (escrito por `backup_nexaro.ps1`).
+
+Logs: una línea JSON por evento en la salida del contenedor, con `request_id` (también en la cabecera
+`X-Request-ID` de cada respuesta), sin cuerpos, consultas ni secretos. Rotación por Docker
+(`json-file`, 10 MiB × 5). Para investigar un error del panel:
+
+```powershell
+docker logs nexaro-backend 2>&1 | Select-String <request_id>
+```
+
+Las métricas de peticiones están en memoria (se reinician con el contenedor); el histórico de uso del
+modelo está en la base (`/api/admin/usage`).
 
 ## 7. Comprobación de contenedores
 
@@ -109,7 +126,7 @@ El nombre de servicio puede variar según el Compose usado; el archivo del proye
 
 ## 9. Seguridad operacional
 
-- Mantén el acceso local mientras no hayas configurado un despliegue remoto seguro.
+- Mantén el acceso local mientras no hayas configurado un despliegue remoto seguro; para el acceso remoto usa solo Tailscale Serve ([REMOTE_ACCESS.md](../REMOTE_ACCESS.md)).
 - En producción, HTTPS y cookies Secure son obligatorios por configuración.
 - No abras el puerto de Ollama a Internet.
 - No publiques el panel de administración sin revisar autenticación y controles.

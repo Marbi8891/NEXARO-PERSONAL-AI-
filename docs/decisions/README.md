@@ -27,3 +27,6 @@ Una decisión aceptada no se cambia en silencio: se propone un *DECISION REVIEW*
 | [0020](0020-tutor-mode.md) | Modo tutor de programación | Aceptada |
 | [0021](0021-compose-ollama-profile-and-smoke.md) | Ollama opcional por perfil, modelo comprobado y prueba de humo | Aceptada |
 | [0022](0022-specialized-agents.md) | Agentes especializados con herramientas por permiso | Propuesta |
+| [0023](0023-model-selection.md) | Selección de modelo por conversación | Propuesta |
+| [0024](0024-organization-agents.md) | Agentes personales y de organización | Aceptada |
+| [0025](0025-prompt-library.md) | Biblioteca de prompts como módulo de la plataforma | Aceptada |

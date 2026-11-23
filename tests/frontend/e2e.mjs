@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { pathToFileURL } from "node:url";
 
 const nativeFetch = globalThis.fetch;
-const BASE = "http://127.0.0.1:8765";
+const BASE = `http://127.0.0.1:${process.env.NEXARO_E2E_PORT ?? "8765"}`;
 const REPO = process.env.REPO;
 
 async function session() {
@@ -40,6 +40,14 @@ function submit(form) { form.dispatchEvent(new window.Event("submit", { bubbles:
 const results = [];
 const noLeaks = () => assert.ok(!/null|undefined/.test(document.body.textContent), "texto null/undefined visible en pantalla");
 const check = async (name, fn) => { await fn(); noLeaks(); results.push(name); console.log("ok -", name); };
+// Entrar en el chat esperando la vista NUEVA: el router sustituye la vista de forma asíncrona y,
+// mientras tanto, el selector de la vista anterior sigue en el DOM (falsos fallos intermitentes).
+async function enterChat() {
+  const old = $("#chat-agent");
+  const changes = location.hash !== "#/chat";
+  location.hash = "#/chat";
+  await until(() => { const s = $("#chat-agent"); return s && (!changes || s !== old) && s.options.length > 1; }, "vista nueva del chat");
+}
 
 // --- Usuario normal ---
 await session();
@@ -81,6 +89,76 @@ await check("abrir conversación del historial restaura mensajes", async () => {
   await until(() => $(".history-item"), "history item");
   $(".history-item").click();
   await until(() => document.querySelectorAll(".message").length === 2, "restore");
+});
+await check("renombrar conversación desde el historial: título propio y Cancelar no cambia nada", async () => {
+  await until(() => $(".history-rename"), "botón renombrar");
+  $(".history-rename").click();
+  await until(() => document.querySelector("dialog #dialog-input"), "diálogo de título");
+  [...document.querySelectorAll("dialog button")].find((b) => b.textContent === "Cancelar").click();
+  await until(() => !document.querySelector("dialog"), "diálogo cerrado");
+  assert.equal($(".history-title").textContent, "hola");
+
+  $(".history-rename").click();
+  await until(() => document.querySelector("dialog #dialog-input"), "diálogo de título");
+  const input = document.querySelector("dialog #dialog-input");
+  assert.equal(input.value, "hola", "el campo empieza con el título actual");
+  input.value = "  Mi primera charla ";
+  submit(document.querySelector("dialog form"));
+  await until(() => $(".history-title")?.textContent === "Mi primera charla", "título nuevo en el historial");
+  // El historial se vuelve a pedir a la API tras renombrar: el título viene del servidor.
+});
+await check("modelo: la lista viene del proveedor, el elegido se usa y la conversación lo recuerda", async () => {
+  [...document.querySelectorAll("button")].find((b) => b.textContent.includes("Nueva")).click();
+  await until(() => $(".welcome") && $("#chat-model") && !$("#chat-model").closest("label").hidden && $("#chat-model").options.length === 3, "selector de modelo");
+  const options = [...$("#chat-model").options].map((o) => o.value);
+  assert.deepEqual(options, ["auto", "qwen2.5:3b", "llama3.2:latest"]);
+  assert.match($("#chat-model-hint").textContent, /Activo: qwen2\.5:3b/);
+  $("#chat-model").value = "llama3.2:latest";
+  $("#chat-model").dispatchEvent(new window.Event("change"));
+  assert.match($("#chat-model-hint").textContent, /Activo: llama3\.2:latest/);
+  $("#message").value = "quemodelo";
+  submit($(".composer"));
+  await until(() => text().includes("respondo con llama3.2:latest"), "respuesta del modelo elegido");
+  const id = decodeURIComponent(location.hash.split("/").pop());
+  await until(() => $(".history-item"), "historial");
+  [...document.querySelectorAll("button")].find((b) => b.textContent.includes("Nueva")).click();
+  await until(() => $(".welcome"), "nueva");
+  location.hash = `#/chat/${encodeURIComponent(id)}`;
+  await until(() => text().includes("respondo con llama3.2:latest") && $("#chat-model").value === "llama3.2:latest", "la conversación reabre con su modelo");
+  // Se borra para no alterar las cifras que comprueban los pasos siguientes.
+  assert.equal((await fetch(`/api/conversations/${encodeURIComponent(id)}`, { method: "DELETE" })).status, 204);
+  [...document.querySelectorAll("button")].find((b) => b.textContent.includes("Nueva")).click();
+  await until(() => $(".welcome") && document.querySelectorAll(".history-item").length === 1, "historial original");
+});
+await check("agentes: crear uno personal, usarlo en el chat, desactivarlo y borrarlo", async () => {
+  location.hash = "#/agents";
+  await until(() => $("#agent-form"), "formulario de agentes");
+  fill("#agent-name", "Revisor E2E");
+  $("#agent-base").value = "developer";
+  $("#agent-base").dispatchEvent(new window.Event("change"));
+  $("#agent-instructions").value = "Sé breve.";
+  submit($("#agent-form"));
+  await until(() => [...document.querySelectorAll(".data-table td")].some((td) => td.textContent === "Revisor E2E"), "agente listado");
+
+  location.hash = "#/chat";
+  await until(() => $("#chat-agent") && [...$("#chat-agent").options].some((o) => o.textContent === "Revisor E2E"), "agente en el selector del chat");
+  const option = [...$("#chat-agent").options].find((o) => o.textContent === "Revisor E2E");
+  $("#chat-agent").value = option.value;
+  $("#chat-agent").dispatchEvent(new window.Event("change"));
+  assert.equal($("#chat-agent").value, option.value);
+  $("#chat-agent").value = "general";
+  $("#chat-agent").dispatchEvent(new window.Event("change"));
+
+  location.hash = "#/agents";
+  await until(() => document.querySelector('button[aria-label="Desactivar Revisor E2E"]'), "botón desactivar");
+  document.querySelector('button[aria-label="Desactivar Revisor E2E"]').click();
+  await until(() => document.querySelector('button[aria-label="Activar Revisor E2E"]'), "agente desactivado");
+  document.querySelector('button[aria-label="Borrar Revisor E2E"]').click();
+  await until(() => document.querySelector("dialog"), "confirmación");
+  [...document.querySelectorAll("dialog button")].find((b) => b.textContent === "Borrar").click();
+  await until(() => text().includes("Aún no tienes agentes"), "agente borrado");
+  location.hash = "#/chat";
+  await until(() => $("#chat-model"), "chat");
 });
 await check("panel: cifras reales del usuario, sin sección de plataforma", async () => {
   location.hash = "#/dashboard";
@@ -225,6 +303,13 @@ await check("uso del modelo se muestra", async () => {
   [...document.querySelectorAll("[role=tab]")].find((b) => b.textContent.startsWith("Uso")).click();
   await until(() => text().includes("Coste del mes"), "usage");
 });
+await check("operaciones: estado real de servicios, base de datos y copias", async () => {
+  [...document.querySelectorAll("[role=tab]")].find((b) => b.textContent === "Operaciones").click();
+  await until(() => text().includes("Estado de los servicios"), "ops");
+  assert.ok(text().includes("Íntegra"), "la base de datos de pruebas está íntegra");
+  assert.ok(text().includes("Sin configurar"), "sin BACKUP_STATUS_PATH no se inventa una copia");
+  assert.ok(text().includes("Sin errores"), "sin 5xx se dice, no se inventan errores");
+});
 await check("admin crea organización y añade miembro", async () => {
   location.hash = "#/organizations";
   await until(() => text().includes("Crear organización"), "orgform");
@@ -330,6 +415,35 @@ await check("finanzas: alta con importes exactos, resumen, edición, borrado y e
   [...document.querySelectorAll("dialog button")].find((b) => b.textContent === "Borrar").click();
   await until(() => text().includes("Sin gastos este mes"), "borrado");
 });
+await check("prompts: crear, instalar del catálogo y usar en el chat como borrador", async () => {
+  const { variablesFor } = await import(pathToFileURL(`${REPO}/frontend/js/views/prompts.js`).href);
+  assert.deepEqual(variablesFor("{{a}} y {{ b }} y {{a}}", [{ name: "a", label: "A", type: "textarea", required: true }]).map((v) => [v.name, v.type]), [["a", "textarea"], ["b", "text"]]);
+
+  location.hash = "#/prompts";
+  await until(() => $("#pr-name"), "formulario de prompts");
+  fill("#pr-name", "Traductor"); fill("#pr-category", "Idiomas"); fill("#pr-tags", "inglés, <b>x</b>");
+  fill("#pr-template", "Traduce al inglés: {{texto}}");
+  submit($("#pr-name").closest("form"));
+  const tables = () => [...document.querySelectorAll(".data-table")].map((t) => t.textContent).join(" ");
+  await until(() => tables().includes("Traductor"), "prompt listado");
+  assert.ok(tables().includes("<b>x</b>"), "las etiquetas se pintan como texto, no como HTML");
+  assert.equal(document.querySelector(".data-table b"), null);
+
+  const install = () => [...document.querySelectorAll("button")].find((b) => (b.getAttribute("aria-label") || "").startsWith("Instalar "));
+  await until(install, "botón de instalar del catálogo");
+  const installedName = install().getAttribute("aria-label").slice("Instalar ".length);
+  install().click();
+  await until(() => [...document.querySelectorAll("button")].some((b) => b.getAttribute("aria-label") === `Usar ${installedName} en el chat`), "prompt del catálogo instalado");
+
+  [...document.querySelectorAll("button")].find((b) => b.getAttribute("aria-label") === "Usar Traductor en el chat").click();
+  await until(() => $("#pv-0"), "diálogo de variables");
+  fill("#pv-0", "hola mundo");
+  [...document.querySelectorAll("dialog button")].find((b) => b.textContent === "Preparar mensaje").click();
+  await until(() => $("#message") && $("#message").value.includes("hola mundo"), "borrador en el chat");
+  assert.equal($("#message").value, "Traduce al inglés: hola mundo");
+  assert.ok(location.hash.startsWith("#/chat"));
+  $("#message").value = "";
+});
 await check("chat en streaming: Markdown y bloques de código como nodos seguros", async () => {
   location.hash = "#/chat";
   await until(() => $("#message"), "chat");
@@ -380,8 +494,7 @@ await check("chat con documentos: opt-in, envía la organización y muestra las 
   }
 });
 await check("agentes: la lista viene de la API, se envía el elegido y se recuerda", async () => {
-  location.hash = "#/chat";
-  await until(() => $("#chat-agent")?.options.length > 1, "selector de agentes");
+  await enterChat();
   const ids = [...$("#chat-agent").options].map((o) => o.value);
   assert.deepEqual(ids, ["general", "developer", "security", "research", "productivity", "data", "tutor"]);
   assert.equal($("#chat-agent").value, "general", "por defecto, el agente general");

@@ -16,6 +16,7 @@ from nexaro_api.deps import (
     require_permission,
     validate_origin,
 )
+from nexaro_api.routers.chat import resolve_agent
 from nexaro_api.schemas import ApiKeyCreateRequest, ChatRequest
 from nexaro_core.api_keys import ApiKeyError, KeyLimitError, create_api_key, list_api_keys
 from nexaro_core.api_keys import revoke_api_key as revoke
@@ -110,6 +111,7 @@ def usage(organization_id: str, access: CanReadUsage, ctx: Ctx, days: int = 30) 
 @router.post("/api/v1/chat")
 async def public_chat(body: ChatRequest, key: ChatKey, ctx: Ctx) -> dict[str, Any]:
     # Ya hay límite por minuto y clave (key_limiter); aquí solo el tope de generaciones.
+    profile = resolve_agent(ctx, key.user_id, body.agent_id)
     lease = acquire_generation(ctx, f"key:{key.key_id}", rate_limit=False)
     try:
         outcome = await ctx.personal_ai.chat(
@@ -118,7 +120,9 @@ async def public_chat(body: ChatRequest, key: ChatKey, ctx: Ctx) -> dict[str, An
             body.conversation_id,
             organization_id=key.organization_id,
             api_key_id=key.key_id,
-            agent=body.agent_id,
+            agent=profile.base_agent,
+            model=body.model,
+            profile=profile,
         )
     except ConversationNotFoundError:
         raise HTTPException(status_code=404, detail="Conversación no encontrada") from None

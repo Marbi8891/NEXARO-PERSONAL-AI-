@@ -22,7 +22,7 @@
 /* Formularios */
 .field { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-4); }
 .field label, .inline-form label { font-size: var(--fs-sm); font-weight: 500; color: var(--muted); }
-.field input, .field select, .inline-form input, .inline-form select, .toolbar input, .toolbar select {
+.field input, .field select, .field textarea, .inline-form input, .inline-form select, .toolbar input, .toolbar select {
   width: 100%;
   min-height: 40px;
   padding: var(--space-2) var(--space-3);
@@ -82,7 +82,8 @@ td.mono, .mono { font-family: var(--font-mono); font-size: var(--fs-xs); }
 .empty { color: var(--muted); padding: var(--space-4); font-size: var(--fs-sm); }
 
 /* Pestañas */
-.tabs { display: flex; gap: var(--space-2); border-bottom: 1px solid var(--border); }
+/* En móvil las pestañas no caben: se desplazan en horizontal en lugar de quedar fuera de la pantalla. */
+.tabs { display: flex; gap: var(--space-2); border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: thin; }
 .tabs button {
   padding: var(--space-3) var(--space-4);
   background: transparent;
@@ -90,6 +91,8 @@ td.mono, .mono { font-family: var(--font-mono); font-size: var(--fs-xs); }
   border-bottom: 2px solid transparent;
   color: var(--muted);
   font-weight: 500;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 .tabs button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--primary); font-weight: 650; }
 
@@ -117,7 +120,7 @@ td.mono, .mono { font-family: var(--font-mono); font-size: var(--fs-xs); }
 }
 .history-row { display: flex; align-items: stretch; gap: var(--space-1); }
 .history-row .history-item { flex: 1; min-width: 0; width: auto; }
-.history-delete {
+.history-action {
   flex: none;
   padding: 0 var(--space-3);
   border: 1px solid transparent;
@@ -127,7 +130,7 @@ td.mono, .mono { font-family: var(--font-mono); font-size: var(--fs-xs); }
   font-size: var(--fs-md, 1rem);
   cursor: pointer;
 }
-.history-delete:hover, .history-delete:focus-visible { background: var(--sidebar-active); color: var(--sidebar-text); }
+.history-action:hover, .history-action:focus-visible { background: var(--sidebar-active); color: var(--sidebar-text); }
 .history-item:hover { background: var(--sidebar-active); }
 .history-item.active { background: var(--sidebar-active); border-color: var(--sidebar-muted); }
 .history-title { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); }
@@ -179,7 +182,7 @@ td.mono, .mono { font-family: var(--font-mono); font-size: var(--fs-xs); }
 }
 .composer .button { padding: 0 var(--space-5); }
 .mode-toggle, .docs-toggle { display: flex; align-items: center; gap: var(--space-2); max-width: 850px; margin: var(--space-2) auto 0; color: var(--muted); font-size: var(--fs-xs); }
-.docs-toggle[hidden], .docs-toggle select[hidden] { display: none; }
+.docs-toggle[hidden], .docs-toggle select[hidden], .mode-toggle[hidden] { display: none; }
 .mode-toggle select, .docs-toggle select { font-size: var(--fs-xs); max-width: 14rem; }
 .docs-toggle:has(input:disabled) { opacity: 0.6; cursor: not-allowed; }
 .message-sources { margin-top: var(--space-3); font-size: var(--fs-xs); color: var(--muted); }
@@ -191,6 +194,9 @@ td.mono, .mono { font-family: var(--font-mono); font-size: var(--fs-xs); }
   .messages { padding: var(--space-4) var(--space-3); }
   .composer-wrap { padding: var(--space-3); }
   .composer .button { padding: 0 var(--space-4); }
+  /* Objetivo táctil: el selector de agente y de documentos se pulsa con el dedo. */
+  .mode-toggle, .docs-toggle { flex-wrap: wrap; font-size: var(--fs-sm); }
+  .mode-toggle select, .docs-toggle select { min-height: 2.75rem; font-size: var(--fs-sm); max-width: 100%; }
 }
 
 /* Apilado vertical con separación uniforme (paneles de pestañas, columnas de tarjetas) */
@@ -379,5 +385,5 @@ th { letter-spacing: .075em; }
 .tabs button { transition: color .14s ease, border-color .14s ease; }
 .stats .card, .stats > * { min-width: 0; }
 .stat dd { letter-spacing: -.035em; }
-.menu, .dialog, .toast { box-shadow: 0 8px 24px light-dark(rgb(16 26 43 / 8%), rgb(0 0 0 / 26%)); }
+.menu, .dialog, .toast { box-shadow: var(--shadow-overlay); }
 @media (prefers-reduced-motion: reduce) { .card, .button, .field input, .field select, .tabs button { transition: none; } }

@@ -12,6 +12,8 @@ from typing import Any
 
 import uvicorn
 
+from ai_gateway.gateway import Gateway, Route
+from ai_gateway.policy import GatewayPolicy
 from ai_gateway.schemas import CompletionRequest, CompletionResult, InferenceMetrics, StreamChunk
 from nexaro_api.bootstrap import migrate
 from nexaro_api.main import create_app
@@ -19,7 +21,9 @@ from nexaro_core.config import Settings
 from nexaro_core.database import Database
 from nexaro_core.identity import create_user
 
-ORIGIN = "http://127.0.0.1:8765"
+# NEXARO_E2E_PORT: en Windows Hyper-V reserva rangos (p. ej. 8751-8850) y 8765 puede no estar libre.
+PORT = int(os.environ.get("NEXARO_E2E_PORT", "8765"))
+ORIGIN = f"http://127.0.0.1:{PORT}"
 PASSWORD = "correct-horse-battery"
 
 
@@ -35,6 +39,13 @@ class FakeProvider:
     async def health(self) -> bool:
         return True
 
+    async def list_models(self) -> list[dict[str, Any]]:
+        """Modelos «instalados» del proveedor falso (para el selector de modelo)."""
+        return [
+            {"name": name, "size_bytes": 1, "parameter_size": size, "quantization": None}
+            for name, size in (("qwen2.5:3b", "3B"), ("llama3.2:latest", "3B"))
+        ]
+
     async def stream(self, request: CompletionRequest) -> AsyncIterator[StreamChunk]:
         """Streaming de pruebas: «lento» genera durante varios segundos (para probar «Detener»)
         y «codigo» devuelve Markdown con un bloque de código y HTML que debe verse como texto."""
@@ -43,6 +54,8 @@ class FakeProvider:
             for _ in range(200):
                 yield StreamChunk(content="parte ")
                 await asyncio.sleep(0.05)
+        elif "quemodelo" in asked:
+            yield StreamChunk(content=f"respondo con {request.model}")
         elif "codigo" in asked:
             for piece in ["**Hola** con `x`\n\n", "```py\nprint(1)\n", "```\n", "<b>x</b>"]:
                 yield StreamChunk(content=piece)
@@ -70,8 +83,10 @@ def main() -> None:
         for email, role, approved in accounts:
             user_id = create_user(db, email, PASSWORD, approved=approved)
             db.execute("UPDATE users SET role = ? WHERE id = ?", (role, user_id))
-    app: Any = create_app(settings, chat_provider=FakeProvider())
-    uvicorn.run(app, host="127.0.0.1", port=8765, log_level="warning")
+    # Detrás de un Gateway real: el selector de modelo y su comprobación son los de producción.
+    gateway = Gateway({"fake": FakeProvider()}, [Route("fake", "qwen2.5:3b")], GatewayPolicy())
+    app: Any = create_app(settings, chat_provider=gateway)
+    uvicorn.run(app, host="127.0.0.1", port=PORT, log_level="warning")
 
 
 if __name__ == "__main__":

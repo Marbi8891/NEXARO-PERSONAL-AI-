@@ -1,6 +1,6 @@
 [project]
 name = "nexaro"
-version = "0.3.0"
+version = "1.0.0"
 description = "NEXARO: plataforma de IA híbrida (local + cloud) con núcleo compartido."
 readme = "README.md"
 requires-python = ">=3.10"

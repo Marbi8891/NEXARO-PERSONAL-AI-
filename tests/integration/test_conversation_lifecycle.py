@@ -91,6 +91,85 @@ def test_delete_needs_session_and_allowed_origin(client: TestClient, logged_in: 
     assert conversation_ids(alice) == [conversation_id]
 
 
+def titles(client: TestClient) -> dict[str, str]:
+    return {c["id"]: c["title"] for c in client.get("/api/conversations").json()["conversations"]}
+
+
+def test_user_can_rename_own_conversation_with_audit(
+    logged_in: Factory, database: Database
+) -> None:
+    alice = logged_in("alice@example.com")
+    conversation_id = chat(alice, "primer mensaje").json()["conversation_id"]
+    assert titles(alice) == {
+        conversation_id: "primer mensaje"
+    }  # sin título propio: el 1.er mensaje
+
+    renamed = alice.patch(
+        f"/api/conversations/{conversation_id}",
+        json={"title": "  Plan   de estudio  "},
+        headers=HEADERS,
+    )
+
+    assert renamed.status_code == 200
+    assert renamed.json() == {"id": conversation_id, "title": "Plan de estudio"}
+    assert titles(alice) == {conversation_id: "Plan de estudio"}
+    detail = alice.get(f"/api/conversations/{conversation_id}").json()
+    assert detail["conversation"]["title"] == "Plan de estudio"
+    assert len(detail["messages"]) == 2  # renombrar no toca los mensajes
+    assert "conversation.rename" in audit_actions(database)
+    with database.connect() as db:
+        details = [r[0] for r in db.execute("SELECT details FROM audit_events")]
+    assert not any("Plan de estudio" in (d or "") for d in details)  # sin contenido en auditoría
+
+
+def test_rename_survives_new_messages(logged_in: Factory) -> None:
+    alice = logged_in("alice@example.com")
+    conversation_id = chat(alice, "uno").json()["conversation_id"]
+    alice.patch(f"/api/conversations/{conversation_id}", json={"title": "Fijo"}, headers=HEADERS)
+    chat(alice, "dos", conversation_id)
+    assert titles(alice) == {conversation_id: "Fijo"}
+
+
+@pytest.mark.parametrize("title", ["", "   ", "x" * 121])
+def test_rename_rejects_empty_or_too_long_titles(logged_in: Factory, title: str) -> None:
+    alice = logged_in("alice@example.com")
+    conversation_id = chat(alice, "hola").json()["conversation_id"]
+    response = alice.patch(
+        f"/api/conversations/{conversation_id}", json={"title": title}, headers=HEADERS
+    )
+    assert response.status_code == 422
+    assert titles(alice) == {conversation_id: "hola"}
+
+
+def test_cannot_rename_someone_elses_conversation(logged_in: Factory) -> None:
+    alice = logged_in("alice@example.com")
+    bob = logged_in("bob@example.com")
+    conversation_id = chat(alice, "secreto de alice").json()["conversation_id"]
+
+    response = bob.patch(
+        f"/api/conversations/{conversation_id}", json={"title": "de bob"}, headers=HEADERS
+    )
+
+    assert response.status_code == 404
+    assert titles(alice) == {conversation_id: "secreto de alice"}
+    missing = bob.patch("/api/conversations/no-existe", json={"title": "x"}, headers=HEADERS)
+    assert missing.status_code == 404  # misma respuesta: no revela si existe
+
+
+def test_rename_needs_session_and_allowed_origin(client: TestClient, logged_in: Factory) -> None:
+    alice = logged_in("alice@example.com")
+    conversation_id = chat(alice, "hola").json()["conversation_id"]
+    url = f"/api/conversations/{conversation_id}"
+
+    assert client.patch(url, json={"title": "x"}, headers=HEADERS).status_code == 401
+    assert (
+        alice.patch(url, json={"title": "x"}, headers={"Origin": "http://evil.example"}).status_code
+        == 403
+    )
+    assert alice.patch(url, json={"title": "x"}).status_code == 403
+    assert titles(alice) == {conversation_id: "hola"}
+
+
 def test_failed_first_turn_leaves_no_trace(logged_in: Factory, provider: FakeProvider) -> None:
     alice = logged_in("alice@example.com")
     provider.error = ProviderError("caído")
