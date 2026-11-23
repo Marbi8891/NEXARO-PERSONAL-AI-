@@ -50,6 +50,10 @@ shadows. Avoid oversized promotional headings inside the operational application
 5. Preserve keyboard navigation, reduced motion and WCAG AA contrast requirements.
 6. The identity refresh does not change API contracts, routing, authentication, data model or deployment.
 
+## Brand family
+
+NEXARO is the master brand. Product names retain the same wordmark and symbol, with a descriptor and a restrained accent. Current naming and governance rules are documented in [Brand Architecture](brand-architecture.md). Future product identities must not imply functionality that has not shipped.
+
 ## Implementation
 
 - Tokens: `frontend/css/tokens.css`
