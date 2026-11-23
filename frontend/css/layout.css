@@ -116,3 +116,16 @@
   .page-body { padding: var(--space-4); }
   .auth-card { padding: var(--space-5); }
 }
+
+
+/* Enterprise UI refinement — applied across authenticated and public views. */
+.auth { background: radial-gradient(ellipse at top, color-mix(in srgb, var(--accent) 7%, transparent), transparent 55%), var(--bg); }
+.auth-card { border-radius: var(--radius); box-shadow: 0 12px 36px light-dark(rgb(16 26 43 / 7%), rgb(0 0 0 / 22%)); }
+.sidebar { border-right: 1px solid var(--sidebar-border); }
+.sidebar-head { padding-bottom: var(--space-3); border-bottom: 1px solid var(--sidebar-border); }
+.nav a { transition: background-color .14s ease, color .14s ease; }
+.nav a[aria-current="page"] { box-shadow: inset 3px 0 0 var(--accent); background: color-mix(in srgb, var(--sidebar-active) 78%, var(--accent) 22%); }
+.topbar { min-height: 64px; }
+.topbar h1 { letter-spacing: -.025em; }
+.page-body { max-width: 1600px; width: 100%; margin-inline: auto; }
+@media (max-width: 760px) { .sidebar-head { padding-bottom: var(--space-2); } }
