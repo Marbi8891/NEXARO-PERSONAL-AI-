@@ -132,6 +132,11 @@ export const api = {
   notifications: () => request("/api/notifications"),
 
   agents: () => request("/api/agents"),
+  organizationAgents: (orgId) => request(`/api/organizations/${id(orgId)}/agents`),
+  createOrganizationAgent: (orgId, body) => request(`/api/organizations/${id(orgId)}/agents`, { method: "POST", body }),
+  organizationAgent: (orgId, agentId) => request(`/api/organizations/${id(orgId)}/agents/${id(agentId)}`),
+  updateOrganizationAgent: (orgId, agentId, body) => request(`/api/organizations/${id(orgId)}/agents/${id(agentId)}`, { method: "PUT", body }),
+  deleteOrganizationAgent: (orgId, agentId) => request(`/api/organizations/${id(orgId)}/agents/${id(agentId)}`, { method: "DELETE" }),
   conversations: () => request("/api/conversations"),
   conversation: (conversationId) => request(`/api/conversations/${id(conversationId)}`),
   deleteConversation: (conversationId) => request(`/api/conversations/${id(conversationId)}`, { method: "DELETE" }),
