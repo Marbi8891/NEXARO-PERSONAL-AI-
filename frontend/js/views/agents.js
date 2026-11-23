@@ -32,7 +32,7 @@ export async function agentsView({ container, shell }) {
     h("div", { class: "field" }, h("label", {}, "Categoría"), category),
     h("div", { class: "field" }, h("label", {}, "Modelo"), model),
     h("div", { class: "field" }, h("label", {}, "Instrucciones"), prompt),
-    h("div", { class: "field", hidden: true }, h("label", {}, "Estado"), status),
+    h("div", { class: "field" }, h("label", {}, "Estado"), status),
     h("div", { class: "row-actions" }, save, cancel),
     h("p", { class: "hint" }, "Esta primera versión solo admite agentes de instrucciones. No pueden ejecutar herramientas, terminal, red ni modificar archivos.")
   );
