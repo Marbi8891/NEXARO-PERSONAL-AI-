@@ -20,7 +20,19 @@ En producción `/docs` está desactivado. En desarrollo, la referencia generada 
 | GET | `/auth/me` | sesión | |
 | POST | `/auth/logout` | sesión | revoca la sesión en servidor |
 
-## Obsidian Vault (solo lectura)\n\n| Método | Ruta | Acceso | Notas |\n|---|---|---|---|\n| GET | `/obsidian/status` | sesión | Estado del Vault y número de notas Markdown |\n| GET | `/obsidian/notes?limit=200&offset=0` | sesión | Listado paginado; excluye carpetas ocultas y configuración |\n| GET | `/obsidian/note/{path}` | sesión | Lee una nota Markdown dentro del Vault; traversal y symlinks fuera del Vault rechazados |\n| GET | `/obsidian/search?q=...&limit=20` | sesión | Búsqueda literal sencilla |\n\nConfiguración Docker: `OBSIDIAN_VAULT_HOST_PATH` define el Vault del host; el contenedor lo monta como `/knowledge/obsidian` en modo read-only. Ver [guía de integración](docs/integrations/obsidian.md).\n\n## NEXARO Personal AI
+## Obsidian Vault (solo lectura)\n\n| Método | Ruta | Acceso | Notas |\n|---|---|---|---|\n| GET | `/obsidian/status` | sesión | Estado del Vault y número de notas Markdown |\n| GET | `/obsidian/notes?limit=200&offset=0` | sesión | Listado paginado; excluye carpetas ocultas y configuración |\n| GET | `/obsidian/note/{path}` | sesión | Lee una nota Markdown dentro del Vault; traversal y symlinks fuera del Vault rechazados |\n| GET | `/obsidian/search?q=...&limit=20` | sesión | Búsqueda literal sencilla |\n\nConfiguración Docker: `OBSIDIAN_VAULT_HOST_PATH` define el Vault del host; el contenedor lo monta como `/knowledge/obsidian` en modo read-only. Ver [guía de integración](docs/integrations/obsidian.md).\n\n## Agent Registry (custom agents)
+
+| Method | Ruta | Acceso | Notas |
+|---|---|---|---|
+| GET | `/organizations/{id}/agents` | `agents:read` | Agentes personalizados de esa organización |
+| POST | `/organizations/{id}/agents` | `agents:manage` + Origin | Crea perfil persistente. Prompt, categoría, modelo opcional; herramientas y permisos ejecutables deben quedar vacíos/denegados |
+| GET | `/organizations/{id}/agents/{agent_id}` | `agents:read` | Devuelve la definición del agente |
+| PUT | `/organizations/{id}/agents/{agent_id}` | `agents:manage` + Origin | Reemplaza configuración y estado active/disabled |
+| DELETE | `/organizations/{id}/agents/{agent_id}` | `agents:manage` + Origin | Elimina el perfil; 204 |
+
+Esta primera fase persiste y administra perfiles, pero no los conecta todavía al selector de Chat ni permite ejecutar herramientas. Terminal, red, filesystem y autonomía ejecutable están bloqueados hasta disponer de runtime aislado y aprobaciones.
+
+## NEXARO Personal AI
 
 | Método | Ruta | Acceso | Notas |
 |---|---|---|---|
