@@ -1,4 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="NEXARO">
-  <rect width="64" height="64" rx="14" fill="#2b5c97"/>
-  <path fill="#ffffff" d="M18 48V16h6.5L40 37.2V16h6v32h-6.5L24 26.8V48z"/>
+  <defs>
+    <linearGradient id="nexaro-mark" x1="8" y1="6" x2="56" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1C3555"/>
+      <stop offset="1" stop-color="#0B1728"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="17" fill="url(#nexaro-mark)"/>
+  <path d="M17 47V17h7l16 20V17h7v30h-7L24 27v20z" fill="#F4F7FB"/>
+  <path d="M43 13h8v8" fill="none" stroke="#63D5D0" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="49" cy="15" r="2.5" fill="#63D5D0"/>
 </svg>
