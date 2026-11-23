@@ -67,7 +67,7 @@ Los volúmenes se conservan al detener el proyecto. **No uses `docker compose do
 
 ## 6. Copias de seguridad
 
-Procedimiento completo, restauración y resultado de la prueba: [BACKUP_RESTORE.md](../BACKUP_RESTORE.md).
+Procedimiento completo, restauración y resultado de la prueba: [BACKUP_RESTORE.md](backup-restore.md).
 
 ```powershell
 pwsh -File C:\Users\pc\NEXARO-PERSONAL-AI-\scripts\backup_nexaro.ps1 -Reason pre-update
@@ -126,7 +126,7 @@ El nombre de servicio puede variar según el Compose usado; el archivo del proye
 
 ## 9. Seguridad operacional
 
-- Mantén el acceso local mientras no hayas configurado un despliegue remoto seguro; para el acceso remoto usa solo Tailscale Serve ([REMOTE_ACCESS.md](../REMOTE_ACCESS.md)).
+- Mantén el acceso local mientras no hayas configurado un despliegue remoto seguro; para el acceso remoto usa solo Tailscale Serve ([REMOTE_ACCESS.md](remote-access.md)).
 - En producción, HTTPS y cookies Secure son obligatorios por configuración.
 - No abras el puerto de Ollama a Internet.
 - No publiques el panel de administración sin revisar autenticación y controles.
@@ -143,4 +143,4 @@ make check
 make run
 ```
 
-El objetivo `make check` ejecuta las comprobaciones descritas por el Makefile (lint, tipos, tests y cobertura). Consulta [DEVELOPMENT.md](../DEVELOPMENT.md) para los detalles y comandos de desarrollo.
+El objetivo `make check` ejecuta las comprobaciones descritas por el Makefile (lint, tipos, tests y cobertura). Consulta [DEVELOPMENT.md](../development/reference.md) para los detalles y comandos de desarrollo.

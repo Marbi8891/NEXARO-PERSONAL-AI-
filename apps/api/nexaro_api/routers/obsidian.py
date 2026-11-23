@@ -2,8 +2,8 @@
 
 El Vault es un único directorio del host sin propietario por usuario ni por organización, así que
 NO es un recurso compartido: solo lo leen los administradores de la plataforma y las cuentas de
-OBSIDIAN_ALLOWED_EMAILS (SECURITY_REVIEW_V1.md, OBS-1). Cada usuario tiene su propio límite de
-peticiones por minuto y las denegaciones quedan en la auditoría.
+OBSIDIAN_ALLOWED_EMAILS (docs/security/audits/security-review-v1.md, OBS-1). Cada usuario tiene
+su propio límite de peticiones por minuto y las denegaciones quedan en la auditoría.
 """
 
 from __future__ import annotations

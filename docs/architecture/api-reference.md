@@ -5,7 +5,7 @@ Base `/api`. Dos formas de autenticarse:
 - **Sesión (navegador):** cookie HttpOnly `SameSite=Strict`. Las rutas que modifican estado exigen
   cabecera `Origin` incluida en `ALLOWED_ORIGINS`.
 - **Clave de API (programática):** `Authorization: Bearer nxr_…` solo en `/api/v1/*`; no usa cookies ni
-  `Origin`. Ver [ADR-0009](docs/decisions/0009-api-keys-developer-module.md).
+  `Origin`. Ver [ADR-0009](../decisions/0009-api-keys-developer-module.md).
 
 En producción `/docs` está desactivado. En desarrollo, la referencia generada (OpenAPI) está en `/docs`.
 
@@ -32,7 +32,7 @@ En producción `/docs` está desactivado. En desarrollo, la referencia generada 
 
 El Vault es del propietario: cualquier otro usuario recibe 403 (auditado como `obsidian.access`). 60 peticiones/minuto por usuario (`OBSIDIAN_REQUESTS_PER_MINUTE`).
 
-Configuración Docker: `OBSIDIAN_VAULT_HOST_PATH` define el Vault del host; el contenedor lo monta como `/knowledge/obsidian` en modo read-only. Ver [guía de integración](docs/integrations/obsidian.md).
+Configuración Docker: `OBSIDIAN_VAULT_HOST_PATH` define el Vault del host; el contenedor lo monta como `/knowledge/obsidian` en modo read-only. Ver [guía de integración](../integrations/obsidian.md).
 
 ## NEXARO Personal AI
 
@@ -83,7 +83,7 @@ Configuración Docker: `OBSIDIAN_VAULT_HOST_PATH` define el Vault del host; el c
 | GET | `/v1/conversations?limit=50` | clave con `conversations:read` | solo conversaciones creadas con claves de la organización (1–100) |
 | GET | `/v1/conversations/{id}` | clave con `conversations:read` | 404 si no es de esa organización (incluye el chat web) |
 
-Sin el permiso: 403. Cada clave admite 60 peticiones por minuto (`API_KEY_REQUESTS_PER_MINUTE`); al superarlo, 429 con `Retry-After`. Ver [ADR-0011](docs/decisions/0011-api-key-scopes-and-read-api.md).
+Sin el permiso: 403. Cada clave admite 60 peticiones por minuto (`API_KEY_REQUESTS_PER_MINUTE`); al superarlo, 429 con `Retry-After`. Ver [ADR-0011](../decisions/0011-api-key-scopes-and-read-api.md).
 
 Permisos: `api_keys:manage` y `usage:read` los tienen propietario y administrador de la organización.
 
@@ -95,20 +95,20 @@ curl -X POST http://127.0.0.1:8001/api/v1/chat \
 
 ## Documentos
 
-Bajo `/organizations/{id}/documents`. Lectura: `documents:read` (todos los roles); escritura: `documents:write` (propietario, administrador, miembro). Texto plano y PDF con texto. Ver [ADR-0012](docs/decisions/0012-documents-lexical-search.md).
+Bajo `/organizations/{id}/documents`. Lectura: `documents:read` (todos los roles); escritura: `documents:write` (propietario, administrador, miembro). Texto plano y PDF con texto. Ver [ADR-0012](../decisions/0012-documents-lexical-search.md).
 
 | Método | Ruta | Notas |
 |---|---|---|
 | GET | `/documents` | lista con `chunk_count` y `limits` |
 | POST | `/documents` | `{title, content, source?, mime_type?}`. 422 vacío, 413 más de 200 000 caracteres, 409 duplicado o 100 documentos |
-| POST | `/documents/pdf?title=&source=` | cuerpo binario `Content-Type: application/pdf` (límite `MAX_BODY_BYTES`, 2 MiB por defecto). 415 otro tipo, 413 más de 300 páginas o 200 000 caracteres, 422 PDF no válido, cifrado o sin texto (escaneado; no hay OCR), 409 duplicado. Ver [ADR-0018](docs/decisions/0018-pdf-documents.md) |
+| POST | `/documents/pdf?title=&source=` | cuerpo binario `Content-Type: application/pdf` (límite `MAX_BODY_BYTES`, 2 MiB por defecto). 415 otro tipo, 413 más de 300 páginas o 200 000 caracteres, 422 PDF no válido, cifrado o sin texto (escaneado; no hay OCR), 409 duplicado. Ver [ADR-0018](../decisions/0018-pdf-documents.md) |
 | DELETE | `/documents/{doc_id}` | 204; borrado lógico, elimina sus fragmentos; 404 si no es de esa organización |
 | GET | `/documents/search?q=&limit=5` | fragmentos por relevancia (BM25): `document_id, title, ordinal, snippet, score` |
 | POST | `/documents/ask` | `{question}` → `{answer, sources}`. Sin fragmentos relevantes no consulta al modelo |
 
 ## Finanzas: gastos
 
-Bajo `/organizations/{id}/expenses`. Solo propietario y administrador (`expenses:read` / `expenses:write`); otros roles reciben 403 y quien no es miembro, 404. Importes en **céntimos** (`amount_cents` incluye IVA; `vat_cents` es la parte de IVA). Ver [ADR-0013](docs/decisions/0013-finance-expenses.md).
+Bajo `/organizations/{id}/expenses`. Solo propietario y administrador (`expenses:read` / `expenses:write`); otros roles reciben 403 y quien no es miembro, 404. Importes en **céntimos** (`amount_cents` incluye IVA; `vat_cents` es la parte de IVA). Ver [ADR-0013](../decisions/0013-finance-expenses.md).
 
 | Método | Ruta | Notas |
 |---|---|---|
@@ -121,7 +121,7 @@ Bajo `/organizations/{id}/expenses`. Solo propietario y administrador (`expenses
 
 ## Biblioteca de prompts
 
-Bajo `/organizations/{id}/prompts`. `prompts:read` (todos los roles) y `prompts:write` (propietario, administrador y miembro); quien no es miembro recibe 404. Ver [ADR-0025](docs/decisions/0025-prompt-library.md).
+Bajo `/organizations/{id}/prompts`. `prompts:read` (todos los roles) y `prompts:write` (propietario, administrador y miembro); quien no es miembro recibe 404. Ver [ADR-0025](../decisions/0025-prompt-library.md).
 
 | Método | Ruta | Notas |
 |---|---|---|

@@ -1,6 +1,6 @@
-"""Copias de seguridad (BACKUP_RESTORE.md): el helper que corre en el contenedor y las garantías
-estáticas de los scripts de PowerShell. La prueba completa con Docker es
-scripts/test_backup_restore.ps1 (resultado en BACKUP_RESTORE.md)."""
+"""Copias de seguridad (docs/deployment/backup-restore.md): el helper que corre en el contenedor y
+las garantías estáticas de los scripts de PowerShell. La prueba completa con Docker es
+scripts/test_backup_restore.ps1 (resultado en docs/deployment/backup-restore.md)."""
 
 import base64
 import importlib.util

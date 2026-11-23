@@ -1,4 +1,4 @@
-"""Helper of the NEXARO backup scripts (BACKUP_RESTORE.md). Standard library only.
+"""Helper of the NEXARO backup scripts (docs/deployment/backup-restore.md). Standard library only.
 
 It runs INSIDE a container of the backend image (the PowerShell scripts pipe it through stdin with
 `docker exec -i ... python - <command>` or `docker run -i ... python - <command>`), so the Windows

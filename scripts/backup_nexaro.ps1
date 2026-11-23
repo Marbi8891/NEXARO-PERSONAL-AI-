@@ -14,7 +14,7 @@
   Nunca sobrescribe una copia (el nombre lleva fecha y hora; si existe, falla), marca los archivos
   como solo lectura y nunca escribe en la base viva. Con el backend parado lee el volumen en modo
   solo lectura. Retención: conserva las -Keep más recientes de cada motivo (solo carpetas creadas
-  por este script). Ver BACKUP_RESTORE.md.
+  por este script). Ver docs/deployment/backup-restore.md.
 
 .EXAMPLE
   pwsh -File C:\Users\pc\NEXARO-PERSONAL-AI-\scripts\backup_nexaro.ps1

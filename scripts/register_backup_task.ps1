@@ -7,7 +7,7 @@
   tarea "NEXARO Backup diario" para el usuario actual (sin privilegios elevados), que ejecuta
   backup_nexaro.ps1 -Reason daily a la hora indicada y, si el equipo estaba apagado, en cuanto
   vuelva a estar disponible. Modificar el Programador de tareas es un cambio del sistema operativo:
-  ejecútalo tú cuando lo apruebes (BACKUP_RESTORE.md).
+  ejecútalo tú cuando lo apruebes (docs/deployment/backup-restore.md).
 
 .EXAMPLE
   pwsh -File C:\Users\pc\NEXARO-PERSONAL-AI-\scripts\register_backup_task.ps1              # simulación

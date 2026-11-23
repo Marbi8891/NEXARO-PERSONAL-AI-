@@ -137,7 +137,7 @@ preflight() {
   else
     step "Modo Ollama externo, red $net"
     docker network inspect "$net" >/dev/null 2>&1 \
-      || fail "no existe la red $net: arranca antes ~/Docker/ollama-local (docker compose up -d) o usa el modo incluido (DEPLOYMENT.md)"
+      || fail "no existe la red $net: arranca antes ~/Docker/ollama-local (docker compose up -d) o usa el modo incluido (docs/deployment/deployment-reference.md)"
     running "$(ollama_container)" \
       && ok "contenedor $(ollama_container) en marcha" \
       || printf '  AVISO el contenedor %s no está en marcha: el backend arrancará, pero /api/health dará 503\n' "$(ollama_container)"

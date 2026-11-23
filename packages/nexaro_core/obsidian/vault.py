@@ -1,8 +1,9 @@
 """Read-only Obsidian Vault connector for NEXARO.
 
-Límites (SECURITY_REVIEW_V1.md, OBS-2/OBS-3): una nota mayor que `max_note_bytes` no se lee
-entera nunca (ni al abrirla, ni al buscar, ni al listar sus etiquetas) y cada recorrido del Vault
-se detiene tras `max_files` notas. Así un Vault enorme o un archivo gigante no bloquean el backend.
+Límites (docs/security/audits/security-review-v1.md, OBS-2/OBS-3): una nota mayor que
+`max_note_bytes` no se lee entera nunca (ni al abrirla, ni al buscar, ni al listar sus
+etiquetas) y cada recorrido del Vault se detiene tras `max_files` notas. Así un
+Vault enorme o un archivo gigante no bloquean el backend.
 """
 
 from __future__ import annotations

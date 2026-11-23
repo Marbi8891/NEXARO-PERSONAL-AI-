@@ -15,7 +15,7 @@
 - Claves de API con scopes (`chat:write`, `conversations:read`) y límite por minuto por clave.
 - Cambio de contraseña con la actual; revoca las demás sesiones (`POST /api/auth/password`).
 - Vault de Obsidian: solo lectura, solo administradores y `OBSIDIAN_ALLOWED_EMAILS`, con topes de tamaño, archivos y peticiones.
-- Copias de seguridad verificadas fuera del repositorio ([BACKUP_RESTORE.md](BACKUP_RESTORE.md)); acceso remoto solo por Tailscale Serve, nunca Funnel ([REMOTE_ACCESS.md](REMOTE_ACCESS.md)).
+- Copias de seguridad verificadas fuera del repositorio ([BACKUP_RESTORE.md](docs/deployment/backup-restore.md)); acceso remoto solo por Tailscale Serve, nunca Funnel ([REMOTE_ACCESS.md](docs/deployment/remote-access.md)).
 
 - Aislamiento entre organizaciones: `organization_id NOT NULL` + claves foráneas compuestas
   (la base rechaza referencias entre organizaciones), acceso por membresía y permiso (404 si no
@@ -43,7 +43,7 @@
 - Sin recuperación de contraseña olvidada (no hay correo saliente); el cambio con la contraseña actual sí existe (Perfil).
 - Sesiones de 7 días sin caducidad por inactividad.
 
-Revisión completa de la v1.0 (hallazgos, correcciones y riesgos): [SECURITY_REVIEW_V1.md](SECURITY_REVIEW_V1.md).
+Revisión completa de la v1.0 (hallazgos, correcciones y riesgos): [SECURITY_REVIEW_V1.md](docs/security/audits/security-review-v1.md).
 
 ## Reporte de vulnerabilidades
 

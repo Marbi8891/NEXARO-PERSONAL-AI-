@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-  Acceso remoto PRIVADO a NEXARO con Tailscale Serve (REMOTE_ACCESS.md).
+  Acceso remoto PRIVADO a NEXARO con Tailscale Serve (docs/deployment/remote-access.md).
 
 .DESCRIPTION
   check   (por defecto) Solo lee: Tailscale instalado y conectado, Serve/Funnel, puertos de
@@ -51,7 +51,7 @@ $ts = Get-Tailscale
 
 if ($Action -eq 'check') {
     Write-Host '==> Tailscale'
-    if (-not $ts) { Bad 'Tailscale no está instalado (instalación manual: REMOTE_ACCESS.md, paso 1)' } else {
+    if (-not $ts) { Bad 'Tailscale no está instalado (instalación manual: docs/deployment/remote-access.md, paso 1)' } else {
         Ok "cliente: $ts"
         $dns = Get-DnsName $ts
         if (-not $dns) { Bad 'Tailscale no está conectado (tailscale up / iniciar sesión en la app)' } else {

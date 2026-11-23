@@ -9,7 +9,7 @@
   reinicio del contenedor y persistencia de la conversación. No toca nexaro-personal-ai_nexaro_data
   ni el contenedor nexaro-backend. Borra solo lo que crea (etiqueta nexaro.test=<id>).
 
-  Úsalo antes de desplegar una imagen nueva (DEPLOYMENT.md).
+  Úsalo antes de desplegar una imagen nueva (docs/deployment/deployment-reference.md).
 
 .EXAMPLE
   pwsh -File C:\Users\pc\NEXARO-PERSONAL-AI-\scripts\smoke_isolated.ps1 -Image nexaro-personal-ai-backend:v1-candidate

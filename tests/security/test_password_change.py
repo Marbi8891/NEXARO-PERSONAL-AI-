@@ -1,4 +1,4 @@
-"""Cambio de contraseña del propio usuario (SECURITY_REVIEW_V1.md, AUTH-1)."""
+"""Cambio de contraseña del propio usuario (docs/security/audits/security-review-v1.md, AUTH-1)."""
 
 from collections.abc import Callable
 from typing import Any

@@ -6,7 +6,7 @@ proveedores en la nube. Monolito modular en Python (FastAPI) con frontend HTML/C
 
 ## Identidad visual
 
-NEXARO usa una arquitectura de marca corporativa con productos bajo una marca matriz. Consulta [Brand Architecture](docs/brand-architecture.md) y el [Design System](docs/design-system.md).
+NEXARO usa una arquitectura de marca corporativa con productos bajo una marca matriz. Consulta [Brand Architecture](docs/product/brand-architecture.md) y el [Design System](docs/product/design-system.md).
 
 **Brand line:** Intelligence under your control.
 
@@ -29,16 +29,16 @@ NEXARO usa una arquitectura de marca corporativa con productos bajo una marca ma
 | Agentes: 6 especializados + tutor, herramientas con permiso por agente y usuario, auditoría `agent.tool`, selector en el chat | Implementado y probado (ADR-0022) |
 | Tareas, embeddings | Solo esquema (sin API) |
 | Migraciones versionadas | Implementado (SQLite, hasta la 13), con copia verificada antes de migrar; actualización desde versiones anteriores probada |
-| Copias de seguridad y restauración (Windows, PowerShell) | Implementado; prueba completa de restauración en entorno temporal: PASS ([BACKUP_RESTORE.md](BACKUP_RESTORE.md)) |
+| Copias de seguridad y restauración (Windows, PowerShell) | Implementado; prueba completa de restauración en entorno temporal: PASS ([BACKUP_RESTORE.md](docs/deployment/backup-restore.md)) |
 | Operaciones: estado de servicios, recursos, errores y copias (Administración → Operaciones) | Implementado y probado |
 | Obsidian (solo lectura, solo propietario) | Implementado y probado |
-| Acceso remoto privado (Tailscale Serve) | Preparado, **no activado** ([REMOTE_ACCESS.md](REMOTE_ACCESS.md)) |
+| Acceso remoto privado (Tailscale Serve) | Preparado, **no activado** ([REMOTE_ACCESS.md](docs/deployment/remote-access.md)) |
 | PostgreSQL | DDL validado con un servidor real; la app aún no ejecuta sobre él |
 | AWS (Terraform) | Aparcado por decisión del propietario; **no se crea nada en AWS sin autorización expresa** |
 
 ## Arranque en Windows (ThinkPad)
 
-Ver [DEPLOYMENT.md](DEPLOYMENT.md#despliegue-permanente-en-el-thinkpad-windows--docker-desktop--v10): requisitos, puerto, copia previa y arranque.
+Ver [DEPLOYMENT.md](docs/deployment/deployment-reference.md#despliegue-permanente-en-el-thinkpad-windows--docker-desktop--v10): requisitos, puerto, copia previa y arranque.
 
 En Windows no hay `make` y PowerShell no continúa líneas con `\`: los bloques de la sección
 siguiente son para macOS/Linux. Equivalentes en PowerShell (desde la carpeta del clon):
@@ -61,25 +61,25 @@ docker exec -it nexaro-backend python -m nexaro_api.bootstrap_admin \
 ```
 
 Por defecto usa el Ollama de `~/Docker/ollama-local`; en una máquina sin él, el perfil `ollama` lo
-incluye ([DEPLOYMENT.md](DEPLOYMENT.md)). No hay administradores ni registro público por defecto; ver
+incluye ([DEPLOYMENT.md](docs/deployment/deployment-reference.md)). No hay administradores ni registro público por defecto; ver
 [SECURITY.md](SECURITY.md).
 
 ## Documentación
 
 La documentación de la aplicación está centralizada en [docs/README.md](docs/README.md).
 
-- [Descripción del producto](docs/PRODUCT.md)
-- [Guía de usuario](docs/USER_GUIDE.md)
-- [Arquitectura](ARCHITECTURE.md)
-- [API](API.md)
-- [Desarrollo](DEVELOPMENT.md)
-- [Despliegue y operación](docs/OPERATIONS.md) · [Despliegue](DEPLOYMENT.md)
-- [Copias de seguridad y restauración](BACKUP_RESTORE.md)
-- [Acceso remoto privado](REMOTE_ACCESS.md)
-- [Evaluación de la IA](AI_EVALUATION.md)
-- v1.0: [auditoría](AUDIT_V1.md) · [revisión de seguridad](SECURITY_REVIEW_V1.md) · [checklist de release](RELEASE_CHECKLIST_V1.md) · [notas de versión](RELEASE_NOTES_V1.md)
+- [Descripción del producto](docs/product/overview.md)
+- [Guía de usuario](docs/product/user-guide.md)
+- [Arquitectura](docs/architecture/modules.md)
+- [API](docs/architecture/api-reference.md)
+- [Desarrollo](docs/development/reference.md)
+- [Despliegue y operación](docs/deployment/operations.md) · [Despliegue](docs/deployment/deployment-reference.md)
+- [Copias de seguridad y restauración](docs/deployment/backup-restore.md)
+- [Acceso remoto privado](docs/deployment/remote-access.md)
+- [Evaluación de la IA](docs/development/ai-evaluation.md)
+- v1.0: [auditoría](docs/security/audits/audit-v1.md) · [revisión de seguridad](docs/security/audits/security-review-v1.md) · [checklist de release](docs/releases/v1.0-checklist.md) · [notas de versión](docs/releases/v1.0-notes.md)
 - [Seguridad](SECURITY.md)
-- [Sistema de diseño](docs/design-system.md)
+- [Sistema de diseño](docs/product/design-system.md)
 - [Decisiones técnicas (ADRs)](docs/decisions/)
 
 ## Desarrollo
@@ -90,7 +90,7 @@ make check     # ruff + mypy + pytest con cobertura
 make run       # API local con recarga en 127.0.0.1:8001
 ```
 
-Detalles en [DEVELOPMENT.md](DEVELOPMENT.md).
+Detalles en [DEVELOPMENT.md](docs/development/reference.md).
 
 ## Estructura
 

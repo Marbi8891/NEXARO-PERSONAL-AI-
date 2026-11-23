@@ -1,6 +1,6 @@
 """Acceso al Vault de Obsidian: quién lo lee, rutas fuera del Vault y abuso de recursos.
 
-Hallazgos OBS-1..OBS-4 de SECURITY_REVIEW_V1.md.
+Hallazgos OBS-1..OBS-4 de docs/security/audits/security-review-v1.md.
 """
 
 from collections.abc import Callable, Iterator

@@ -1,5 +1,9 @@
 # IMPLEMENTATION_STATUS — NEXARO Personal AI
 
+> **Instantánea histórica (2026-11-22), anterior a la v1.0.** El estado vigente está en la
+> [matriz de capacidades](capabilities.md). Desde esta fecha, la v1.0 verificó con Docker y el Ollama
+> real los pasos 1, 6, 18 y 19 ([checklist v1.0](../releases/v1.0-checklist.md), puntos 13, 16 y 17).
+
 Actualizado: 2026-11-22. Estados: `IMPLEMENTED` (implementado y verificado en esta auditoría),
 `IMPLEMENTED_PARTIALLY`, `BROKEN`, `NOT_IMPLEMENTED`, `DOCUMENTED_ONLY`, `NOT_VERIFIED` (existe
 código, pero no se ha podido ejecutar aquí). Un test con modelo simulado verifica el flujo de la

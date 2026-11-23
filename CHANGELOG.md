@@ -2,7 +2,7 @@
 
 ## [1.0.0-rc] — rama `claude/nexaro-v1-consolidation-921fe0` (2026-11-23)
 
-Detalle: [RELEASE_NOTES_V1.md](RELEASE_NOTES_V1.md).
+Detalle: [RELEASE_NOTES_V1.md](docs/releases/v1.0-notes.md).
 
 ### Seguridad
 - Obsidian: el Vault solo lo leen administradores y `OBSIDIAN_ALLOWED_EMAILS` (antes, cualquier usuario autenticado); topes de tamaño de nota, de archivos recorridos y de peticiones por usuario; denegaciones auditadas.

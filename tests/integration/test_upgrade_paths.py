@@ -1,4 +1,4 @@
-"""Actualización desde bases de versiones anteriores (AUDIT_V1.md, DB-1/DB-2).
+"""Actualización desde bases de versiones anteriores (docs/security/audits/audit-v1.md, DB-1/DB-2).
 
 Cada versión intermedia del esquema (v1..v6) se actualiza a la actual sin perder datos, y una base
 que viene de una rama con otra numeración de migraciones (p. ej. la 0008 de

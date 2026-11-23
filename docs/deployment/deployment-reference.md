@@ -76,7 +76,7 @@ Recursos: backend 1 GiB / 2 CPU / 200 procesos; logs 10 MiB × 5. El Ollama exte
 Requisitos: Docker con **Compose >= 2.20** (Docker Desktop en macOS o Docker Engine en Linux, incluido
 Linux en VirtualBox), `make` y `curl`. Unos 4 GB de RAM libres para Docker con `qwen2.5:3b`.
 
-Hay dos modos de Ollama ([ADR-0021](docs/decisions/0021-compose-ollama-profile-and-smoke.md)). En los
+Hay dos modos de Ollama ([ADR-0021](../decisions/0021-compose-ollama-profile-and-smoke.md)). En los
 dos, el backend lo encuentra como `http://ollama:11434` y Ollama **no publica puertos** desde este proyecto.
 
 | | Externo (por defecto, MacBook) | Incluido (máquina nueva) |
@@ -107,7 +107,7 @@ No uses los dos a la vez sobre la misma red: `make up` lo impide.
 «Servicio de IA no disponible» si Ollama no responde, o «Modelo de IA no disponible» si falta el modelo;
 con todo bien, `{"status":"ok","ollama":"connected","model":"ready"}`.
 
-Variables de la aplicación: [`.env.example`](.env.example). `compose.yaml` fija las del servicio; desde
+Variables de la aplicación: [`.env.example`](../../.env.example). `compose.yaml` fija las del servicio; desde
 `.env` se pueden cambiar `OLLAMA_MODEL`, `OLLAMA_NETWORK`, `OLLAMA_IMAGE` (fíjala a una versión tras la
 primera descarga: `docker image inspect ollama/ollama:latest --format '{{index .RepoDigests 0}}'`) y
 `OLLAMA_MEM_LIMIT` (6g).
@@ -125,12 +125,12 @@ primera descarga: `docker image inspect ollama/ollama:latest --format '{{index .
 
 ### Sin Docker (desarrollo)
 
-`make install && make run` (API en `127.0.0.1:8001`, Ollama en `OLLAMA_BASE_URL`). Ver [DEVELOPMENT.md](DEVELOPMENT.md).
+`make install && make run` (API en `127.0.0.1:8001`, Ollama en `OLLAMA_BASE_URL`). Ver [DEVELOPMENT.md](../development/reference.md).
 
 ### Copias de seguridad y actualización
 
 - La base es un único archivo SQLite en el volumen `nexaro-personal-ai_nexaro_data`. En Windows:
-  `scripts/backup_nexaro.ps1` (copia verificada, ver [BACKUP_RESTORE.md](BACKUP_RESTORE.md)); en macOS,
+  `scripts/backup_nexaro.ps1` (copia verificada, ver [BACKUP_RESTORE.md](backup-restore.md)); en macOS,
   `scripts/rebuild_backend.sh` la hace antes de actualizar. La imagen no incluye el binario `sqlite3`.
   Guarda las copias fuera del repositorio: contienen datos de usuarios.
 - Actualizar = reconstruir **solo** `backend` conservando el volumen. Las migraciones pendientes (hoy hasta la 10)
@@ -199,8 +199,8 @@ credenciales vienen del rol/entorno de AWS, no del repositorio. Mientras `AI_ALL
 ## AWS (Terraform, sin aplicar)
 
 Código en `infrastructure/aws/terraform` (módulos + `envs/{dev,staging,prod}`). **No se ha creado
-ningún recurso.** Decisiones y límites: [ADR-0006](docs/decisions/0006-aws-infrastructure.md);
-costes: [docs/deployment/aws-costs.md](docs/deployment/aws-costs.md).
+ningún recurso.** Decisiones y límites: [ADR-0006](../decisions/0006-aws-infrastructure.md);
+costes: [docs/deployment/aws-costs.md](aws-costs.md).
 
 Para aplicarlo (con tu autorización expresa, desde tu máquina):
 

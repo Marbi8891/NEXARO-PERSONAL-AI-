@@ -42,7 +42,7 @@ frontend/js/views/           una vista por pantalla; sin lógica de red propia m
 ```
 
 Reglas: el DOM se construye con `h()` (nunca `innerHTML`); los colores solo existen en `tokens.css`;
-una pantalla entra en la navegación solo si tiene API real. Sistema de diseño: [docs/design-system.md](docs/design-system.md).
+una pantalla entra en la navegación solo si tiene API real. Sistema de diseño: [docs/design-system.md](../product/design-system.md).
 
 ## Arranque y migración
 

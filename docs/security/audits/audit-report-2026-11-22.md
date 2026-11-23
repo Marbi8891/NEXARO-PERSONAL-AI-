@@ -71,7 +71,7 @@ El PR de consolidación lo ejecutó por primera vez (2026-11-22): `quality` y `t
 
 ## 4. Funcionalidades
 
-El detalle con evidencias está en [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md). Resumen
+El detalle con evidencias está en [IMPLEMENTATION_STATUS.md](../../product/implementation-status.md). Resumen
 del MVP definido por el propietario (20 pasos): **8 verificados de 20 (40 %)** en la auditoría inicial. El valor actual está en IMPLEMENTATION_STATUS.md.
 
 ## 5. Bugs y defectos
@@ -126,4 +126,4 @@ documentos contra inyección de prompt.
 
 ## 10. Prioridades
 
-Ver [ROADMAP.md](ROADMAP.md).
+Ver [ROADMAP.md](../../../ROADMAP.md).

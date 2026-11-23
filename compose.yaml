@@ -20,7 +20,7 @@ services:
       OLLAMA_MODEL: "${OLLAMA_MODEL:-qwen2.5:3b}"
       OLLAMA_KEEP_ALIVE: "30m"
       OLLAMA_NUM_CTX: "4096"
-      # Acceso remoto privado (REMOTE_ACCESS.md): añade aquí la URL https de Tailscale Serve y
+      # Acceso remoto privado (docs/deployment/remote-access.md): añade aquí la URL https de Tailscale Serve y
       # activa COOKIE_SECURE=true en .env. El puerto sigue publicado solo en 127.0.0.1.
       ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-http://127.0.0.1:8001,http://localhost:8001}"
       COOKIE_SECURE: "${COOKIE_SECURE:-false}"
@@ -66,7 +66,7 @@ services:
   ollama:
     profiles: ["ollama"]
     # ASSUMPTION: misma imagen que ~/Docker/ollama-local. Fija una versión o digest tras la
-    # primera descarga (OLLAMA_IMAGE en .env); ver DEPLOYMENT.md.
+    # primera descarga (OLLAMA_IMAGE en .env); ver docs/deployment/deployment-reference.md.
     image: "${OLLAMA_IMAGE:-ollama/ollama:latest}"
     container_name: nexaro-ollama
     restart: unless-stopped
