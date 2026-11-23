@@ -132,6 +132,10 @@ primera descarga: `docker image inspect ollama/ollama:latest --format '{{index .
   Guarda las copias fuera del repositorio: contienen datos de usuarios.
 - Actualizar = reconstruir **solo** `backend` conservando el volumen. Las migraciones pendientes (hoy hasta la 7)
   se aplican al arrancar en una transacción; si fallan, el arranque aborta sin dejar estado parcial.
+- Antes de aplicar migraciones pendientes sobre una base con datos, el arranque deja una copia
+  verificada (`integrity_check`) junto a ella: `/data/nexaro.pre-migration-v<N>-<fecha UTC>.db`.
+  Si la copia falla, no se migra. Estas copias no se borran solas: revísalas y muévelas fuera del
+  volumen cuando ya no hagan falta.
 - Revertir código: la imagen anterior queda etiquetada `rollback-<fecha>`. Las migraciones no tienen
   «bajada»: para volver atrás de verdad se restaura la copia previa.
 - Nunca `docker compose down -v` ni borrar el volumen.
