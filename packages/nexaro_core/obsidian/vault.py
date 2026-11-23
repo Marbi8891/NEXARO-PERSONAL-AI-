@@ -1,10 +1,12 @@
 """Read-only Obsidian Vault connector for NEXARO."""
+
 from __future__ import annotations
 
 import os
 import re
+from collections.abc import Iterator
 from pathlib import Path
-from collections.abc import Iterator\nfrom typing import Any
+from typing import Any
 
 DEFAULT_EXCLUDED_DIRS = frozenset({".obsidian", ".trash", ".git", "node_modules"})
 
@@ -60,11 +62,14 @@ class ObsidianVault:
             root = self._root()
         except VaultNotConfiguredError:
             return {"configured": True, "available": False, "note_count": 0}
-        count = sum(1 for _ in self._iter_notes(root))\n        return {"configured": True, "available": True, "note_count": count}
+        count = sum(1 for _ in self._iter_notes(root))
+        return {"configured": True, "available": True, "note_count": count}
 
     def list_notes(self, *, limit: int = 200, offset: int = 0) -> list[dict[str, Any]]:
         root = self._root()
-        notes = sorted((relative.as_posix(), candidate) for candidate, relative in self._iter_notes(root))
+        notes = sorted(
+            (relative.as_posix(), candidate) for candidate, relative in self._iter_notes(root)
+        )
         selected = notes[offset : offset + limit]
         return [self._metadata(candidate, relative) for relative, candidate in selected]
 
@@ -91,11 +96,13 @@ class ObsidianVault:
             start = max(0, index - 100)
             end = min(len(content), index + len(query) + 180)
             snippet = content[start:end].replace("\n", " ").strip()
-            results.append({
-                "path": relative.as_posix(),
-                "title": self._title(content, candidate.stem),
-                "snippet": snippet,
-            })
+            results.append(
+                {
+                    "path": relative.as_posix(),
+                    "title": self._title(content, candidate.stem),
+                    "snippet": snippet,
+                }
+            )
             if len(results) >= limit:
                 break
         return results

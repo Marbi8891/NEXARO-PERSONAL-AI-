@@ -17,6 +17,28 @@ make check
 - `pre-commit install` activa ruff y gitleaks.
 - Nunca ejecutes `docker compose down -v` ni borres el volumen `nexaro-personal-ai_nexaro_data`.
 
+## Tests en Windows
+
+La suite funciona en Windows 11 con Python 3.12. Los tests que ejecutan scripts `.sh`
+(`test_compose_stack.py`, `test_prune_backups.py`) necesitan Bash y lo buscan en este orden:
+
+1. En Windows, Git Bash: `C:\Program Files\Git\bin\bash.exe` y luego `C:\Program Files\Git\usr\bin\bash.exe`.
+2. `shutil.which("bash")`.
+3. `/bin/bash` en Linux y macOS.
+
+Git Bash va primero porque `shutil.which` puede devolver `C:\Windows\System32\bash.exe`, el
+lanzador de WSL. Sin Bash, esos tests se omiten (skipped). Instala [Git for Windows](https://git-scm.com/download/win)
+para ejecutarlos. Si solo tienes el lanzador de WSL sin distribución, fallarán en vez de omitirse.
+
+```powershell
+$env:PYTHONUTF8 = "1"
+python -m pytest -v
+```
+
+`PYTHONUTF8=1` evita errores de codificación con la salida en español. En Windows se omiten además el
+test de symlinks de Obsidian (necesita modo desarrollador o administrador) y los que dependen de
+`tofu`/`terraform` o de una copia real en `backups/` si no están disponibles.
+
 ## Frontend
 
 No hay paso de compilación: edita `frontend/` y recarga. Pruebas:
