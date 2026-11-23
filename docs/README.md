@@ -12,7 +12,8 @@ Esta carpeta reúne la documentación funcional, de uso y operación del proyect
 - [Despliegue y operación](OPERATIONS.md): Docker, configuración, copias de seguridad y resolución de problemas.
 - [Seguridad](../SECURITY.md): configuración segura y controles de la aplicación.
 - [Sistema de diseño](design-system.md): componentes, estilos y reglas visuales.
-- [Auditoría de agentes y roadmap](agents/RECOVERY_AUDIT.md): estado recuperado, límites y fases del runtime.\n- [Integración Obsidian](integrations/obsidian.md): conector de Vault en modo lectura.
+- [Auditoría de agentes y roadmap](agents/RECOVERY_AUDIT.md): estado recuperado, límites y fases del runtime.
+- [Integración Obsidian](integrations/obsidian.md): conector de Vault en modo lectura.
 - [Decisiones de arquitectura](decisions/): ADRs que explican decisiones técnicas.
 
 ## Estado y alcance
