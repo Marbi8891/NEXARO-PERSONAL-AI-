@@ -180,7 +180,9 @@ def update_agent(
                 ),
             )
         except sqlite3.IntegrityError as exc:
-            raise HTTPException(status_code=409, detail="Ya existe un agente con ese nombre") from exc
+            raise HTTPException(
+                status_code=409, detail="Ya existe un agente con ese nombre"
+            ) from exc
         record_event(
             db,
             "agent.update",
