@@ -53,7 +53,7 @@ def _clean(value: str, limit: int, field: str, *, required: bool = False) -> str
     return text
 
 
-def _validate(data: dict[str, Any]) -> dict[str, Any]:
+def validate_agent_data(data: dict[str, Any]) -> dict[str, Any]:
     base = data.get("base_agent", "general")
     if base not in AGENTS:
         raise AgentValidationError("Agente base desconocido")
@@ -124,7 +124,7 @@ def _name_taken(db: sqlite3.Connection, user_id: str, name: str, exclude: str | 
 
 
 def create_agent(db: sqlite3.Connection, user_id: str, data: dict[str, Any]) -> dict[str, Any]:
-    clean = _validate(data)
+    clean = validate_agent_data(data)
     count = db.execute(
         "SELECT COUNT(*) FROM user_agents WHERE owner_user_id = ?", (user_id,)
     ).fetchone()[0]
@@ -172,7 +172,7 @@ def update_agent(
     if "base_agent" in changes and "tools" not in changes:
         merged.pop("tools")  # al cambiar de base, por defecto todas las herramientas de la nueva
     merged.update(changes)
-    clean = _validate(merged)
+    clean = validate_agent_data(merged)
     if _name_taken(db, user_id, clean["name"], agent_id):
         raise AgentValidationError("Ya tienes un agente con ese nombre")
     db.execute(

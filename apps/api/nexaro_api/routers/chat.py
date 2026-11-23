@@ -17,7 +17,7 @@ from nexaro_api.deps import (
 from nexaro_api.schemas import ChatRequest, ConversationRenameRequest
 from nexaro_core.audit import record_event
 from nexaro_core.audit.service import Outcome
-from products.personal_ai import custom_agents
+from products.personal_ai import custom_agents, org_agents
 from products.personal_ai.agents import TOOL_PERMISSIONS, public_agents
 from products.personal_ai.custom_agents import AgentNotFoundError, AgentProfile
 from products.personal_ai.service import ConversationNotFoundError
@@ -29,10 +29,12 @@ NOT_FOUND = HTTPException(status_code=404, detail="Conversación no encontrada")
 
 @router.get("/agents")
 def list_agents(user: CurrentUser, ctx: Ctx) -> dict[str, Any]:
-    """Agentes que el usuario puede usar en el chat: los predefinidos (ADR-0022) y sus agentes
-    personales activos. Nunca los prompts de los predefinidos."""
+    """Agentes que el usuario puede usar en el chat: los predefinidos (ADR-0022), sus agentes
+    personales activos y los de sus organizaciones (ADR-0024). Nunca los prompts de los
+    predefinidos ni las instrucciones de los de organización."""
     with ctx.database.connect() as db:
         own = [a for a in custom_agents.list_agents(db, user["id"]) if a["status"] == "active"]
+        shared = org_agents.usable_agents(db, user["id"])
     personal = [
         {
             "id": a["id"],
@@ -40,19 +42,36 @@ def list_agents(user: CurrentUser, ctx: Ctx) -> dict[str, Any]:
             "description": a["description"],
             "tools": a["tools"],
             "custom": True,
+            "scope": "personal",
             "base_agent": a["base_agent"],
             "model": a["model"],
         }
         for a in own
     ]
-    return {"agents": [*public_agents(), *personal]}
+    organization = [
+        {
+            "id": a["id"],
+            "name": a["name"],
+            "description": a["description"],
+            "tools": a["tools"],
+            "custom": True,
+            "scope": "organization",
+            "organization_id": a["organization_id"],
+            "organization_name": a["organization_name"],
+            "base_agent": a["base_agent"],
+            "model": a["model"],
+        }
+        for a in shared
+    ]
+    return {"agents": [*public_agents(), *personal, *organization]}
 
 
 def resolve_agent(ctx: Ctx, user_id: str, agent_id: str) -> AgentProfile:
-    """Perfil del agente pedido; 422 igual si no existe, es de otro usuario o está desactivado."""
+    """Perfil del agente pedido; 422 igual si no existe, es de otro usuario, de una organización
+    en la que no puede usar agentes o está desactivado."""
     try:
         with ctx.database.connect() as db:
-            return custom_agents.resolve_profile(db, user_id, agent_id)
+            return org_agents.resolve_profile(db, user_id, agent_id)
     except AgentNotFoundError:
         raise HTTPException(status_code=422, detail="Agente no disponible") from None
 
