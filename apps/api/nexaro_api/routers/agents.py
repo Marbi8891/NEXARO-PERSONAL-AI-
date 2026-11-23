@@ -24,6 +24,8 @@ _MEMORY_SCOPES = {"none", "conversation", "workspace", "global"}
 
 
 def _validate_config(body: AgentCreateRequest) -> None:
+    if not body.name.strip() or not body.description.strip() or not body.system_prompt.strip():
+        raise HTTPException(status_code=422, detail="Los campos de texto no pueden estar vacíos")
     # Capabilities are deliberately not user-grantable until the tool runtime and sandbox exist.
     if body.tools:
         raise HTTPException(
@@ -38,7 +40,8 @@ def _validate_config(body: AgentCreateRequest) -> None:
         body.memory.get("enabled", False), bool
     ):
         raise HTTPException(status_code=422, detail="Configuración de memoria no válida")
-    if body.memory.get("scope", "none") not in _MEMORY_SCOPES:
+    scope = body.memory.get("scope", "none")
+    if not isinstance(scope, str) or scope not in _MEMORY_SCOPES:
         raise HTTPException(status_code=422, detail="Ámbito de memoria no válido")
     if body.memory.get("enabled", False) or body.memory.get("scope", "none") != "none":
         raise HTTPException(
@@ -199,12 +202,25 @@ def delete_agent(
     validate_origin(request, ctx)
     with ctx.database.connect() as db:
         begin_write(db)
-        deleted = db.execute(
+        exists = db.execute(
+            "SELECT id FROM agents WHERE id = ? AND organization_id = ?",
+            (agent_id, organization_id),
+        ).fetchone()
+        if exists is None:
+            raise HTTPException(status_code=404, detail="Agente no encontrado")
+        runs = db.execute(
+            "SELECT COUNT(*) AS n FROM agent_runs WHERE agent_id = ? AND organization_id = ?",
+            (agent_id, organization_id),
+        ).fetchone()["n"]
+        if runs:
+            raise HTTPException(
+                status_code=409,
+                detail="El agente tiene ejecuciones históricas; desactívalo para conservarlas",
+            )
+        db.execute(
             "DELETE FROM agents WHERE id = ? AND organization_id = ?",
             (agent_id, organization_id),
-        ).rowcount
-        if not deleted:
-            raise HTTPException(status_code=404, detail="Agente no encontrado")
+        )
         record_event(
             db,
             "agent.delete",
