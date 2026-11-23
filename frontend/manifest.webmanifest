@@ -1,13 +1,13 @@
 {
-  "name": "NEXARO",
+  "name": "NEXARO Intelligence Platform",
   "short_name": "NEXARO",
-  "description": "Plataforma de IA personal y de equipo",
+  "description": "Private AI infrastructure for organisations.",
   "lang": "es",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#f3f5f9",
-  "theme_color": "#0b1f3a",
+  "background_color": "#101a2b",
+  "theme_color": "#101a2b",
   "icons": [
     { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },

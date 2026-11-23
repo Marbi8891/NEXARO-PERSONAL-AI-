@@ -23,11 +23,14 @@
 .auth-alt { margin-top: var(--space-4); font-size: var(--fs-sm); text-align: center; }
 
 /* Marca: símbolo + logotipo tipográfico */
-.logo { display: inline-flex; align-items: center; gap: var(--space-3); }
-.logo img { width: 32px; height: 32px; display: block; }
-.wordmark { font-weight: 750; font-size: var(--fs-lg); letter-spacing: 0.16em; }
+.logo { display: inline-flex; align-items: center; gap: var(--space-3); min-width: 0; }
+.logo img { width: 36px; height: 36px; display: block; flex: none; }
+.brand-lockup { display: flex; flex-direction: column; gap: 1px; line-height: 1.1; }
+.wordmark { font-weight: 780; font-size: var(--fs-lg); letter-spacing: 0.13em; }
+.brand-descriptor { font-size: 0.59rem; font-weight: 650; letter-spacing: 0.21em; color: var(--muted); }
 .auth-card .wordmark { color: var(--text); }
 .sidebar .wordmark { color: var(--sidebar-text); }
+.sidebar .brand-descriptor { color: var(--sidebar-muted); }
 
 .app {
   display: grid;

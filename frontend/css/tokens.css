@@ -1,7 +1,4 @@
-/* Tokens de diseño NEXARO: única fuente de verdad de color, tipografía, espacio y forma.
-   Cada color define claro y oscuro con light-dark(). Los pares se validan en
-   tests/unit/test_design_tokens.py (WCAG AA). Documentación: docs/design-system.md */
-
+/* NEXARO Enterprise design tokens — conservative enterprise software palette. */
 @font-face {
   font-family: "Inter";
   src: url("/fonts/inter-latin-wght-normal.woff2") format("woff2");
@@ -13,48 +10,48 @@
 :root {
   color-scheme: light dark;
 
-  /* Superficies */
-  --bg: light-dark(#f3f5f9, #0a1424);
-  --panel: light-dark(#ffffff, #101f36);
-  --panel-2: light-dark(#e9eef5, #172a47);
-  --border: light-dark(#cbd3df, #26405f);
-  --border-input: light-dark(#6b7a90, #7390b3);
+  /* Neutral surfaces */
+  --bg: light-dark(#f3f5f8, #101a2b);
+  --panel: light-dark(#ffffff, #172438);
+  --panel-2: light-dark(#e9edf2, #202f43);
+  --border: light-dark(#cbd3dd, #344459);
+  --border-input: light-dark(#68788b, #8191a5);
 
-  /* Texto */
-  --text: light-dark(#0e1a2b, #e8eef7);
-  --muted: light-dark(#475569, #a5b4c8);
+  /* Typography */
+  --text: light-dark(#172334, #edf1f6);
+  --muted: light-dark(#4c5b6d, #aeb9c7);
 
-  /* Acción principal (azul marino) y acento (azul acero) */
-  --primary: light-dark(#12305a, #7fa9de);
-  --primary-hover: light-dark(#0b2447, #9bbbe6);
-  --primary-text: light-dark(#ffffff, #0a1424);
-  --accent: light-dark(#2b5c97, #8db4e8);
-  --focus: light-dark(#2b5c97, #8db4e8);
+  /* Corporate actions */
+  --primary: light-dark(#344f70, #91a8c4);
+  --primary-hover: light-dark(#293f5c, #adbed2);
+  --primary-text: light-dark(#ffffff, #101a2b);
+  --accent: light-dark(#43658e, #a0b5ce);
+  --focus: light-dark(#315e91, #a0bddd);
 
-  /* Barra lateral (siempre oscura: ancla visual de la marca) */
-  --sidebar: light-dark(#0b1f3a, #07101f);
-  --sidebar-text: #e7edf6;
-  --sidebar-muted: #a9b8ce;
-  --sidebar-active: light-dark(#16335b, #12294a);
-  --sidebar-border: light-dark(#1f3a62, #1a2e4f);
+  /* Navigation shell */
+  --sidebar: light-dark(#101a2b, #0b1422);
+  --sidebar-text: #edf1f6;
+  --sidebar-muted: #b2bdca;
+  --sidebar-active: light-dark(#26384f, #1d2c40);
+  --sidebar-border: light-dark(#344459, #29394e);
 
-  /* Estado */
-  --ok: light-dark(#146c43, #5fd1a0);
-  --ok-bg: light-dark(#e4f4ec, #0f2d22);
-  --warn: light-dark(#8a5300, #e6b35e);
-  --warn-bg: light-dark(#fdf1dc, #33260d);
-  --danger: light-dark(#b42318, #ff9b93);
-  --danger-bg: light-dark(#fdeceb, #3a1614);
-  --info-bg: light-dark(#e3ebf6, #1b3354);
+  /* State semantics */
+  --ok: light-dark(#176747, #71c5a0);
+  --ok-bg: light-dark(#e5f3ec, #16372d);
+  --warn: light-dark(#79500b, #e5bd70);
+  --warn-bg: light-dark(#fbf2df, #3a2e18);
+  --danger: light-dark(#a52c31, #ef9da0);
+  --danger-bg: light-dark(#f9e9e9, #3c2027);
+  --info-bg: light-dark(#e8eef5, #26364a);
 
-  /* Identidad funcional por módulo (solo icono, etiqueta y filete; nunca fondos grandes) */
-  --module-personal-ai: light-dark(#2b5c97, #8db4e8);
-  --module-finance: light-dark(#1d6b6f, #6cc7cc);
-  --module-business: light-dark(#4a4f9c, #a4a9f0);
-  --module-security: light-dark(#8e3a3a, #f0a3a3);
-  --module-developer: light-dark(#4f6a1f, #b7d67a);
+  /* Product family accents: restrained and semantic */
+  --module-personal-ai: light-dark(#43658e, #a0b5ce);
+  --module-finance: light-dark(#36766b, #81b8ad);
+  --module-business: light-dark(#5b6388, #a8afd0);
+  --module-security: light-dark(#9a5156, #d5a0a3);
+  --module-developer: light-dark(#687b50, #b0c194);
 
-  /* Tipografía */
+  /* Type scale */
   --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --fs-xs: 0.75rem;
@@ -64,18 +61,18 @@
   --fs-xl: 1.5rem;
   --fs-2xl: 2rem;
 
-  /* Espacio, forma y elevación */
+  /* Spacing and shape */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
   --space-4: 1rem;
   --space-5: 1.5rem;
   --space-6: 2rem;
-  --radius-sm: 6px;
-  --radius: 10px;
-  --radius-lg: 14px;
-  --scrim: rgb(7 16 31 / 55%);
-  --shadow: 0 1px 2px light-dark(rgb(14 26 43 / 8%), rgb(0 0 0 / 40%));
+  --radius-sm: 5px;
+  --radius: 8px;
+  --radius-lg: 11px;
+  --scrim: rgb(5 12 22 / 62%);
+  --shadow: 0 1px 3px light-dark(rgb(16 26 43 / 8%), rgb(0 0 0 / 24%));
 }
 
 :root[data-theme="light"] { color-scheme: light; }
