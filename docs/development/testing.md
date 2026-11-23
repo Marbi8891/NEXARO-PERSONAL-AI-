@@ -23,7 +23,8 @@ separately with `make eval` ([AI evaluation](ai-evaluation.md), Spanish).
 | `make cov` | Tests with coverage report (threshold 80 %, set in `pyproject.toml`) |
 | `make lint` / `make format` | Ruff check + format check / auto-fix |
 | `make typecheck` | `mypy packages apps products` (strict: `disallow_untyped_defs`) |
-| `make docs-check` | Validate relative links and anchors in all Markdown files |
+| `make docs-check` | Validate relative links and anchors in all Markdown files (also enforced in CI by `tests/unit/test_docs_links.py`) |
+| `make screenshots` | Regenerate the product screenshots ([assets](../assets/README.md)) |
 | `make audit` | `pip-audit` of runtime dependencies |
 | `bash tests/frontend/run.sh` | Frontend E2E with jsdom |
 | `BROWSER=1 bash tests/frontend/run.sh` | Also real Chromium: CSP, fonts, themes, mobile, reference screenshots |
