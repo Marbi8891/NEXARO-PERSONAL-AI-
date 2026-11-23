@@ -15,6 +15,7 @@ from nexaro_api.limits import BodyLimitMiddleware
 from nexaro_api.request_context import RequestContextMiddleware
 from nexaro_api.routers import (
     admin,
+    agents,
     api_keys,
     auth,
     chat,
