@@ -98,11 +98,16 @@ class AgentCreateRequest(BaseModel):
     name: str = Field(min_length=2, max_length=80)
     description: str = Field(min_length=5, max_length=500)
     system_prompt: str = Field(min_length=1, max_length=12000)
-    category: str = Field(default="custom", pattern="^(general|development|cybersecurity|ai_data|education|business|research|productivity|custom)$")
+    category: str = Field(
+        default="custom",
+        pattern="^(general|development|cybersecurity|ai_data|education|business|research|productivity|custom)$",
+    )
     model: str | None = Field(default=None, max_length=120)
     tools: list[str] = Field(default_factory=list, max_length=30)
-    permissions: dict[str, object] = Field(default_factory=lambda: {"filesystem":"none","terminal":False,"network":False})
-    memory: dict[str, object] = Field(default_factory=lambda: {"enabled":False,"scope":"none"})
+    permissions: dict[str, object] = Field(
+        default_factory=lambda: {"filesystem": "none", "terminal": False, "network": False}
+    )
+    memory: dict[str, object] = Field(default_factory=lambda: {"enabled": False, "scope": "none"})
     autonomy: str = Field(default="assisted", pattern="^(assisted|supervised|autonomous)$")
     template_id: str | None = Field(default=None, max_length=80)
 
