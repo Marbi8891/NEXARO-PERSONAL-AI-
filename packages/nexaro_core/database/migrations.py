@@ -83,6 +83,11 @@ def platform_migrations() -> list[Migration]:
             MIGRATIONS_DIR / "sqlite" / "0011_organization_agents.sql",
         ),
         sql_migration(12, "prompt_library", MIGRATIONS_DIR / "sqlite" / "0012_prompt_library.sql"),
+        sql_migration(
+            13,
+            "conversation_ownership",
+            MIGRATIONS_DIR / "sqlite" / "0013_conversation_ownership.sql",
+        ),
     ]
 
 

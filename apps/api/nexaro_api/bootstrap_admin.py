@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 
 from nexaro_api.bootstrap import migrate
+from nexaro_core.audit import record_event
 from nexaro_core.config import get_settings
 from nexaro_core.database import Database
 from nexaro_core.identity import approve_user, set_user_role
@@ -193,6 +194,17 @@ def main() -> None:
                     (admin_id,),
                 )
                 assigned = result.rowcount
+                # Recuperación explícita de conversaciones sin propietario: queda en la auditoría
+                # (misma transacción) para que nunca sea una asignación silenciosa.
+                record_event(
+                    connection,
+                    "conversation.orphans_assigned",
+                    "success",
+                    actor_user_id=admin_id,
+                    target_type="user",
+                    target_id=admin_id,
+                    details={"assigned": assigned, "source": "bootstrap_admin"},
+                )
 
         print(
             "Cuenta promovida a administrador."
