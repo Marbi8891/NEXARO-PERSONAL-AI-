@@ -73,6 +73,8 @@
   --radius-lg: 11px;
   --scrim: rgb(5 12 22 / 62%);
   --shadow: 0 1px 3px light-dark(rgb(16 26 43 / 8%), rgb(0 0 0 / 24%));
+  --shadow-overlay: 0 8px 24px light-dark(rgb(16 26 43 / 8%), rgb(0 0 0 / 26%));
+  --shadow-auth: 0 12px 36px light-dark(rgb(16 26 43 / 7%), rgb(0 0 0 / 22%));
 }
 
 :root[data-theme="light"] { color-scheme: light; }

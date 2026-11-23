@@ -385,5 +385,5 @@ th { letter-spacing: .075em; }
 .tabs button { transition: color .14s ease, border-color .14s ease; }
 .stats .card, .stats > * { min-width: 0; }
 .stat dd { letter-spacing: -.035em; }
-.menu, .dialog, .toast { box-shadow: 0 8px 24px light-dark(rgb(16 26 43 / 8%), rgb(0 0 0 / 26%)); }
+.menu, .dialog, .toast { box-shadow: var(--shadow-overlay); }
 @media (prefers-reduced-motion: reduce) { .card, .button, .field input, .field select, .tabs button { transition: none; } }

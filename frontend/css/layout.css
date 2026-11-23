@@ -120,7 +120,7 @@
 
 /* Enterprise UI refinement — applied across authenticated and public views. */
 .auth { background: radial-gradient(ellipse at top, color-mix(in srgb, var(--accent) 7%, transparent), transparent 55%), var(--bg); }
-.auth-card { border-radius: var(--radius); box-shadow: 0 12px 36px light-dark(rgb(16 26 43 / 7%), rgb(0 0 0 / 22%)); }
+.auth-card { border-radius: var(--radius); box-shadow: var(--shadow-auth); }
 .sidebar { border-right: 1px solid var(--sidebar-border); }
 .sidebar-head { padding-bottom: var(--space-3); border-bottom: 1px solid var(--sidebar-border); }
 .nav a { transition: background-color .14s ease, color .14s ease; }
