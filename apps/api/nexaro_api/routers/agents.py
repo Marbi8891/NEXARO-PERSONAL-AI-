@@ -6,7 +6,7 @@ el runtime todavía no implementa un sandbox ni un dispatcher de herramientas.
 import json
 import sqlite3
 import uuid
-from typing import Any, Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
@@ -48,7 +48,9 @@ def _validate_config(body: AgentCreateRequest) -> None:
             status_code=422, detail="La memoria operativa aún no está disponible"
         )
     if body.autonomy != "assisted":
-        raise HTTPException(status_code=422, detail="La autonomía ejecutable aún no está disponible")
+        raise HTTPException(
+            status_code=422, detail="La autonomía ejecutable aún no está disponible"
+        )
 
 
 def _serialize(row: sqlite3.Row) -> dict[str, Any]:
@@ -105,7 +107,9 @@ def create_agent(
                 ),
             )
         except sqlite3.IntegrityError as exc:
-            raise HTTPException(status_code=409, detail="Ya existe un agente con ese nombre") from exc
+            raise HTTPException(
+                status_code=409, detail="Ya existe un agente con ese nombre"
+            ) from exc
         record_event(
             db,
             "agent.create",
