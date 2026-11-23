@@ -1,59 +1,61 @@
-# NEXARO Visual Identity System
+# NEXARO Enterprise Design System
 
-## Brand direction
+## Positioning
 
-NEXARO Personal AI is a private, local-first AI assistant. The identity is built around user control,
-a calm technical character and clear product hierarchy. It should feel like a dependable desktop
-product, not a generic AI chat skin.
+NEXARO is an enterprise software platform for private AI infrastructure. Its visual identity should
+communicate operational reliability, privacy, control and technical competence. It is designed for
+organisations, IT teams and security-conscious users.
 
-**Brand line:** Your intelligence. Your data. Your control.
+**Brand line:** Intelligence under your control.
+
+**Product descriptor:** Private AI infrastructure for organisations.
 
 ## Logo
 
-The primary lockup combines the geometric N mark with the NEXARO wordmark and PERSONAL AI descriptor.
-The mark uses a deep-navy rounded square, a white geometric N and a small teal signal detail.
-Use the SVG in `frontend/icons/symbol.svg` as the only source of truth for the symbol.
+The primary lockup combines a geometric N monogram, the NEXARO wordmark and the descriptor
+INTELLIGENCE PLATFORM. Use `frontend/icons/symbol.svg` as the canonical mark.
 
-Do not redraw, distort, rotate, add a glow, or place the symbol on a low-contrast background.
-The minimum clear space around the symbol is one quarter of its width. The wordmark is uppercase
-Inter at weight 780 with moderate tracking. The descriptor is smaller and more widely tracked.
+The mark uses a square-cornered deep-navy field, a white N and a restrained steel-blue signal detail.
+Do not add gradients, glow, shadows, decorative circuit patterns or rounded app-store styling.
+Preserve proportions and clear space equal to at least one quarter of the mark width.
 
-## Colour palette
+## Corporate palette
 
-| Token | Light | Dark | Usage |
+| Token | Light | Dark | Purpose |
 |---|---|---|---|
-| `--bg` | `#edf2f7` | `#0b1220` | App canvas |
-| `--panel` | `#ffffff` | `#111d2d` | Cards and surfaces |
-| `--panel-2` | `#e3eaf2` | `#17263a` | Secondary surfaces |
-| `--text` | `#101b2b` | `#edf3fa` | Main text |
-| `--muted` | `#46576c` | `#a6b5c8` | Secondary text |
-| `--primary` | `#126e70` | `#63d5d0` | Primary action |
-| `--accent` | `#315b91` | `#8aa7e8` | Links and secondary emphasis |
-| `--sidebar` | `#0b1220` | `#070d17` | Navigation shell |
+| `--bg` | `#f3f5f8` | `#101a2b` | Workspace |
+| `--panel` | `#ffffff` | `#172438` | Cards and primary surfaces |
+| `--panel-2` | `#e9edf2` | `#202f43` | Secondary surfaces |
+| `--text` | `#172334` | `#edf1f6` | Primary text |
+| `--muted` | `#4c5b6d` | `#aeb9c7` | Secondary text |
+| `--primary` | `#344f70` | `#91a8c4` | Primary action |
+| `--accent` | `#43658e` | `#a0b5ce` | Links and emphasis |
+| `--sidebar` | `#101a2b` | `#0b1422` | Navigation shell |
 
-Semantic state colours remain separate from brand colours. Module accents are used only for small markers,
-labels and icons, not large background areas. All colour values live in `frontend/css/tokens.css`.
+State colours communicate status only. Module colours are muted, reserved for small identifiers and
+never used as large decorative blocks. All palette definitions remain in `frontend/css/tokens.css`.
 
-## Typography and shape
+## Typography and layout
 
-Inter variable is the product typeface, already self-hosted in `frontend/fonts`. System monospace is
-reserved for technical identifiers and code. The existing spacing scale is retained. Surfaces use
-12px default and 17px large radii; shadows remain restrained.
+Inter remains the main typeface. System monospace is used for code, IDs and technical values.
+The layout uses compact enterprise spacing, restrained 5/8/11px radii, subtle borders and low-elevation
+shadows. Avoid oversized promotional headings inside the operational application.
 
-## UI principles
+## Interface principles
 
-1. Dark theme is the primary brand expression; light theme remains fully supported.
-2. Use teal for actions, focus and live/connected signals. Do not use it as body text on light surfaces.
-3. Maintain clear visual hierarchy and restrained density.
-4. Never fabricate operational data, model status or activity.
-5. Keep keyboard navigation, reduced-motion support and WCAG AA contrast requirements.
-6. The identity refresh must not change API contracts, routing, authentication or product behaviour.
+1. Prefer neutral surfaces and clear information hierarchy.
+2. Use steel blue sparingly for actions and selected states.
+3. Keep status colours semantic and consistent.
+4. Use real API data only; do not introduce decorative or simulated metrics.
+5. Preserve keyboard navigation, reduced motion and WCAG AA contrast requirements.
+6. The identity refresh does not change API contracts, routing, authentication, data model or deployment.
 
 ## Implementation
 
 - Tokens: `frontend/css/tokens.css`
 - Symbol: `frontend/icons/symbol.svg`
-- Lockup: `frontend/js/components/brand.js`
-- App metadata: `frontend/index.html` and `frontend/manifest.webmanifest`
+- Wordmark lockup: `frontend/js/components/brand.js`
+- Browser metadata: `frontend/index.html`
+- PWA metadata: `frontend/manifest.webmanifest`
 
-No framework migration or additional runtime dependency is required.
+No new runtime dependencies or framework migration are introduced.
