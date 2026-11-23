@@ -1,4 +1,4 @@
-"""Biblioteca de prompts (ADR-0024): CRUD, versiones, catálogo, renderizado, aislamiento y roles."""
+"""Biblioteca de prompts (ADR-0025): CRUD, versiones, catálogo, renderizado, aislamiento y roles."""
 
 from collections.abc import Callable
 

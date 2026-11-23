@@ -1,4 +1,4 @@
--- Biblioteca de prompts por organización (ADR-0024). Mismas tablas y columnas que sqlite/0011_prompt_library.sql.
+-- Biblioteca de prompts por organización (ADR-0025). Mismas tablas y columnas que sqlite/0012_prompt_library.sql.
 
 CREATE TABLE prompts (
     id uuid PRIMARY KEY,

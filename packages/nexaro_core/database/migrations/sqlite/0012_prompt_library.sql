@@ -1,4 +1,4 @@
--- Biblioteca de prompts por organización (ADR-0024). Ver postgresql/0011_prompt_library.sql.
+-- Biblioteca de prompts por organización (ADR-0025). Ver postgresql/0012_prompt_library.sql.
 -- tags y variables se guardan como JSON en texto; version empieza en 1 y crece con cada cambio.
 
 CREATE TABLE prompts (

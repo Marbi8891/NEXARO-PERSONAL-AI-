@@ -23,6 +23,7 @@ from nexaro_api.routers import (
     documents,
     expenses,
     health,
+    org_agents,
     organizations,
     prompts,
 )
@@ -186,6 +187,7 @@ def create_app(
         expenses,
         health,
         organizations,
+        org_agents,
         prompts,
     ):
         app.include_router(module.router)

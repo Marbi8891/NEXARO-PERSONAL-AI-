@@ -1,4 +1,4 @@
-# ADR-0024: Biblioteca de prompts como módulo de la plataforma
+# ADR-0025: Biblioteca de prompts como módulo de la plataforma
 
 - **Estado:** Aceptada
 - **Fecha:** 2026-11-22
@@ -22,7 +22,7 @@ módulo en lugar de mantener servicios separados.
 
 ## Decisión
 
-- Migración 11: `prompts` y `prompt_versions` por organización, clave foránea compuesta
+- Migración 12: `prompts` y `prompt_versions` por organización, clave foránea compuesta
   `(prompt_id, organization_id)` y RLS en PostgreSQL. Permisos `prompts:read` (todos los roles) y
   `prompts:write` (propietario, administrador y miembro, como `documents:write`).
 - Código en `products/personal_ai/prompt_library.py` (va unido al chat) y API en

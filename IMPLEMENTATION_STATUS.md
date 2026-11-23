@@ -68,7 +68,7 @@ una ejecución de `make up && make model && make smoke` en el Mac o el ThinkPad.
 | Equipos de agentes | NOT_IMPLEMENTED | — |
 | Registro de herramientas | IMPLEMENTED_PARTIALLY | Una herramienta (`documents`) con permiso por agente y usuario y auditoría `agent.tool` |
 | Agente de código con herramientas (PR #3) | IMPLEMENTED_PARTIALLY | 9 tests OK; servicio aparte sin autenticación (AUDIT_REPORT SEC-01) |
-| Biblioteca de prompts | IMPLEMENTED | Módulo de la plataforma (ADR-0024): `test_prompt_library.py` (17) y E2E del frontend; packs y workflows del PR #2 no portados |
+| Biblioteca de prompts | IMPLEMENTED | Módulo de la plataforma (ADR-0025): `test_prompt_library.py` (17) y E2E del frontend; packs y workflows del PR #2 no portados |
 | Memoria (usuario, agente, proyecto, equipo) | NOT_IMPLEMENTED | — |
 | Documentos DOCX, CSV | NOT_IMPLEMENTED | Solo texto y PDF |
 | Organizaciones, miembros, roles | IMPLEMENTED | `test_organizations.py` |
