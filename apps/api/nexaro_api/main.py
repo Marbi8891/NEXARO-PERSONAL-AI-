@@ -178,6 +178,7 @@ def create_app(
     for module in (
         auth,
         admin,
+        agents,
         api_keys,
         chat,
         dashboard,
