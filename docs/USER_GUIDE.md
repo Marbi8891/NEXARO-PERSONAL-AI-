@@ -108,11 +108,13 @@ Scopes documentados:
 
 La API aplica un límite de 60 solicitudes por minuto por clave, configurable mediante entorno. No incluyas claves en repositorios, capturas o logs.
 
-Ejemplo:
+Ejemplo usando una variable de entorno para no escribir el token directamente en el comando:
 
 ```bash
+export NEXARO_API_TOKEN="your-local-token"
+
 curl -X POST http://127.0.0.1:8001/api/v1/chat \
-  -H "Authorization: Bearer TU_CLAVE" \
+  -H "Authorization: Bearer ${NEXARO_API_TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{"message":"Hola"}'
 ```

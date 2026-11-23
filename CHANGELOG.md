@@ -48,6 +48,8 @@
 - Índice `idx_messages_conversation_id`.
 
 ### Corregido
+- Tests en Windows: `tests/unit/test_compose_stack.py` y `tests/unit/test_prune_backups.py` ya no llaman a `/bin/bash` (fallaban con `FileNotFoundError: [WinError 2]`). Buscan Bash en este orden: Git Bash en Windows, `shutil.which("bash")` y `/bin/bash` en Unix; sin Bash, los tests que lo necesitan se omiten. Las assertions y los scripts `.sh` no cambian. En Windows 11: 590 aprobados, 3 omitidos y 0 fallidos.
+- Conector de Obsidian: `packages/nexaro_core/obsidian/vault.py` tenía `\n` literales en dos líneas (error de sintaxis que impedía importar la app y cargar cualquier test). Se separan las líneas y se aplica `ruff` a `vault.py` y `routers/obsidian.py` (solo formato, sin cambio de comportamiento).
 - Instalación desde cero: `/data` se crea en la imagen con propietario 10001. Antes, un volumen nuevo era de root y el backend no podía crear la base. Los volúmenes con datos no cambian (ADR-0021).
 
 ### Eliminado

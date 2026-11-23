@@ -21,6 +21,26 @@ STACK = ROOT / "scripts" / "stack.sh"
 MAKEFILE = (ROOT / "Makefile").read_text(encoding="utf-8")
 DOCKERFILE = (ROOT / "Dockerfile").read_text(encoding="utf-8")
 
+# En Windows, Git Bash va antes que `shutil.which`: System32\bash.exe es el lanzador de WSL.
+_GIT_BASH = (r"C:\Program Files\Git\bin\bash.exe", r"C:\Program Files\Git\usr\bin\bash.exe")
+
+
+def _find_bash() -> str | None:
+    if os.name == "nt":
+        for candidate in _GIT_BASH:
+            if Path(candidate).is_file():
+                return candidate
+    found = shutil.which("bash")
+    if found:
+        return found
+    if os.name != "nt" and Path("/bin/bash").is_file():
+        return "/bin/bash"
+    return None
+
+
+BASH = _find_bash()
+needs_bash = pytest.mark.skipif(BASH is None, reason="sin bash")
+
 
 def test_project_name_is_fixed_so_the_data_volume_never_changes() -> None:
     assert re.search(r"^name: nexaro-personal-ai$", COMPOSE, re.MULTILINE)
@@ -76,9 +96,11 @@ def test_make_targets_exist_and_nothing_destroys_volumes() -> None:
         assert not re.search(r"volume\s+(rm|prune)|system\s+prune|rm\s+-rf", text)
 
 
+@needs_bash
 def test_stack_script_is_valid_bash_3_2_without_newer_features() -> None:
+    assert BASH is not None
     script = STACK.read_text(encoding="utf-8")
-    result = subprocess.run(["/bin/bash", "-n", str(STACK)], capture_output=True, check=False)  # noqa: S603
+    result = subprocess.run([BASH, "-n", str(STACK)], capture_output=True, check=False)  # noqa: S603
     assert result.returncode == 0, result.stderr
     # macOS trae bash 3.2: nada de arrays asociativos, mapfile, ${x,,} ni |&.
     for pattern in (r"declare -A", r"\bmapfile\b", r"\breadarray\b", r"\$\{\w+,,\}", r"\|&"):
@@ -87,9 +109,11 @@ def test_stack_script_is_valid_bash_3_2_without_newer_features() -> None:
     assert "| grep -q" not in script
 
 
+@needs_bash
 def test_stack_script_rejects_unknown_commands() -> None:
+    assert BASH is not None
     result = subprocess.run(  # noqa: S603
-        ["/bin/bash", str(STACK), "otra"], capture_output=True, text=True, check=False
+        [BASH, str(STACK), "otra"], capture_output=True, text=True, check=False
     )
     assert result.returncode == 2 and "uso:" in result.stderr
 
