@@ -1,13 +1,13 @@
 {
-  "name": "NEXARO Personal AI",
+  "name": "NEXARO Intelligence Platform",
   "short_name": "NEXARO",
-  "description": "Tu inteligencia, tus datos y tu control. Asistente de IA local y privado.",
+  "description": "Private AI infrastructure for organisations.",
   "lang": "es",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0b1220",
-  "theme_color": "#0b1220",
+  "background_color": "#101a2b",
+  "theme_color": "#101a2b",
   "icons": [
     { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
