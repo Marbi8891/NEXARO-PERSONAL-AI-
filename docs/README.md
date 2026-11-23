@@ -11,7 +11,7 @@ Esta carpeta reúne la documentación funcional, de uso y operación del proyect
 - [Desarrollo](../DEVELOPMENT.md): instalación del entorno, pruebas y tareas de desarrollo.
 - [Despliegue y operación](OPERATIONS.md): Docker, configuración, copias de seguridad y resolución de problemas.
 - [Seguridad](../SECURITY.md): configuración segura y controles de la aplicación.
-- [Sistema de diseño](design-system.md): componentes, estilos y reglas visuales.
+- [Sistema de diseño](design-system.md): componentes, estilos y reglas visuales.\n- [Integración Obsidian](integrations/obsidian.md): conector de Vault en modo lectura.
 - [Decisiones de arquitectura](decisions/): ADRs que explican decisiones técnicas.
 
 ## Estado y alcance

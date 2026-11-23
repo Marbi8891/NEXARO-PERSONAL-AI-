@@ -1,12 +1,37 @@
+import os
+import shutil
 import subprocess
 from pathlib import Path
 
+import pytest
+
 SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "prune_backups.sh"
+
+# En Windows, Git Bash va antes que `shutil.which`: System32\bash.exe es el lanzador de WSL.
+_GIT_BASH = (r"C:\Program Files\Git\bin\bash.exe", r"C:\Program Files\Git\usr\bin\bash.exe")
+
+
+def _find_bash() -> str | None:
+    if os.name == "nt":
+        for candidate in _GIT_BASH:
+            if Path(candidate).is_file():
+                return candidate
+    found = shutil.which("bash")
+    if found:
+        return found
+    if os.name != "nt" and Path("/bin/bash").is_file():
+        return "/bin/bash"
+    return None
+
+
+BASH = _find_bash()
+pytestmark = pytest.mark.skipif(BASH is None, reason="sin bash")
 
 
 def run(directory: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    assert BASH is not None
     return subprocess.run(  # noqa: S603
-        ["/bin/bash", str(SCRIPT), "--dir", str(directory), *args],
+        [BASH, str(SCRIPT), "--dir", str(directory), *args],
         capture_output=True,
         text=True,
         check=False,
