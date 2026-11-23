@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NEXARO AI</title>
+  <link rel="stylesheet" href="startup.css">
+</head>
+<body>
+  <main class="card" aria-live="polite">
+    <header class="brand">
+      <img src="logo.svg" alt="" width="48" height="48">
+      <div>
+        <h1>NEXARO AI</h1>
+        <p class="sub">Command Center</p>
+      </div>
+    </header>
+
+    <section class="status" id="status" data-state="INITIALIZING">
+      <div class="spinner" aria-hidden="true"></div>
+      <div>
+        <p class="state-label" id="state-label">INITIALIZING</p>
+        <p class="message" id="message">Iniciando NEXARO AI…</p>
+      </div>
+    </section>
+
+    <p class="detail" id="detail" hidden></p>
+
+    <ul class="checks" id="checks" aria-label="Comprobaciones"></ul>
+
+    <div class="actions">
+      <button type="button" id="open-app" class="primary" hidden>Abrir NEXARO</button>
+      <button type="button" id="retry" class="primary" hidden>Reintentar</button>
+      <button type="button" id="open-logs">Abrir registros</button>
+    </div>
+  </main>
+  <script src="startup.js"></script>
+</body>
+</html>

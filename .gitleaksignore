@@ -6,3 +6,5 @@ b91b548ddf9927541ddcb5ee5b5d63c5c0771ec9:API.md:curl-auth-header:61
 aad4259189fba7fecd0af8f76bb972f0e3a04336:frontend/js/views/developer.js:curl-auth-header:124
 3497a03320fa9a993bdd95d2277aae7022ebeb24:tests/frontend/e2e.mjs:generic-api-key:52
 3497a03320fa9a993bdd95d2277aae7022ebeb24:tests/frontend/e2e.mjs:generic-api-key:131
+# Clave AWS ficticia (AKIA + letras) del test de redacción del escritorio; ya no está en el archivo.
+7dc61d888c4b694ddb8002dd6d84fceb3c0388bf:desktop/test/config-logger.test.js:aws-access-token:110

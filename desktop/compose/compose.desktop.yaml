@@ -1,0 +1,16 @@
+# Override de Compose para la aplicación de escritorio (ver desktop/DESKTOP_IMPLEMENTATION_PLAN.md §2.3).
+# Se usa SIEMPRE junto a compose.yaml:
+#   docker compose --project-directory <raíz> -f compose.yaml -f desktop/compose/compose.desktop.yaml up -d --wait
+#
+# Solo cambia cómo encuentra el backend a Ollama. El escritorio pone en el entorno del proceso:
+# - modo native (Ollama para Windows en el host): NEXARO_DESKTOP_OLLAMA_URL=http://host.docker.internal:11434
+# - modo bundled (perfil `ollama`):                NEXARO_DESKTOP_OLLAMA_URL=http://ollama:11434, COMPOSE_PROFILES=ollama
+# y en ambos OLLAMA_NETWORK=nexaro_desktop (red creada por el escritorio si no existe).
+# Sin IPs fijas: nombre de servicio o el alias host.docker.internal de Docker Desktop.
+services:
+  backend:
+    environment:
+      OLLAMA_BASE_URL: "${NEXARO_DESKTOP_OLLAMA_URL:-http://host.docker.internal:11434}"
+    extra_hosts:
+      # Docker Desktop ya define host.docker.internal; en Linux (desarrollo) hace falta host-gateway.
+      - "host.docker.internal:host-gateway"
