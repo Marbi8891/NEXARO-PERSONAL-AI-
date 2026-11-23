@@ -1,4 +1,4 @@
-/* NEXARO brand system — Deep navy, electric teal, quiet indigo. */
+/* NEXARO Enterprise design tokens — conservative enterprise software palette. */
 @font-face {
   font-family: "Inter";
   src: url("/fonts/inter-latin-wght-normal.woff2") format("woff2");
@@ -10,48 +10,48 @@
 :root {
   color-scheme: light dark;
 
-  /* Surfaces */
-  --bg: light-dark(#edf2f7, #0b1220);
-  --panel: light-dark(#ffffff, #111d2d);
-  --panel-2: light-dark(#e3eaf2, #17263a);
-  --border: light-dark(#c7d2df, #26384e);
-  --border-input: light-dark(#667a91, #7188a5);
+  /* Neutral surfaces */
+  --bg: light-dark(#f3f5f8, #101a2b);
+  --panel: light-dark(#ffffff, #172438);
+  --panel-2: light-dark(#e9edf2, #202f43);
+  --border: light-dark(#cbd3dd, #344459);
+  --border-input: light-dark(#68788b, #8191a5);
 
-  /* Text */
-  --text: light-dark(#101b2b, #edf3fa);
-  --muted: light-dark(#46576c, #a6b5c8);
+  /* Typography */
+  --text: light-dark(#172334, #edf1f6);
+  --muted: light-dark(#4c5b6d, #aeb9c7);
 
-  /* NEXARO actions */
-  --primary: light-dark(#126e70, #63d5d0);
-  --primary-hover: light-dark(#0c5a5c, #83e3de);
-  --primary-text: light-dark(#ffffff, #081622);
-  --accent: light-dark(#315b91, #8aa7e8);
-  --focus: light-dark(#087f83, #63d5d0);
+  /* Corporate actions */
+  --primary: light-dark(#344f70, #91a8c4);
+  --primary-hover: light-dark(#293f5c, #adbed2);
+  --primary-text: light-dark(#ffffff, #101a2b);
+  --accent: light-dark(#43658e, #a0b5ce);
+  --focus: light-dark(#315e91, #a0bddd);
 
-  /* Persistent dark navigation */
-  --sidebar: light-dark(#0b1220, #070d17);
-  --sidebar-text: #edf3fa;
-  --sidebar-muted: #9aacc2;
-  --sidebar-active: light-dark(#1a2c43, #17283e);
-  --sidebar-border: light-dark(#26384e, #1b2b40);
+  /* Navigation shell */
+  --sidebar: light-dark(#101a2b, #0b1422);
+  --sidebar-text: #edf1f6;
+  --sidebar-muted: #b2bdca;
+  --sidebar-active: light-dark(#26384f, #1d2c40);
+  --sidebar-border: light-dark(#344459, #29394e);
 
-  /* State */
-  --ok: light-dark(#126a4a, #64d6a5);
-  --ok-bg: light-dark(#e1f4eb, #102e26);
-  --warn: light-dark(#805000, #e8bc69);
-  --warn-bg: light-dark(#fff3dc, #35290f);
-  --danger: light-dark(#ae302b, #ffaaa4);
-  --danger-bg: light-dark(#fce9e7, #3a1c20);
-  --info-bg: light-dark(#e5edf8, #1b2c44);
+  /* State semantics */
+  --ok: light-dark(#176747, #71c5a0);
+  --ok-bg: light-dark(#e5f3ec, #16372d);
+  --warn: light-dark(#79500b, #e5bd70);
+  --warn-bg: light-dark(#fbf2df, #3a2e18);
+  --danger: light-dark(#a52c31, #ef9da0);
+  --danger-bg: light-dark(#f9e9e9, #3c2027);
+  --info-bg: light-dark(#e8eef5, #26364a);
 
-  /* Product accents: small markers, never large colour blocks */
-  --module-personal-ai: light-dark(#087f83, #63d5d0);
-  --module-finance: light-dark(#167a69, #70d2b3);
-  --module-business: light-dark(#5266b8, #9ba9f5);
-  --module-security: light-dark(#a34a54, #f0a0aa);
-  --module-developer: light-dark(#647b37, #b9d77e);
+  /* Product family accents: restrained and semantic */
+  --module-personal-ai: light-dark(#43658e, #a0b5ce);
+  --module-finance: light-dark(#36766b, #81b8ad);
+  --module-business: light-dark(#5b6388, #a8afd0);
+  --module-security: light-dark(#9a5156, #d5a0a3);
+  --module-developer: light-dark(#687b50, #b0c194);
 
-  /* Type */
+  /* Type scale */
   --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --fs-xs: 0.75rem;
@@ -61,18 +61,18 @@
   --fs-xl: 1.5rem;
   --fs-2xl: 2rem;
 
-  /* Space, shape and elevation */
+  /* Spacing and shape */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
   --space-4: 1rem;
   --space-5: 1.5rem;
   --space-6: 2rem;
-  --radius-sm: 7px;
-  --radius: 12px;
-  --radius-lg: 17px;
-  --scrim: rgb(3 9 17 / 65%);
-  --shadow: 0 2px 8px light-dark(rgb(15 31 49 / 7%), rgb(0 0 0 / 30%));
+  --radius-sm: 5px;
+  --radius: 8px;
+  --radius-lg: 11px;
+  --scrim: rgb(5 12 22 / 62%);
+  --shadow: 0 1px 3px light-dark(rgb(16 26 43 / 8%), rgb(0 0 0 / 24%));
 }
 
 :root[data-theme="light"] { color-scheme: light; }
