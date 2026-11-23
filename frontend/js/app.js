@@ -20,6 +20,7 @@ export async function boot(root) {
     { pattern: /^\/register$/, guest: true, view: registerView },
     { pattern: /^\/dashboard$/, nav: "dashboard", view: dashboardView },
     { pattern: /^\/chat(?:\/([^/]+))?$/, nav: "chat", view: chatView },
+    { pattern: /^\/agents$/, nav: "agents", view: agentsView },
     { pattern: /^\/documents$/, nav: "documents", view: documentsView },
     { pattern: /^\/finance$/, nav: "finance", view: financeView },
     { pattern: /^\/developer$/, nav: "developer", view: developerView },
