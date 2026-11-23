@@ -1,4 +1,5 @@
 """Persistencia y autorización del registro de agentes personalizados."""
+import json
 from collections.abc import Callable
 
 from fastapi.testclient import TestClient
@@ -47,7 +48,11 @@ def test_custom_agent_crud_and_tenant_isolation(logged_in: Factory) -> None:
 def test_custom_agent_rejects_unsafe_capabilities(logged_in: Factory) -> None:
     admin, org_id = setup_org(logged_in)
     base = f"/api/organizations/{org_id}/agents"
-    unsafe = {**BODY, "tools": ["terminal"], "permissions": {"filesystem": "read_only", "terminal": True, "network": False}}
+    unsafe = {
+        **BODY,
+        "tools": ["terminal"],
+        "permissions": {"filesystem": "read_only", "terminal": True, "network": False},
+    }
     response = admin.post(base, json=unsafe, headers=HEADERS)
     assert response.status_code == 422
     assert "herramientas ejecutables" in response.json()["detail"]
@@ -67,7 +72,17 @@ def test_agent_configuration_json_is_persisted(logged_in: Factory, database: Dat
     assert response.status_code == 201
     with database.connect() as db:
         row = db.execute("SELECT tools_json, permissions_json, memory_json FROM agents WHERE id = ?", (response.json()["id"],)).fetchone()
-    import json
     assert json.loads(row["tools_json"]) == []
     assert json.loads(row["permissions_json"]) == BODY["permissions"]
     assert json.loads(row["memory_json"]) == BODY["memory"]
+
+
+def test_custom_agent_memory_and_autonomy_are_not_enabled(logged_in: Factory) -> None:
+    admin, org_id = setup_org(logged_in)
+    base = f"/api/organizations/{org_id}/agents"
+    for unsafe_config in (
+        {**BODY, "memory": {"enabled": True, "scope": "workspace"}},
+        {**BODY, "autonomy": "autonomous"},
+    ):
+        response = admin.post(base, json=unsafe_config, headers=HEADERS)
+        assert response.status_code == 422
