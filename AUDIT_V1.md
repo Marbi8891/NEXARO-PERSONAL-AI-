@@ -133,7 +133,24 @@ No se ha hecho ningún merge. Estado de GitHub (`gh pr list`, 2026-11-23):
 | Coding agent / agent hub | `feature/real-coding-agent`, `feature/agent-hub-foundation`, **#6** | — | — | — | Ejecuta comandos: revisión de seguridad propia |
 | App de escritorio Windows (Electron) | `claude/project-thread-17a30v` / `-3nd08p` | — | — | — | 7 468 líneas nuevas; producto aparte |
 
-### Orden recomendado
+### Integración realizada (2026-11-23, con tu autorización: merges locales, sin push)
+
+Rama local `nexaro-v1-full` en `C:\Users\pc\NEXARO-v1`: v1.0 → `main` (identidad de marca, #23) → #5 →
+cadena #8–#11 → aislamiento de conversaciones con la migración renumerada a **0013**. Conflictos
+resueltos: routers y documentación (aditivos), `service.py` (ids generados por el servidor + perfiles
+de agente, modelo y título), migraciones (8–12 de la cadena, 13 la propiedad). Además:
+
+- `main` estaba en rojo en CI: la identidad de marca puso colores `rgb()` fuera de `tokens.css`;
+  pasan a `--shadow-overlay` y `--shadow-auth`.
+- El inventario de rutas del aislamiento exigió probar las rutas nuevas: tests negativos en
+  `tests/security/test_v1_route_isolation.py` (fuera de la organización y desde otra: 404).
+- E2E intermitente (también en el PR #11 solo): carrera del test al navegar, corregida.
+- **PR #24 descartado**: tercera migración `0008` y CRUD de agentes de organización sin uso en el
+  chat, ya cubierto (y mejor) por #10.
+- Resultado: 797 tests passed, E2E 40/40 estable, smoke con Ollama real 8/8, restauración 14/14,
+  ensayo de la migración v7→v13 sobre una copia de los datos reales, despliegue en 8002.
+
+### Orden recomendado (aplicado)
 
 1. **#5** (copia antes de migrar) → `main`.
 2. Cadena **#8 → #9 → #10 → #11**, en ese orden, cada una con su CI verde (son coherentes entre sí: 0008–0012).

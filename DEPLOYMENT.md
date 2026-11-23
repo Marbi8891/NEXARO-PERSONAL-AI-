@@ -2,17 +2,20 @@
 
 ## Despliegue permanente en el ThinkPad (Windows + Docker Desktop) — v1.0
 
-Estado el 2026-11-23, 15:43: NEXARO **en marcha en `http://127.0.0.1:8002`** (`NEXARO_PORT=8002`,
-porque `127.0.0.1:8001` lo ocupa `nexaro-prompt-library`, de `C:\Users\pc\Documents\NEXARO-PERSONAL-AI-`).
-Esquema v7, datos migrados desde v6 sin pérdidas, copia previa verificada en
-`C:\Users\pc\NEXARO-Backups`. **Provisional:** se desplegó desde el worktree de la rama
-`claude/nexaro-v1-consolidation-921fe0`; al integrarla en `main`, repite el paso 5 desde el clon
-definitivo con este mismo `.env`:
+Estado el 2026-11-23, 17:15: NEXARO **en marcha en `http://127.0.0.1:8002`**, versión completa
+(v1.0 + PRs #5, #8–#11 + aislamiento de conversaciones, esquema v13), desplegada desde
+`C:\Users\pc\NEXARO-v1` (worktree de la rama local `nexaro-v1-full`). El puerto 8002 es porque `127.0.0.1:8001`
+lo ocupa `nexaro-prompt-library` (la Prompt Library standalone, ya integrada en NEXARO: puedes
+pararla). `.env` de `C:\Users\pc\NEXARO-v1`:
 
 ```
 NEXARO_PORT=8002
 ALLOWED_ORIGINS=http://127.0.0.1:8002,http://localhost:8002
 ```
+
+**No borres `C:\Users\pc\NEXARO-v1`**: el contenedor monta su `frontend/` y la copia diaria usa sus scripts.
+Para actualizar: `git -C C:\Users\pc\NEXARO-v1 pull` (cuando la rama esté en GitHub) y repite los pasos 3–6
+desde esa carpeta.
 
 1. **Un solo clon, limpio, en `main`.** Hoy hay cuatro copias del proyecto y la de
    `C:\Users\pc\NEXARO-PERSONAL-AI-` tiene cambios sin confirmar. Despliega desde un clon sin

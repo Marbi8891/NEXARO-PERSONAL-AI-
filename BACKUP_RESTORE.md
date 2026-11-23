@@ -161,10 +161,9 @@ SQLite no puede crearlo en un volumen de solo lectura («unable to open database
 frío abre ahora el origen en modo `immutable` (solo con el backend parado y el volumen `:ro`); test
 de regresión en `test_backup_scripts.py`.
 
-**Copia diaria:** tarea «NEXARO Backup diario» registrada el 2026-11-23 (03:30, retención 14);
-ejecución de prueba correcta (`nexaro-20261123-154529-daily`, «COPIA VÁLIDA»). Apunta al script
-del worktree de la rama v1: tras integrarla en `main`, repite `register_backup_task.ps1 -Register`
-desde el clon definitivo (sustituye la tarea; `-Force`). Para quitarla:
+**Copia diaria:** tarea «NEXARO Backup diario» (03:30, retención 14) que ejecuta
+`C:\Users\pc\NEXARO-v1\scripts\backup_nexaro.ps1`. Ejecución de prueba del 2026-11-23 17:15: código 0,
+`nexaro-20261123-171517-daily` (esquema v13). Para quitarla:
 `Unregister-ScheduledTask -TaskName 'NEXARO Backup diario'`.
 
 **Pendiente:** la restauración con
