@@ -1,14 +1,14 @@
-// NEXARO identity: symbol + wordmark. Single source for the application brand.
+// NEXARO Enterprise wordmark and symbol lockup.
 import { h } from "../dom.js";
 
 export function brand() {
   return h(
     "span",
-    { class: "logo", "aria-label": "NEXARO Personal AI" },
-    h("img", { src: "/icons/symbol.svg", alt: "", width: "36", height: "36" }),
+    { class: "logo", "aria-label": "NEXARO Intelligence Platform" },
+    h("img", { src: "/icons/symbol.svg", alt: "", width: "34", height: "34" }),
     h("span", { class: "brand-lockup" },
       h("span", { class: "wordmark" }, "NEXARO"),
-      h("span", { class: "brand-descriptor" }, "PERSONAL AI"),
+      h("span", { class: "brand-descriptor" }, "INTELLIGENCE PLATFORM"),
     ),
   );
 }
