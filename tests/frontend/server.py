@@ -19,7 +19,9 @@ from nexaro_core.config import Settings
 from nexaro_core.database import Database
 from nexaro_core.identity import create_user
 
-ORIGIN = "http://127.0.0.1:8765"
+# NEXARO_E2E_PORT: en Windows Hyper-V reserva rangos (p. ej. 8751-8850) y 8765 puede no estar libre.
+PORT = int(os.environ.get("NEXARO_E2E_PORT", "8765"))
+ORIGIN = f"http://127.0.0.1:{PORT}"
 PASSWORD = "correct-horse-battery"
 
 
@@ -71,7 +73,7 @@ def main() -> None:
             user_id = create_user(db, email, PASSWORD, approved=approved)
             db.execute("UPDATE users SET role = ? WHERE id = ?", (role, user_id))
     app: Any = create_app(settings, chat_provider=FakeProvider())
-    uvicorn.run(app, host="127.0.0.1", port=8765, log_level="warning")
+    uvicorn.run(app, host="127.0.0.1", port=PORT, log_level="warning")
 
 
 if __name__ == "__main__":

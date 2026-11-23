@@ -3,6 +3,7 @@
   "short_name": "NEXARO",
   "description": "Plataforma de IA personal y de equipo",
   "lang": "es",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

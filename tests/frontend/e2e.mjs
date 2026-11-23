@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { pathToFileURL } from "node:url";
 
 const nativeFetch = globalThis.fetch;
-const BASE = "http://127.0.0.1:8765";
+const BASE = `http://127.0.0.1:${process.env.NEXARO_E2E_PORT ?? "8765"}`;
 const REPO = process.env.REPO;
 
 async function session() {
@@ -224,6 +224,13 @@ await check("auditoría lista eventos y filtra", async () => {
 await check("uso del modelo se muestra", async () => {
   [...document.querySelectorAll("[role=tab]")].find((b) => b.textContent.startsWith("Uso")).click();
   await until(() => text().includes("Coste del mes"), "usage");
+});
+await check("operaciones: estado real de servicios, base de datos y copias", async () => {
+  [...document.querySelectorAll("[role=tab]")].find((b) => b.textContent === "Operaciones").click();
+  await until(() => text().includes("Estado de los servicios"), "ops");
+  assert.ok(text().includes("Íntegra"), "la base de datos de pruebas está íntegra");
+  assert.ok(text().includes("Sin configurar"), "sin BACKUP_STATUS_PATH no se inventa una copia");
+  assert.ok(text().includes("Sin errores"), "sin 5xx se dice, no se inventan errores");
 });
 await check("admin crea organización y añade miembro", async () => {
   location.hash = "#/organizations";

@@ -19,8 +19,22 @@ En producción `/docs` está desactivado. En desarrollo, la referencia generada 
 | POST | `/auth/login` | público | limitado por IP+correo; error idéntico para usuario inexistente y clave errónea |
 | GET | `/auth/me` | sesión | |
 | POST | `/auth/logout` | sesión | revoca la sesión en servidor |
+| POST | `/auth/password` | sesión + `Origin` | `{current_password, new_password}` (mín. 12, distinta de la actual) → `{changed, other_sessions_revoked}`. 403 si la actual no es correcta; 5 fallos → 429. Mantiene esta sesión y cierra las demás. Auditoría `auth.password_change` |
 
-## Obsidian Vault (solo lectura)\n\n| Método | Ruta | Acceso | Notas |\n|---|---|---|---|\n| GET | `/obsidian/status` | sesión | Estado del Vault y número de notas Markdown |\n| GET | `/obsidian/notes?limit=200&offset=0` | sesión | Listado paginado; excluye carpetas ocultas y configuración |\n| GET | `/obsidian/note/{path}` | sesión | Lee una nota Markdown dentro del Vault; traversal y symlinks fuera del Vault rechazados |\n| GET | `/obsidian/search?q=...&limit=20` | sesión | Búsqueda literal sencilla |\n\nConfiguración Docker: `OBSIDIAN_VAULT_HOST_PATH` define el Vault del host; el contenedor lo monta como `/knowledge/obsidian` en modo read-only. Ver [guía de integración](docs/integrations/obsidian.md).\n\n## NEXARO Personal AI
+## Obsidian Vault (solo lectura)
+
+| Método | Ruta | Acceso | Notas |
+|---|---|---|---|
+| GET | `/obsidian/status` | admin o `OBSIDIAN_ALLOWED_EMAILS` | Estado del Vault y número de notas Markdown |
+| GET | `/obsidian/notes?limit=200&offset=0` | admin o lista | Listado paginado; excluye carpetas ocultas y configuración |
+| GET | `/obsidian/note/{path}` | admin o lista | Lee una nota Markdown dentro del Vault; traversal y symlinks fuera del Vault rechazados; > `OBSIDIAN_MAX_NOTE_BYTES` → 413 |
+| GET | `/obsidian/search?q=...&limit=20` | admin o lista | Búsqueda literal sencilla (salta notas grandes; como mucho `OBSIDIAN_MAX_FILES`) |
+
+El Vault es del propietario: cualquier otro usuario recibe 403 (auditado como `obsidian.access`). 60 peticiones/minuto por usuario (`OBSIDIAN_REQUESTS_PER_MINUTE`).
+
+Configuración Docker: `OBSIDIAN_VAULT_HOST_PATH` define el Vault del host; el contenedor lo monta como `/knowledge/obsidian` en modo read-only. Ver [guía de integración](docs/integrations/obsidian.md).
+
+## NEXARO Personal AI
 
 | Método | Ruta | Acceso | Notas |
 |---|---|---|---|
@@ -108,6 +122,7 @@ Bajo `/organizations/{id}/expenses`. Solo propietario y administrador (`expenses
 | GET | `/admin/audit` | admin | filtro `action`, `limit` |
 | GET | `/admin/security?days=14` | admin | `days` 1–90. Resumen derivado de la auditoría: totales (accesos fallidos y correctos, denegaciones, bloqueos), serie diaria sin huecos, 5 IP con más fallos, incidencias por tipo y las 10 últimas. Sin correos, seudónimos ni `details` |
 | GET | `/admin/models` | admin | rutas del gateway: `provider`, `model`, `cloud`, `healthy`, `circuit` (`closed`/`open`/`half_open`), `consecutive_failures`, `installed_models` (Ollama: nombre, tamaño, parámetros, cuantización; `null` si no responde) y `model_installed` |
+| GET | `/admin/status` | admin | panel de operaciones (OPERATIONS.md): `backend`, `ollama` (estado, modelo, `model_ready`, rutas), `database` (`quick_check`, versión del esquema, tamaño), `agents`, `system` (CPU, memoria del contenedor por cgroups, disco del volumen), `requests` (total por clase, latencia p50/p95, últimos 5xx con `request_id`), `generation_last_24h` y `backups` (`ok`, `stale` > 26 h, `failed`, `never`, `not_configured`) |
 | GET | `/admin/usage` | admin | uso de modelos por proveedor/modelo (`days`, máx. 365), coste del mes y `inference`: medias de primer token, carga, lectura del prompt, total, tokens/s y cargas en frío |
 
 ## Códigos

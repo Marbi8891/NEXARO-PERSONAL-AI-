@@ -77,3 +77,15 @@ def test_swagger_is_not_covered_by_strict_csp_outside_production(tmp_path: Path)
     settings = Settings(database_path=tmp_path / "n.db", frontend_path=tmp_path / "x")
     with TestClient(create_app(settings)) as client:
         assert "content-security-policy" not in client.get("/docs").headers
+
+
+def test_static_files_are_revalidated_so_updates_show_immediately(tmp_path: Path) -> None:
+    from tests.conftest import FakeProvider
+
+    settings = Settings(database_path=tmp_path / "n.db", frontend_path=FRONTEND)
+    with TestClient(create_app(settings, chat_provider=FakeProvider())) as client:
+        for path in ("/", "/css/components.css", "/js/main.js", "/sw.js"):
+            response = client.get(path)
+            assert response.status_code == 200, path
+            assert response.headers["cache-control"] == "no-cache", path
+        assert client.get("/api/health/live").headers["cache-control"] == "no-store"

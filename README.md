@@ -22,11 +22,29 @@ proveedores en la nube. Monolito modular en Python (FastAPI) con frontend HTML/C
 | Finance, Business | Solo identidad de marca; sin funcionalidad (no aparecen en la navegación) |
 | Agentes: 6 especializados + tutor, herramientas con permiso por agente y usuario, auditoría `agent.tool`, selector en el chat | Implementado y probado (ADR-0022) |
 | Tareas, embeddings | Solo esquema (sin API) |
-| Migraciones versionadas | Implementado (SQLite, hasta la 7) |
+| Migraciones versionadas | Implementado (SQLite, hasta la 7); actualización desde v1…v6 probada |
+| Copias de seguridad y restauración (Windows, PowerShell) | Implementado; prueba completa de restauración en entorno temporal: PASS ([BACKUP_RESTORE.md](BACKUP_RESTORE.md)) |
+| Operaciones: estado de servicios, recursos, errores y copias (Administración → Operaciones) | Implementado y probado |
+| Obsidian (solo lectura, solo propietario) | Implementado y probado |
+| Acceso remoto privado (Tailscale Serve) | Preparado, **no activado** ([REMOTE_ACCESS.md](REMOTE_ACCESS.md)) |
 | PostgreSQL | DDL validado con un servidor real; la app aún no ejecuta sobre él |
 | AWS (Terraform) | Aparcado por decisión del propietario; **no se crea nada en AWS sin autorización expresa** |
 
-## Arranque rápido (Docker)
+## Arranque en Windows (ThinkPad)
+
+Ver [DEPLOYMENT.md](DEPLOYMENT.md#despliegue-permanente-en-el-thinkpad-windows--docker-desktop--v10): requisitos, puerto, copia previa y arranque.
+
+En Windows no hay `make` y PowerShell no continúa líneas con `\`: los bloques de la sección
+siguiente son para macOS/Linux. Equivalentes en PowerShell (desde la carpeta del clon):
+
+| macOS/Linux | Windows (PowerShell) |
+|---|---|
+| `make up` | `docker compose up -d --build --wait` |
+| `make model` | `Get-Content scripts\ollama_model.py -Raw \| docker exec -i nexaro-backend sh -c 'python - ensure "$OLLAMA_MODEL"'` |
+| `make smoke` | `pwsh -File scripts\smoke_isolated.ps1 -Image nexaro-personal-ai-backend` (con datos temporales) |
+| primer administrador | `docker exec -it nexaro-backend python -m nexaro_api.bootstrap_admin --confirm-database /data/nexaro.db --email TU_CORREO` (una sola línea; solo si aún no hay ningún administrador) |
+
+## Arranque rápido (Docker, macOS/Linux)
 
 ```bash
 make up        # comprueba el entorno, construye y espera a que todo esté sano: http://127.0.0.1:8001
@@ -49,7 +67,11 @@ La documentación de la aplicación está centralizada en [docs/README.md](docs/
 - [Arquitectura](ARCHITECTURE.md)
 - [API](API.md)
 - [Desarrollo](DEVELOPMENT.md)
-- [Despliegue y operación](docs/OPERATIONS.md)
+- [Despliegue y operación](docs/OPERATIONS.md) · [Despliegue](DEPLOYMENT.md)
+- [Copias de seguridad y restauración](BACKUP_RESTORE.md)
+- [Acceso remoto privado](REMOTE_ACCESS.md)
+- [Evaluación de la IA](AI_EVALUATION.md)
+- v1.0: [auditoría](AUDIT_V1.md) · [revisión de seguridad](SECURITY_REVIEW_V1.md) · [checklist de release](RELEASE_CHECKLIST_V1.md) · [notas de versión](RELEASE_NOTES_V1.md)
 - [Seguridad](SECURITY.md)
 - [Sistema de diseño](docs/design-system.md)
 - [Decisiones técnicas (ADRs)](docs/decisions/)

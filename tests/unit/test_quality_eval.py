@@ -341,17 +341,22 @@ def test_any_failed_case_exits_1_but_the_report_is_complete(server: str, tmp_pat
     sent = FakeOllama.seen[0]
     assert sent["messages"][0] == {"role": "system", "content": build_system_prompt()}
     assert sent["options"] == {"seed": 42, "num_ctx": 4096, "num_predict": 2048}
-    text = report.read_text()
+    text = report.read_text(encoding="utf-8")
     assert "| bueno | 100 % (1/1)" in text and "| malo | 0 % (0/1)" in text
     assert "**malo** · `py-nif`" in text and "tok/s" in text
-    assert {r["model"] for r in json.loads(answers.read_text())} == {"bueno", "malo"}
+    assert {r["model"] for r in json.loads(answers.read_text(encoding="utf-8"))} == {
+        "bueno",
+        "malo",
+    }
 
 
 def test_all_cases_passing_exits_0(server: str, tmp_path: Path) -> None:
     report, answers = tmp_path / "informe.md", tmp_path / "respuestas.json"
     args = ["--base-url", server, "--models", "bueno", "--only", "py-nif"]
     assert qe.main([*args, "--report", str(report), "--save-answers", str(answers)]) == 0
-    assert "| bueno | 100 % (1/1)" in report.read_text() and "Ninguno." in report.read_text()
+    assert "| bueno | 100 % (1/1)" in report.read_text(
+        encoding="utf-8"
+    ) and "Ninguno." in report.read_text(encoding="utf-8")
 
     # Puntuar después sin Ollama (--grade-only) mantiene el mismo código de salida.
     assert qe.main(["--grade-only", str(answers), "--only", "py-nif"]) == 0
@@ -377,7 +382,9 @@ def test_run_code_without_docker_fails_the_case_instead_of_running_locally(
     monkeypatch.setattr(qe.shutil, "which", lambda name: None)
     args = ["--grade-only", str(answers), "--only", "py-nif", "--run-code"]
     assert qe.main([*args, "--report", str(report)]) == 1
-    assert "codigo_python: no ejecutado: Docker no está instalado" in report.read_text()
+    assert "codigo_python: no ejecutado: Docker no está instalado" in report.read_text(
+        encoding="utf-8"
+    )
 
 
 @pytest.mark.usefixtures("sandbox")
@@ -387,7 +394,7 @@ def test_grade_only_runs_the_generated_code_in_the_sandbox(server: str, tmp_path
              "--save-answers", str(answers)])  # fmt: skip
     args = ["--grade-only", str(answers), "--only", "py-nif", "--run-code"]
     assert qe.main([*args, "--report", str(report)]) == 1
-    text = report.read_text()
+    text = report.read_text(encoding="utf-8")
     assert "| bueno | 100 % (1/1)" in text and "| malo | 0 % (0/1)" in text
 
 
@@ -395,4 +402,20 @@ def test_unreachable_ollama_is_reported_as_error(tmp_path: Path) -> None:
     report = tmp_path / "informe.md"
     args = ["--base-url", "http://127.0.0.1:9", "--only", "estilo-saludo", "--timeout", "2"]
     assert qe.main([*args, "--report", str(report)]) == 1
-    assert "URLError" in report.read_text()
+    assert "URLError" in report.read_text(encoding="utf-8")
+
+
+def test_rag_abstention_case_accepts_a_correct_refusal() -> None:
+    """Regresión: «no contiene información sobre si se permiten mascotas» es una abstención
+    correcta y no debe contar como afirmación (falso positivo de la evaluación v1.0)."""
+    case = next(c for c in qe.load_cases(qe.DEFAULT_CASES) if c["id"] == "doc-no-consta")
+    abstains = (  # respuesta real de qwen2.5:3b en la evaluación del 2026-11-23
+        "Lo siento por la confusión, pero no contiene información sobre si se permiten mascotas "
+        "en la vivienda. El fragmento proporcionado habla sobre el plazo para la devolución de la "
+        "fianza, no sobre las condiciones de alquiler, como permitir o no permitir mascotas."
+    )
+    affirms = (
+        "Sí, se permiten mascotas en la vivienda según el contrato de alquiler que me has dado."
+    )
+    assert all(ch.passed for ch in qe.grade(case, abstains, run_code=False))
+    assert not all(ch.passed for ch in qe.grade(case, affirms, run_code=False))

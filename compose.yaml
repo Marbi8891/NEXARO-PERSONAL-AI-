@@ -12,16 +12,24 @@ services:
       dockerfile: Dockerfile
     container_name: nexaro-backend
     restart: unless-stopped
+    # Solo loopback. NEXARO_PORT (.env) si 8001 está ocupado; entonces ajusta también ALLOWED_ORIGINS.
     ports:
-      - "127.0.0.1:8001:8000"
+      - "127.0.0.1:${NEXARO_PORT:-8001}:8000"
     environment:
       OLLAMA_BASE_URL: "http://ollama:11434"
       OLLAMA_MODEL: "${OLLAMA_MODEL:-qwen2.5:3b}"
       OLLAMA_KEEP_ALIVE: "30m"
       OLLAMA_NUM_CTX: "4096"
-      ALLOWED_ORIGINS: "http://127.0.0.1:8001,http://localhost:8001"
+      # Acceso remoto privado (REMOTE_ACCESS.md): añade aquí la URL https de Tailscale Serve y
+      # activa COOKIE_SECURE=true en .env. El puerto sigue publicado solo en 127.0.0.1.
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-http://127.0.0.1:8001,http://localhost:8001}"
+      COOKIE_SECURE: "${COOKIE_SECURE:-false}"
       DATABASE_PATH: "/data/nexaro.db"
       OBSIDIAN_VAULT_PATH: "/knowledge/obsidian"
+      # Además de los administradores, cuentas que pueden leer el Vault (separadas por comas).
+      OBSIDIAN_ALLOWED_EMAILS: "${OBSIDIAN_ALLOWED_EMAILS:-}"
+      # Lo escribe scripts/backup_nexaro.ps1; lo muestra Administración > Operaciones.
+      BACKUP_STATUS_PATH: "/data/backup-status.json"
       API_DOCS: "false"
       LOGIN_IP_MAX_ATTEMPTS: "50"
       HEALTH_CACHE_SECONDS: "5"

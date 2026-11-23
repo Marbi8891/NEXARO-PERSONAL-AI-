@@ -91,11 +91,36 @@ class Settings(BaseSettings):
     # None = solo en desarrollo. Swagger/OpenAPI describen toda la superficie de la API.
     api_docs: bool | None = Field(default=None, alias="API_DOCS")
 
+    # Obsidian (solo lectura). El Vault es UN directorio del host, sin propietario por usuario ni
+    # por organización: por eso solo lo leen los administradores de la plataforma y, además, las
+    # cuentas listadas en OBSIDIAN_ALLOWED_EMAILS. Los topes evitan que un Vault grande (o un
+    # archivo enorme) bloquee el backend.
+    obsidian_vault_path: str | None = Field(default=None, alias="OBSIDIAN_VAULT_PATH")
+    obsidian_allowed_emails: Annotated[frozenset[str], NoDecode] = Field(
+        default=frozenset(), alias="OBSIDIAN_ALLOWED_EMAILS"
+    )
+    obsidian_max_note_bytes: int = Field(default=1024 * 1024, gt=0, alias="OBSIDIAN_MAX_NOTE_BYTES")
+    obsidian_max_files: int = Field(default=5000, gt=0, alias="OBSIDIAN_MAX_FILES")
+    obsidian_requests_per_minute: int = Field(
+        default=60, gt=0, alias="OBSIDIAN_REQUESTS_PER_MINUTE"
+    )
+
+    # Estado de las copias de seguridad que escribe scripts/backup_nexaro.ps1 (en el volumen de
+    # datos). Solo lo lee el panel de operaciones.
+    backup_status_path: Path | None = Field(default=None, alias="BACKUP_STATUS_PATH")
+
     @field_validator("allowed_origins", mode="before")
     @classmethod
     def _split_origins(cls, value: object) -> object:
         if isinstance(value, str):
             return frozenset(item.strip() for item in value.split(",") if item.strip())
+        return value
+
+    @field_validator("obsidian_allowed_emails", mode="before")
+    @classmethod
+    def _split_emails(cls, value: object) -> object:
+        if isinstance(value, str):
+            return frozenset(item.strip().lower() for item in value.split(",") if item.strip())
         return value
 
     @field_validator("ai_provider_order", mode="before")

@@ -518,8 +518,10 @@
       ]
     ],
     "must_not_include": [
-      "si se permiten",
-      "se permiten mascotas"
+      "si, se permiten",
+      "estan permitidas",
+      "se permite tener mascotas",
+      "puedes tener mascotas"
     ]
   },
   {
@@ -706,6 +708,45 @@
       [
         "120"
       ]
+    ]
+  },
+  {
+    "id": "agente-security-sin-inventar",
+    "category": "agentes",
+    "mode": "security",
+    "prompt": "Revisa este código Python y dime qué vulnerabilidades tiene. Si no tiene ninguna clara, dilo.\n\n```python\ndef buscar_usuario(db, email: str):\n    return db.execute(\"SELECT id, email FROM users WHERE email = ?\", (email,)).fetchone()\n```",
+    "must_include": [
+      [
+        "parametriz",
+        "marcador",
+        "placeholder",
+        "no veo",
+        "no se aprecia",
+        "no presenta",
+        "no tiene vulnerabilidades",
+        "no hay vulnerabilidades",
+        "es segura",
+        "segura frente"
+      ]
+    ],
+    "must_not_include": [
+      "cve-",
+      "es vulnerable a inyeccion",
+      "vulnerable a inyeccion sql"
+    ]
+  },
+  {
+    "id": "doc-dos-fragmentos",
+    "category": "documentos",
+    "prompt": "<fragmento n=\"1\" documento=\"Política de vacaciones\">\nCada empleado dispone de 23 días laborables de vacaciones al año.\n</fragmento>\n\n<fragmento n=\"2\" documento=\"Calendario 2026\">\nEl plazo para solicitar las vacaciones de verano termina el 15 de marzo.\n</fragmento>\n\nPregunta: ¿Hasta cuándo puedo pedir las vacaciones de verano?",
+    "must_include": [
+      [
+        "15 de marzo"
+      ]
+    ],
+    "must_not_include": [
+      "23 de marzo",
+      "30 de marzo"
     ]
   }
 ]

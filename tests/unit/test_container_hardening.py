@@ -20,8 +20,11 @@ def test_backend_runs_with_minimal_privileges() -> None:
 
 
 def test_only_localhost_port_and_no_secrets_in_compose() -> None:
-    ports = re.findall(r'^\s+- "([^"]+:\d+:\d+)"', COMPOSE, re.MULTILINE)
+    # El puerto del host puede venir de NEXARO_PORT, pero la IP es SIEMPRE 127.0.0.1 literal.
+    ports = re.findall(r'^\s+- "([^"]+:\d+)"$', COMPOSE, re.MULTILINE)
+    ports = [p for p in ports if p.count(":") >= 2]
     assert ports and all(p.startswith("127.0.0.1:") for p in ports)
+    assert "127.0.0.1:${NEXARO_PORT:-8001}:8000" in ports
     assert not re.search(r"(PASSWORD|SECRET|TOKEN|API_KEY)\s*:\s*\"?[^\s\"$]", COMPOSE)
 
 

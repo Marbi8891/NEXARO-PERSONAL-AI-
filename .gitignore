@@ -62,3 +62,6 @@ coverage/
 .vscode/
 *.swp
 *.swo
+
+# Vault de Obsidian por defecto de compose.yaml (notas personales: nunca al repositorio)
+obsidian-vault/

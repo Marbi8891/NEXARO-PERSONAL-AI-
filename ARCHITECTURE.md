@@ -57,6 +57,16 @@ suscripciones, proveedores de modelos, documentos, fragmentos, embeddings, agent
 tareas. Hay un juego de SQL por dialecto (`migrations/sqlite`, `migrations/postgresql`) y un test
 de paridad contra un PostgreSQL real.
 
+## Operación (v1.0)
+
+- Métricas de peticiones en memoria (`nexaro_core.observability.metrics.RequestMetrics`), alimentadas
+  por `RequestContextMiddleware`; `nexaro_api.system_status` compone el estado para
+  `GET /api/admin/status` (cgroups para CPU/memoria del contenedor, `shutil.disk_usage` del volumen,
+  `PRAGMA quick_check`, estado de copias leído de `BACKUP_STATUS_PATH`).
+- Copias: scripts PowerShell en el host + `scripts/backup/nexaro_backup_helper.py` (solo biblioteca
+  estándar) ejecutado dentro de un contenedor de la imagen del backend (BACKUP_RESTORE.md).
+- Obsidian: recurso del propietario, no de una organización (SECURITY_REVIEW_V1.md OBS-1).
+
 ## Límites conocidos
 
 - La aplicación solo ejecuta sobre SQLite: el DDL de PostgreSQL está validado, pero falta la capa de acceso (ADR-0005).

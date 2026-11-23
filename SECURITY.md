@@ -12,6 +12,10 @@
 - Contenedor no root (uid 10001), cabeceras `X-Content-Type-Options`, `X-Frame-Options`,
   `Referrer-Policy`.
 - CI: pip-audit, gitleaks, escaneo de imagen con Trivy.
+- Claves de API con scopes (`chat:write`, `conversations:read`) y límite por minuto por clave.
+- Cambio de contraseña con la actual; revoca las demás sesiones (`POST /api/auth/password`).
+- Vault de Obsidian: solo lectura, solo administradores y `OBSIDIAN_ALLOWED_EMAILS`, con topes de tamaño, archivos y peticiones.
+- Copias de seguridad verificadas fuera del repositorio ([BACKUP_RESTORE.md](BACKUP_RESTORE.md)); acceso remoto solo por Tailscale Serve, nunca Funnel ([REMOTE_ACCESS.md](REMOTE_ACCESS.md)).
 
 - Aislamiento entre organizaciones: `organization_id NOT NULL` + claves foráneas compuestas
   (la base rechaza referencias entre organizaciones), acceso por membresía y permiso (404 si no
@@ -32,11 +36,14 @@
 ## Pendiente / límites
 
 - El límite de intentos (login y claves de API) es en memoria del proceso; con varias instancias haría falta un almacén compartido. `client_ip` debe reflejar la IP real tras un proxy (VERIFY en el despliegue).
-- Sin scopes por clave de API: una clave puede lo mismo que su creador en `/api/v1/chat`.
 - Subir el coste de scrypt exige verificación versionada y rehash (no hecho).
 - RLS solo existe en el DDL de PostgreSQL y no protege frente a superusuarios; la aplicación aún no
   ejecuta sobre PostgreSQL (ADR-0005). En SQLite el aislamiento depende de claves compuestas y de la capa de aplicación.
-- Documentos, agentes y tareas tienen tablas pero aún no API: el aislamiento está probado a nivel de esquema.
+- Tareas y embeddings tienen tablas pero aún no API: el aislamiento está probado a nivel de esquema.
+- Sin recuperación de contraseña olvidada (no hay correo saliente); el cambio con la contraseña actual sí existe (Perfil).
+- Sesiones de 7 días sin caducidad por inactividad.
+
+Revisión completa de la v1.0 (hallazgos, correcciones y riesgos): [SECURITY_REVIEW_V1.md](SECURITY_REVIEW_V1.md).
 
 ## Reporte de vulnerabilidades
 

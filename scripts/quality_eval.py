@@ -196,6 +196,8 @@ def sandbox_problem() -> str | None:
             stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=DOCKER_OVERHEAD_SECONDS,
             check=False,
         )
@@ -268,6 +270,8 @@ def run_python(code: str, tests: str) -> Check:
                 stdin=subprocess.DEVNULL,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",  # salida del contenedor: UTF-8 aunque el host sea cp1252
+                errors="replace",
                 timeout=CODE_TIMEOUT_SECONDS + DOCKER_OVERHEAD_SECONDS,
                 check=False,
             )

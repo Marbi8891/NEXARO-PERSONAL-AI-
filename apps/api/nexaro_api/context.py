@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from ai_gateway.providers.base import ChatProvider
 from nexaro_core.config import Settings
 from nexaro_core.database import Database
+from nexaro_core.observability import RequestMetrics
 from nexaro_core.security import ConcurrencyGuard, RateLimiter
 from products.personal_ai.service import PersonalAIService
 
@@ -18,5 +19,7 @@ class AppContext:
     ip_limiter: RateLimiter  # intentos de login por IP (umbral propio)
     chat_limiter: RateLimiter  # peticiones al modelo por usuario y minuto
     chat_guard: ConcurrencyGuard  # generaciones simultáneas
+    obsidian_limiter: RateLimiter  # lecturas del Vault por usuario y minuto
     provider: ChatProvider
     personal_ai: PersonalAIService
+    metrics: RequestMetrics  # peticiones, latencia y errores recientes (panel de operaciones)

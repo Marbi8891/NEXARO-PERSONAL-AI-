@@ -11,7 +11,7 @@ PRODUCT_NAMES = {
 
 def imports(path: Path) -> set[str]:
     found: set[str] = set()
-    for node in ast.walk(ast.parse(path.read_text())):
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
         if isinstance(node, ast.Import):
             found.update(alias.name for alias in node.names)
         elif isinstance(node, ast.ImportFrom) and node.module and node.level == 0:

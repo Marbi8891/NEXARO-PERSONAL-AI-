@@ -27,7 +27,7 @@ from nexaro_api.routers import (
 )
 from nexaro_core.config import Settings, get_settings
 from nexaro_core.database import Database
-from nexaro_core.observability import configure_logging, request_id_var
+from nexaro_core.observability import RequestMetrics, configure_logging, request_id_var
 from nexaro_core.security import ConcurrencyGuard, RateLimiter
 from products.personal_ai.service import PersonalAIService
 
@@ -92,6 +92,9 @@ def create_app(
         key_limiter=RateLimiter(
             settings.api_key_requests_per_minute, 60, settings.login_max_tracked_keys
         ),
+        obsidian_limiter=RateLimiter(
+            settings.obsidian_requests_per_minute, 60, settings.login_max_tracked_keys
+        ),
         provider=provider,
         personal_ai=PersonalAIService(
             database,
@@ -104,6 +107,7 @@ def create_app(
             },
             history_max_chars=settings.chat_history_max_chars,
         ),
+        metrics=RequestMetrics(),
     )
 
     @asynccontextmanager
@@ -129,7 +133,7 @@ def create_app(
     ) and not production
     app = FastAPI(
         title="NEXARO",
-        version="0.3.0",
+        version="1.0.0",
         lifespan=lifespan,
         docs_url="/docs" if docs_enabled else None,
         redoc_url=None,
@@ -150,10 +154,15 @@ def create_app(
             response.headers.setdefault("Strict-Transport-Security", HSTS)
         if request.url.path.startswith("/api/"):  # respuestas autenticadas: nada de caché
             response.headers.setdefault("Cache-Control", "no-store")
+        else:
+            # Interfaz: el navegador revalida siempre (ETag -> 304, barato). Sin esto aplica caché
+            # heurística y tras actualizar NEXARO seguiría usando CSS/JS antiguos durante horas.
+            response.headers.setdefault("Cache-Control", "no-cache")
         return response
 
     app.add_middleware(BodyLimitMiddleware, max_bytes=settings.max_body_bytes)
-    app.add_middleware(RequestContextMiddleware)  # el último añadido es el más externo
+    # El último añadido es el más externo: mide también los 413 del límite de cuerpo.
+    app.add_middleware(RequestContextMiddleware, metrics=ctx.metrics)
 
     @app.exception_handler(Exception)
     async def unhandled(request: Request, exc: Exception) -> JSONResponse:

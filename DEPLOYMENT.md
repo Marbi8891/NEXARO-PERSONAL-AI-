@@ -1,5 +1,73 @@
 # Despliegue
 
+## Despliegue permanente en el ThinkPad (Windows + Docker Desktop) — v1.0
+
+Estado el 2026-11-23, 15:43: NEXARO **en marcha en `http://127.0.0.1:8002`** (`NEXARO_PORT=8002`,
+porque `127.0.0.1:8001` lo ocupa `nexaro-prompt-library`, de `C:\Users\pc\Documents\NEXARO-PERSONAL-AI-`).
+Esquema v7, datos migrados desde v6 sin pérdidas, copia previa verificada en
+`C:\Users\pc\NEXARO-Backups`. **Provisional:** se desplegó desde el worktree de la rama
+`claude/nexaro-v1-consolidation-921fe0`; al integrarla en `main`, repite el paso 5 desde el clon
+definitivo con este mismo `.env`:
+
+```
+NEXARO_PORT=8002
+ALLOWED_ORIGINS=http://127.0.0.1:8002,http://localhost:8002
+```
+
+1. **Un solo clon, limpio, en `main`.** Hoy hay cuatro copias del proyecto y la de
+   `C:\Users\pc\NEXARO-PERSONAL-AI-` tiene cambios sin confirmar. Despliega desde un clon sin
+   cambios locales (`git status` vacío) para que lo que corre sea lo probado.
+2. **Puerto.** O bien paras la Prompt Library standalone (la PR #11 la integra en NEXARO):
+
+   ```powershell
+   docker stop nexaro-prompt-library
+   ```
+
+   o bien, en `.env`, usas otro puerto local (siempre en 127.0.0.1):
+
+   ```
+   NEXARO_PORT=8002
+   ALLOWED_ORIGINS=http://127.0.0.1:8002,http://localhost:8002
+   ```
+
+3. **Copia de seguridad** de los datos actuales (esquema v6) antes de actualizar:
+
+   ```powershell
+   pwsh -File C:\Users\pc\NEXARO-PERSONAL-AI-\scripts\backup_nexaro.ps1 -Reason pre-update
+   ```
+
+4. **Prueba previa de la imagen** contra el Ollama real con datos temporales (no toca los reales):
+
+   ```powershell
+   docker build -t nexaro-personal-ai-backend:v1-candidate C:\Users\pc\NEXARO-PERSONAL-AI-
+   ```
+
+   ```powershell
+   pwsh -File C:\Users\pc\NEXARO-PERSONAL-AI-\scripts\smoke_isolated.ps1 -Image nexaro-personal-ai-backend:v1-candidate
+   ```
+
+5. **Arranque** (construye la imagen, aplica la migración 7 al arrancar y espera a que esté sano):
+
+   ```powershell
+   docker compose -f C:\Users\pc\NEXARO-PERSONAL-AI-\compose.yaml up -d --build --wait
+   ```
+
+6. **Comprobaciones:** `http://127.0.0.1:8001/api/health` → `{"status":"ok",...}`; inicia sesión;
+   Administración → Operaciones (todo en verde salvo «Copia de seguridad» hasta el primer
+   `backup_nexaro.ps1` con el backend en marcha).
+7. **Copia diaria** (cambia el Programador de tareas; la decides tú): BACKUP_RESTORE.md.
+8. **Arranque tras reiniciar Windows:** Docker Desktop → *Settings → General → Start Docker Desktop
+   when you sign in*. Los contenedores tienen `restart: unless-stopped` y vuelven solos; el Ollama
+   externo (`C:\Docker\ollama-local`) también. Docker Desktop no arranca hasta que inicias sesión.
+9. **Acceso desde el móvil:** REMOTE_ACCESS.md (Tailscale Serve; preparado, sin activar).
+
+Recomendado para el despliegue permanente: quitar el bind mount `./frontend:/app/frontend:ro` de
+`compose.yaml` (la imagen ya incluye la interfaz) para que cambiar de rama en el clon no cambie la
+interfaz en caliente.
+
+Recursos: backend 1 GiB / 2 CPU / 200 procesos; logs 10 MiB × 5. El Ollama externo tiene 12 GiB;
+`qwen2.5:3b` ocupa ~2 GiB cargado.
+
 ## Instalación desde cero (Docker, local)
 
 Requisitos: Docker con **Compose >= 2.20** (Docker Desktop en macOS o Docker Engine en Linux, incluido
@@ -58,8 +126,9 @@ primera descarga: `docker image inspect ollama/ollama:latest --format '{{index .
 
 ### Copias de seguridad y actualización
 
-- La base es un único archivo SQLite en el volumen `nexaro-personal-ai_nexaro_data`. Copia con
-  `sqlite3 nexaro.db ".backup copia.db"` (o `scripts/rebuild_backend.sh`, que la hace antes de actualizar).
+- La base es un único archivo SQLite en el volumen `nexaro-personal-ai_nexaro_data`. En Windows:
+  `scripts/backup_nexaro.ps1` (copia verificada, ver [BACKUP_RESTORE.md](BACKUP_RESTORE.md)); en macOS,
+  `scripts/rebuild_backend.sh` la hace antes de actualizar. La imagen no incluye el binario `sqlite3`.
   Guarda las copias fuera del repositorio: contienen datos de usuarios.
 - Actualizar = reconstruir **solo** `backend` conservando el volumen. Las migraciones pendientes (hoy hasta la 7)
   se aplican al arrancar en una transacción; si fallan, el arranque aborta sin dejar estado parcial.

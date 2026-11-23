@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.0.0-rc] — rama `claude/nexaro-v1-consolidation-921fe0` (2026-11-23)
+
+Detalle: [RELEASE_NOTES_V1.md](RELEASE_NOTES_V1.md).
+
+### Seguridad
+- Obsidian: el Vault solo lo leen administradores y `OBSIDIAN_ALLOWED_EMAILS` (antes, cualquier usuario autenticado); topes de tamaño de nota, de archivos recorridos y de peticiones por usuario; denegaciones auditadas.
+- `POST /api/auth/password` y Perfil → Contraseña: cambio con la contraseña actual, revoca las demás sesiones, limitado y auditado.
+- La interfaz se sirve con `Cache-Control: no-cache` (las actualizaciones llegan al navegador al momento).
+
+### Añadido
+- Copias de seguridad para Windows: `scripts/backup_nexaro.ps1`, `verify_backup.ps1`, `restore_nexaro.ps1`, `register_backup_task.ps1` y `test_backup_restore.ps1` (prueba completa en entorno temporal).
+- Panel de operaciones: `GET /api/admin/status` y Administración → Operaciones.
+- `scripts/smoke_isolated.ps1`: imagen candidata contra el Ollama real con datos temporales.
+- Acceso remoto privado preparado: `scripts/remote_access.ps1` (Tailscale Serve, nunca Funnel).
+- Tests de actualización desde cada versión anterior del esquema y de rechazo de bases de otras ramas.
+- 2 casos de evaluación (agente de seguridad sin inventar vulnerabilidades; RAG con dos fragmentos).
+
+### Cambiado
+- `compose.yaml`: `NEXARO_PORT`, `ALLOWED_ORIGINS`, `COOKIE_SECURE`, `OBSIDIAN_ALLOWED_EMAILS` y `BACKUP_STATUS_PATH` configurables desde `.env` (mismos valores por defecto; el puerto sigue solo en 127.0.0.1).
+- Versión 1.0.0 en `pyproject.toml` y en la API.
+
+### Corregido
+- Tests y `scripts/quality_eval.py` en Windows (codificación UTF-8).
+- E2E del frontend en Windows (`NEXARO_E2E_PORT`; ya no «pasa» sin servidor).
+- Móvil: pestañas de Administración desplazables, selector de agente de 44 px; service worker en cualquier contexto seguro (también `127.0.0.1`); manifest con `id` y `apple-touch-icon`.
+- API.md: la sección de Obsidian estaba escrita con `\n` literales.
+
 ## [Sin publicar] — rama `refactor/nexaro-platform`
 
 ### Añadido

@@ -148,6 +148,8 @@ export const api = {
   adminSecurity: (days = 14) => request(`/api/admin/security?days=${days}`),
   adminUsage: () => request("/api/admin/usage"),
   adminModels: () => request("/api/admin/models"),
+  adminStatus: () => request("/api/admin/status"),
+  changePassword: (current_password, new_password) => request("/api/auth/password", { method: "POST", body: { current_password, new_password } }),
 
   apiKeys: (orgId) => request(`/api/organizations/${id(orgId)}/api-keys`),
   createApiKey: (orgId, name, expiresInDays, scopes) => request(`/api/organizations/${id(orgId)}/api-keys`, { method: "POST", body: { name, expires_in_days: expiresInDays, scopes } }),
