@@ -26,15 +26,24 @@ _MEMORY_SCOPES = {"none", "conversation", "workspace", "global"}
 def _validate_config(body: AgentCreateRequest) -> None:
     # Capabilities are deliberately not user-grantable until the tool runtime and sandbox exist.
     if body.tools:
-        raise HTTPException(status_code=422, detail="Las herramientas ejecutables aún no están disponibles")
+        raise HTTPException(
+            status_code=422, detail="Las herramientas ejecutables aún no están disponibles"
+        )
     if body.permissions != _SAFE_PERMISSIONS:
-        raise HTTPException(status_code=422, detail="Este runtime solo admite agentes sin permisos de ejecución")
-    if set(body.memory) - {"enabled", "scope"} or not isinstance(body.memory.get("enabled", False), bool):
+        raise HTTPException(
+            status_code=422,
+            detail="Este runtime solo admite agentes sin permisos de ejecución",
+        )
+    if set(body.memory) - {"enabled", "scope"} or not isinstance(
+        body.memory.get("enabled", False), bool
+    ):
         raise HTTPException(status_code=422, detail="Configuración de memoria no válida")
     if body.memory.get("scope", "none") not in _MEMORY_SCOPES:
         raise HTTPException(status_code=422, detail="Ámbito de memoria no válido")
     if body.memory.get("enabled", False) or body.memory.get("scope", "none") != "none":
-        raise HTTPException(status_code=422, detail="La memoria operativa aún no está disponible")
+        raise HTTPException(
+            status_code=422, detail="La memoria operativa aún no está disponible"
+        )
     if body.autonomy != "assisted":
         raise HTTPException(status_code=422, detail="La autonomía ejecutable aún no está disponible")
 
@@ -77,18 +86,31 @@ def create_agent(
                     template_id, updated_at)
                    VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)""",
                 (
-                    agent_id, organization_id, body.name.strip(), body.description.strip(),
-                    body.system_prompt.strip(), access.user["id"], body.category,
-                    body.model.strip() if body.model else None, json.dumps(body.tools),
-                    json.dumps(body.permissions), json.dumps(body.memory), body.autonomy,
+                    agent_id,
+                    organization_id,
+                    body.name.strip(),
+                    body.description.strip(),
+                    body.system_prompt.strip(),
+                    access.user["id"],
+                    body.category,
+                    body.model.strip() if body.model else None,
+                    json.dumps(body.tools),
+                    json.dumps(body.permissions),
+                    json.dumps(body.memory),
+                    body.autonomy,
                     body.template_id,
                 ),
             )
         except sqlite3.IntegrityError as exc:
             raise HTTPException(status_code=409, detail="Ya existe un agente con ese nombre") from exc
         record_event(
-            db, "agent.create", "success", actor_user_id=access.user["id"],
-            target_type="agent", target_id=agent_id, ip=client_ip(request),
+            db,
+            "agent.create",
+            "success",
+            actor_user_id=access.user["id"],
+            target_type="agent",
+            target_id=agent_id,
+            ip=client_ip(request),
             details={"organization": organization_id, "category": body.category},
         )
         row = db.execute("SELECT * FROM agents WHERE id = ?", (agent_id,)).fetchone()
@@ -135,17 +157,31 @@ def update_agent(
                    autonomy=?, template_id=?, updated_at=CURRENT_TIMESTAMP
                    WHERE id=? AND organization_id=?""",
                 (
-                    body.name.strip(), body.description.strip(), body.system_prompt.strip(),
-                    body.status, body.category, body.model.strip() if body.model else None,
-                    json.dumps(body.tools), json.dumps(body.permissions), json.dumps(body.memory),
-                    body.autonomy, body.template_id, agent_id, organization_id,
+                    body.name.strip(),
+                    body.description.strip(),
+                    body.system_prompt.strip(),
+                    body.status,
+                    body.category,
+                    body.model.strip() if body.model else None,
+                    json.dumps(body.tools),
+                    json.dumps(body.permissions),
+                    json.dumps(body.memory),
+                    body.autonomy,
+                    body.template_id,
+                    agent_id,
+                    organization_id,
                 ),
             )
         except sqlite3.IntegrityError as exc:
             raise HTTPException(status_code=409, detail="Ya existe un agente con ese nombre") from exc
         record_event(
-            db, "agent.update", "success", actor_user_id=access.user["id"],
-            target_type="agent", target_id=agent_id, ip=client_ip(request),
+            db,
+            "agent.update",
+            "success",
+            actor_user_id=access.user["id"],
+            target_type="agent",
+            target_id=agent_id,
+            ip=client_ip(request),
             details={"organization": organization_id, "status": body.status},
         )
         row = db.execute("SELECT * FROM agents WHERE id = ?", (agent_id,)).fetchone()
@@ -170,7 +206,12 @@ def delete_agent(
         if not deleted:
             raise HTTPException(status_code=404, detail="Agente no encontrado")
         record_event(
-            db, "agent.delete", "success", actor_user_id=access.user["id"],
-            target_type="agent", target_id=agent_id, ip=client_ip(request),
+            db,
+            "agent.delete",
+            "success",
+            actor_user_id=access.user["id"],
+            target_type="agent",
+            target_id=agent_id,
+            ip=client_ip(request),
             details={"organization": organization_id},
         )
