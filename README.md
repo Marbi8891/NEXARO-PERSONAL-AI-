@@ -4,6 +4,12 @@ Plataforma de IA propia, local primero: chat con modelos locales (Ollama), cuent
 aprobación manual, auditoría y una base preparada para varias organizaciones y para
 proveedores en la nube. Monolito modular en Python (FastAPI) con frontend HTML/CSS/ES Modules.
 
+## Identidad visual
+
+NEXARO usa una arquitectura de marca corporativa con productos bajo una marca matriz. Consulta [Brand Architecture](docs/brand-architecture.md) y el [Design System](docs/design-system.md).
+
+**Brand line:** Intelligence under your control.
+
 ## Estado
 
 | Área | Estado |
