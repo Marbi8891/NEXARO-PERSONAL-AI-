@@ -360,3 +360,24 @@ code { font-family: var(--font-mono); }
 .sources { margin: 0; padding-left: var(--space-5); display: grid; gap: var(--space-3); }
 .sources p { margin: var(--space-1) 0 0; color: var(--muted); }
 .row-actions { display: inline-flex; gap: var(--space-2); }
+
+
+/* Enterprise UI refinement — consistent, restrained surfaces and controls. */
+.card { box-shadow: none; transition: border-color .14s ease; }
+.card:hover { border-color: color-mix(in srgb, var(--border) 65%, var(--accent)); }
+.button { transition: background-color .14s ease, border-color .14s ease, transform .08s ease; }
+.button:active:not(:disabled) { transform: translateY(1px); }
+.field input, .field select, .inline-form input, .inline-form select, .toolbar input, .toolbar select, .composer textarea { transition: border-color .14s ease, box-shadow .14s ease; }
+.field input:focus-visible, .field select:focus-visible, .inline-form input:focus-visible, .inline-form select:focus-visible, .toolbar input:focus-visible, .toolbar select:focus-visible, .composer textarea:focus-visible { border-color: var(--focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 18%, transparent); }
+.table-wrap { box-shadow: none; }
+th { letter-spacing: .075em; }
+.message { border-radius: var(--radius); }
+.message.user { border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border)); }
+.message.assistant { box-shadow: none; }
+.composer-wrap { background: color-mix(in srgb, var(--panel) 94%, var(--bg)); }
+.composer textarea { border-radius: var(--radius); }
+.tabs button { transition: color .14s ease, border-color .14s ease; }
+.stats .card, .stats > * { min-width: 0; }
+.stat dd { letter-spacing: -.035em; }
+.menu, .dialog, .toast { box-shadow: 0 8px 24px light-dark(rgb(16 26 43 / 8%), rgb(0 0 0 / 26%)); }
+@media (prefers-reduced-motion: reduce) { .card, .button, .field input, .field select, .tabs button { transition: none; } }
