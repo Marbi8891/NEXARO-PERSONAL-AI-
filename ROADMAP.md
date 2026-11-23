@@ -1,36 +1,65 @@
-# ROADMAP — NEXARO Personal AI
+# NEXARO roadmap
 
-Priorizado según AUDIT_REPORT.md (2026-11-22). P0 > P1 > P2; las P3 esperan. Se trabaja en PR
-pequeños sobre la versión canónica (linaje `backup/macbook`), sin cambiar de framework.
+Direction and priorities for NEXARO. There are **no committed dates**: items move forward in small,
+tested pull requests, in the order below, on the existing modular monolith (no framework change, no
+microservices). Exact current status of every feature: [capability matrix](docs/product/capabilities.md).
 
-## Top 10
+**Legend:** ✅ done · 🔄 in progress · ⏭ next · 📋 planned · 💡 future
 
-| # | P | Tarea | Necesita al propietario |
-|---|---|---|---|
-| 1 | P0 | Consolidar la versión canónica en `main` (fusión de `backup/macbook` + documentación de `main`) y pasar el CI completo en GitHub por primera vez | Sí: aprobar y fusionar el PR |
-| 2 | P0 | Verificar Docker + Ollama real: `make up`, `make model`, `make smoke` (pasos 1, 6, 18, 19 del MVP) | Sí: se ejecuta en su Mac o ThinkPad |
-| 3 | P0 | PR #3: no fusionar tal cual. Añadir autenticación, quitar `python`/`pip`/`npx`/`docker` de la lista o exigir aprobación previa, y llevarlo al monolito como herramienta del registro | Decidir si se integra |
-| 4 | P1 | ✅ (falta por usuario y por agente) Selección de modelo en tiempo real: descubrir modelos de Ollama, modelo por defecto, modelo por conversación, error claro si no está instalado (sin cambio silencioso) | No |
-| 5 | P1 | ✅ Agentes personales (`user_agents`) y de organización (`agents`, ADR-0024): CRUD, duplicar, activar/desactivar; los 7 predefinidos son la base. Falta la pantalla de los de organización | No |
-| 6 | P2 | ✅ Renombrar conversaciones (`PATCH /api/conversations/{id}`) | No |
-| 7 | P2 | Tareas: API sobre la tabla `tasks` (crear, estado, listar, propietario) | No |
-| 8 | P2 | Registro de herramientas: contrato común (nombre, schema, permiso, timeout, auditoría) y herramientas desactivadas si no están configuradas | No |
-| 9 | P2 | Documentos: extractores Markdown, CSV y DOCX; embeddings locales con Ollama como opción junto a BM25 | No |
-| 10 | P2 | ✅ Integrar la biblioteca de prompts (PR #2) como módulo con autenticación (ADR-0025) | Decidido: integrar |
+## Completed
 
-## Después (no empezar hasta cerrar lo anterior)
+| Area | Delivered |
+|---|---|
+| Platform core | Accounts with manual approval, sessions, password change, append-only audit, organizations, roles and permissions, tenant isolation at the database level |
+| AI | Local chat via Ollama with streaming and cancel; AI Gateway with fallback, circuit breaker, limits and usage ledger; per-conversation model selection |
+| Agents | 7 built-in agents, personal agents (CRUD, duplicate, enable/disable), organization agents API, per-agent tool permissions with audit |
+| Knowledge | Text and PDF documents, BM25 retrieval with cited sources in chat, read-only Obsidian vault, versioned prompt library with a 100-prompt catalogue |
+| Developer | Scoped API keys with per-key rate limits and usage, `/api/v1` |
+| Operations | 13 versioned migrations with verified pre-migration backup, Windows backup/restore with a restore drill, operations panel, hardened Docker deployment, `make smoke` against a real model |
+| Quality | ~800 tests, strict typing, security CI (pip-audit, Bandit, gitleaks, Trivy, SBOM), reproducible model evaluation |
 
-- Agent Builder con generación por IA y confirmación antes de guardar.
-- Orquestación secuencial con límites de pasos, tiempo y tokens; luego equipos.
-- Memoria con ámbitos (usuario, agente, proyecto) y expiración.
-- Proveedores OpenAI y Gemini **solo si el propietario lo pide**: implican coste.
-- Capa de acceso PostgreSQL.
-- Terraform AWS: aparcado; nada se crea en AWS sin autorización expresa.
+## In progress
 
-## Decisiones pendientes del propietario
+| # | Item | Scope |
+|---|---|---|
+| 1 | 🔄 **v1.0 stabilization** | Tag and publish `v1.0.0` through the release workflow; repository and documentation professionalization; keep `make smoke` green on the target machines |
 
-- ~~D1~~: resuelta el 2026-11-22: `backup/macbook` es `main` (PR #4 fusionado).
-- D2: ¿Se integran PR #2 y PR #3 en el monolito o se cierran como prototipos?
-- D4: ¿El selector de modelo es para todos los usuarios o solo para administradores? (ADR-0023 frente a ADR-0019; ahora: todos).
-- ~~D5~~: resuelta el 2026-11-22: ambos (ADR-0024).
-- D3: ¿Se mantienen los módulos Finanzas, Developer y multiorganización dentro de «Personal AI»?
+## Next
+
+| # | Item | Scope |
+|---|---|---|
+| 2 | ⏭ **Security audit findings** | Idle session timeout (in addition to the 7-day limit); `--reset-password` in `bootstrap_admin`; versioned scrypt cost with rehash; shared rate-limit store before running more than one instance; enable Trivy IaC scan as blocking. Source: [v1.0 security review](docs/security/audits/security-review-v1.md) |
+| 3 | ⏭ **Model Manager** | Default model per user and per agent; pull/remove models from the UI (admin, audited); model metadata and recommended hardware |
+
+## Planned
+
+| # | Item | Scope |
+|---|---|---|
+| 4 | 📋 **Intelligent Model Router** | Task-aware routing on top of the AI Gateway (e.g. code vs. short questions), with explicit, explainable rules and no silent model substitution |
+| 5 | 📋 **Agent Runtime** | Executor with a common tool contract (name, schema, permission, timeout, audit), step/time/token budgets, cancellation and execution history; tools disabled unless configured |
+| 6 | 📋 **Persistent Task Engine** | API on the existing `tasks` table: create, status, list, ownership; resumable after restart |
+| 7 | 📋 **Orchestrator** | Sequential plans with hard limits on steps, time and tokens; user approval for sensitive steps |
+| 8 | 📋 **Controlled multi-agent execution** | Agent teams on top of the orchestrator, sequential by default on modest hardware |
+| 9 | 📋 **Memory system** | Scoped memory (user, agent, project) with expiry, visibility and deletion |
+| 10 | 📋 **Advanced RAG** | Local embeddings via Ollama alongside BM25; Markdown, CSV and DOCX extractors |
+| 11 | 📋 **Prompt Library integration** | Port the remaining prototype features (packs, workflows) into the platform module (ADR-0025) |
+| 12 | 📋 **Secure Coding Agent** | Bring the coding-agent prototype into the monolith only with authentication, opt-in commands, approval before execution and a sandbox; disabled by default |
+
+## Future
+
+| Item | Condition |
+|---|---|
+| 💡 PostgreSQL runtime | The DDL is already validated in CI; needs the data-access layer |
+| 💡 Additional cloud providers (OpenAI, Gemini) | Only on explicit owner request: they add cost and send data off-host |
+| 💡 AWS deployment | Terraform is written but parked; **nothing is created in AWS without explicit authorization** |
+| 💡 English UI | Interface translation (the UI is currently Spanish) |
+| 💡 Organization agents UI, AI-assisted Agent Builder | After the Agent Runtime |
+
+## Pending owner decisions
+
+- **D2:** integrate the prototype PRs (#2 prompt library, #3/#6 coding agent, #7) into the monolith, or close them as prototypes.
+- **D3:** keep Finance, Developer and multi-organization inside "Personal AI", or split product scope.
+- **D4:** model selector for all users or administrators only (currently all; ADR-0023 vs. ADR-0019).
+- **Licence:** the code is proprietary today; choose whether to adopt an open-source licence.
+
+Resolved: D1 (`main` is the canonical lineage, 2026-11-22) · D5 (both personal and organization agents, ADR-0024).
