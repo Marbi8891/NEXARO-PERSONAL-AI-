@@ -40,6 +40,14 @@ function submit(form) { form.dispatchEvent(new window.Event("submit", { bubbles:
 const results = [];
 const noLeaks = () => assert.ok(!/null|undefined/.test(document.body.textContent), "texto null/undefined visible en pantalla");
 const check = async (name, fn) => { await fn(); noLeaks(); results.push(name); console.log("ok -", name); };
+// Entrar en el chat esperando la vista NUEVA: el router sustituye la vista de forma asíncrona y,
+// mientras tanto, el selector de la vista anterior sigue en el DOM (falsos fallos intermitentes).
+async function enterChat() {
+  const old = $("#chat-agent");
+  const changes = location.hash !== "#/chat";
+  location.hash = "#/chat";
+  await until(() => { const s = $("#chat-agent"); return s && (!changes || s !== old) && s.options.length > 1; }, "vista nueva del chat");
+}
 
 // --- Usuario normal ---
 await session();
@@ -486,8 +494,7 @@ await check("chat con documentos: opt-in, envía la organización y muestra las 
   }
 });
 await check("agentes: la lista viene de la API, se envía el elegido y se recuerda", async () => {
-  location.hash = "#/chat";
-  await until(() => $("#chat-agent")?.options.length > 1, "selector de agentes");
+  await enterChat();
   const ids = [...$("#chat-agent").options].map((o) => o.value);
   assert.deepEqual(ids, ["general", "developer", "security", "research", "productivity", "data", "tutor"]);
   assert.equal($("#chat-agent").value, "general", "por defecto, el agente general");
