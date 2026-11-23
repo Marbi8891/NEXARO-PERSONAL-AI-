@@ -71,7 +71,10 @@ def test_agent_configuration_json_is_persisted(logged_in: Factory, database: Dat
     response = admin.post(f"/api/organizations/{org_id}/agents", json=BODY, headers=HEADERS)
     assert response.status_code == 201
     with database.connect() as db:
-        row = db.execute("SELECT tools_json, permissions_json, memory_json FROM agents WHERE id = ?", (response.json()["id"],)).fetchone()
+        row = db.execute(
+            "SELECT tools_json, permissions_json, memory_json FROM agents WHERE id = ?",
+            (response.json()["id"],),
+        ).fetchone()
     assert json.loads(row["tools_json"]) == []
     assert json.loads(row["permissions_json"]) == BODY["permissions"]
     assert json.loads(row["memory_json"]) == BODY["memory"]
