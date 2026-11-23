@@ -67,6 +67,7 @@ def platform_migrations() -> list[Migration]:
             6, "inference_metrics", MIGRATIONS_DIR / "sqlite" / "0006_inference_metrics.sql"
         ),
         sql_migration(7, "message_agent", MIGRATIONS_DIR / "sqlite" / "0007_message_agent.sql"),
+        sql_migration(8, "agent_config", MIGRATIONS_DIR / "sqlite" / "0008_agent_config.sql"),
     ]
 
 
