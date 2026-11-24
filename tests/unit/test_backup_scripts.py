@@ -222,3 +222,29 @@ def test_cold_backups_use_immutable_mode_only_on_the_read_only_volume() -> None:
     assert '"${Volume}:/data:ro"' in text  # el modo inmutable solo con el volumen en solo lectura
     hot = text.split("if ($running) {", 1)[1].split("} else {", 1)[0]
     assert "--immutable" not in hot  # con la app en marcha, nunca
+
+
+@pytest.mark.skipif(shutil.which("pwsh") is None, reason="sin PowerShell 7")
+@pytest.mark.parametrize(("image_exists", "expected"), [(True, "sha256:viva"), (False, "respaldo")])
+def test_backups_fall_back_when_the_running_container_image_is_gone(
+    image_exists: bool, expected: str
+) -> None:
+    """Regresión (2026-11-23): el contenedor seguía en marcha pero su imagen ya no existía y la
+    copia fallaba («No such image»). Docker se sustituye por una función."""
+    inspect_code = 0 if image_exists else 1
+    command = (
+        f". '{SCRIPTS / 'backup' / 'common.ps1'}'; "
+        "function docker { "
+        f"if ($args[0] -eq 'image') {{ $global:LASTEXITCODE = {inspect_code} }} "
+        "else { $global:LASTEXITCODE = 0; if ($args[0] -eq 'inspect') { 'sha256:viva' } } }; "
+        "Get-ContainerImage 'nexaro-backend' 'respaldo'"
+    )
+    proc = subprocess.run(  # noqa: S603
+        [shutil.which("pwsh") or "pwsh", "-NoProfile", "-NonInteractive", "-Command", command],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert proc.stdout.strip() == expected
