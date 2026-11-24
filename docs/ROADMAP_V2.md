@@ -36,26 +36,34 @@ Pull requests abiertas detectadas:
 - **#7 — XSS fix de Prompt Library.** Está apilado sobre #2, no sobre `main`; solo tiene sentido si se decide integrar #2.
 - **#6 — Coding Agent hardening.** Está apilado sobre la rama experimental `feature/real-coding-agent`, no sobre `main`. El PR documenta ejecución de código arbitrario si se habilita `run_command`; mantenerlo aislado y revisar sandbox antes de cualquier integración.
 
-El PR #25 figura como cerrado/merged en la búsqueda remota y su descripción afirma que consolidó la v1.0 y las funcionalidades pendientes. Confirmar SHA y estado de CI con el historial de `main` antes de confiar en los resultados locales de ese PR.
+**Confirmado:** PR #25 está integrado. `main` apunta actualmente a `b547a9c` (24-11-2026), cuyo commit más reciente mejora la presentación bilingüe; el commit de merge de #25 es `8fc5746`. La descripción de #25 registra consolidación v1.0, integración de funcionalidades, 797 tests y smoke/backup local, aunque gitleaks y CI estaban pendientes en aquel momento.
+
+**PR #26 — resultado CI confirmado:** el workflow `CI` del commit `cd54a19` terminó `success` (run #66). La corrección es pequeña y añade fallback si la imagen del contenedor desapareció, evitando que la tarea de backups dependa de esa imagen. Recomendación: revisar el diff final y mergear #26 como primer cambio de código, sujeto a autorización del propietario.
 
 ## Prioridades
 
 ### P0 — Establecer una línea base reproducible
 
-**P0.1 — Reconciliar Git y documentación**
+**P0.1 — Revisar y resolver el PR de backups #26**
+- Confirmar que el diff solo afecta a la selección de imagen y test de regresión.
+- CI del commit `cd54a19`: PASS (workflow CI #66).
+- Confirmar que el fallback funciona con Docker y que no cambia el método de backup/restauración.
+- Merge tras revisión; después registrar la resolución en CHANGELOG y roadmap.
+
+**P0.2 — Reconciliar Git y documentación**
 - Comparar `main`, PRs abiertos/cerrados, ramas activas y archivos del audit anterior.
 - Identificar funcionalidades documentadas pero no presentes en `main`.
 - Comprobar numeración y checksum de migraciones en todas las ramas candidatas.
 - Resultado: informe de diferencias y decisión de qué integrar, cerrar o archivar.
 
-**P0.2 — Calidad y CI multiplataforma**
+**P0.3 — Calidad y CI multiplataforma**
 - Mantener el job Linux actual como gate.
 - Añadir job Windows para tests que no requieran Docker y documentar los tests condicionados.
 - Añadir E2E frontend con Chromium en CI, si el tiempo y estabilidad son aceptables.
 - Hacer que tests de scripts detecten correctamente herramientas ausentes; evitar skips silenciosos que oculten regresiones.
 - Gate: lint, format, mypy, tests, cobertura, frontend E2E, security y build/healthcheck.
 
-**P0.3 — Seguridad y release gate**
+**P0.4 — Seguridad y release gate**
 - Revisión de permisos en todas las rutas nuevas y existentes.
 - Tests negativos de ownership, multitenancy, Origin/CSRF, scopes, límites y logs.
 - Verificar que secretos y datos personales no aparezcan en logs, fixtures, artifacts o capturas.
@@ -148,7 +156,8 @@ El PR #25 figura como cerrado/merged en la búsqueda remota y su descripción af
 
 | ID | Tarea | Prioridad | Dependencias | Criterio de aceptación |
 |---|---|---:|---|---|
-| NX-001 | Verificar estado remoto de main, PRs y ramas respecto al AUDIT_V1 | P0 | — | Informe de diferencias con evidencia |
+| NX-001 | Verificar estado remoto de main, PRs y ramas respecto al AUDIT_V1 | P0 | — | **Hecho:** main = b547a9c; PR #25 integrado; snapshot de PRs documentado |
+| NX-017 | Revisar y resolver PR #26 (fallback de imagen en backups) | P0 | NX-001 | CI PASS confirmado; diff revisado; merge autorizado y verificado |
 | NX-002 | Ejecutar baseline CI/test suite y registrar resultados | P0 | NX-001 | Resultado reproducible; bugs separados de skips |
 | NX-003 | Añadir CI Windows | P0 | NX-002 | Job estable; tests no aplicables identificados |
 | NX-004 | E2E Chromium en CI | P0 | NX-002 | Smoke UI en Chromium; artifacts sanitizados |
@@ -169,7 +178,8 @@ El PR #25 figura como cerrado/merged en la búsqueda remota y su descripción af
 
 No empezar con una implementación multiagente grande.
 
-1. NX-001: reconciliar el estado real de Git.
+1. NX-001: reconciliar el estado real de Git (**completado**).
+2. NX-017: revisar PR #26, que tiene CI verde; resolverlo antes de iniciar nuevas funcionalidades.
 2. NX-002: establecer baseline.
 3. NX-005: revisar seguridad y permisos.
 4. NX-006: escribir ADR y schemas para Agent Runtime.
