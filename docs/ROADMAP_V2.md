@@ -27,6 +27,17 @@ La revisión accesible de los archivos de `main` confirma una arquitectura de mo
 
 **Pendiente de verificación de ejecución:** no se ha ejecutado el CI, los tests ni Docker desde este análisis. Además, `AUDIT_V1.md` describe una consolidación local fechada el 23-11-2026 y menciona ramas/PRs y un worktree; esos detalles deben contrastarse con el estado remoto actual antes de tomarlos como estado de `main`.
 
+## Snapshot del repositorio remoto (2026-11-24)
+
+Pull requests abiertas detectadas:
+
+- **#26 — Backup: fallback si falta la imagen del contenedor.** Apunta a `main`; reporta test de regresión y ejecución de la tarea programada con copia verificada. Prioridad inmediata: revisar el diff y confirmar CI antes de mergear, porque afecta a la continuidad de backups.
+- **#2 — Prompt Library standalone.** 62 commits; es una app local single-user, sin autenticación/ownership ni autorización multiusuario. No integrar directamente en el producto principal sin decidir arquitectura y revisar seguridad.
+- **#7 — XSS fix de Prompt Library.** Está apilado sobre #2, no sobre `main`; solo tiene sentido si se decide integrar #2.
+- **#6 — Coding Agent hardening.** Está apilado sobre la rama experimental `feature/real-coding-agent`, no sobre `main`. El PR documenta ejecución de código arbitrario si se habilita `run_command`; mantenerlo aislado y revisar sandbox antes de cualquier integración.
+
+El PR #25 figura como cerrado/merged en la búsqueda remota y su descripción afirma que consolidó la v1.0 y las funcionalidades pendientes. Confirmar SHA y estado de CI con el historial de `main` antes de confiar en los resultados locales de ese PR.
+
 ## Prioridades
 
 ### P0 — Establecer una línea base reproducible
