@@ -1,3 +1,17 @@
+> **EN — Product overview**
+>
+> NEXARO is a local-first AI workspace built around Python and FastAPI. It combines local model access, governed agent capabilities, organization-aware access control, auditability and operational tools. The project distinguishes implemented and tested capabilities from planned or not-yet-validated infrastructure.
+>
+> **ES — Resumen del producto**
+>
+> NEXARO es un entorno de IA local-first desarrollado con Python y FastAPI. Integra acceso a modelos locales, capacidades de agentes con permisos, control de acceso por organización, auditoría y herramientas de operación. La documentación diferencia las funciones implementadas y probadas de la infraestructura planificada o todavía no validada.
+>
+> **Product line / Lema:** Intelligence under your control.
+>
+> **Project status / Estado:** Active development / En desarrollo activo. Check the status table below before treating any capability as production-ready.
+>
+> ---
+>
 # NEXARO
 
 Plataforma de IA propia, local primero: chat con modelos locales (Ollama), cuentas con
