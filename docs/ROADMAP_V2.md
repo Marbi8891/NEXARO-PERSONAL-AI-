@@ -201,3 +201,29 @@ Una tarea se considera terminada cuando:
 ## Registro de decisiones
 
 Las decisiones que cambien arquitectura, datos, seguridad, permisos, proveedores o despliegue deben documentarse en ADR. Las funcionalidades experimentales deben quedar detrás de configuración y no presentarse como producción-ready.
+
+
+## Actualización de estado — 2026-11-24
+
+El snapshot inicial anterior queda supersedido por esta actualización:
+
+- **PR #26 fusionado** mediante squash. Merge commit en `main`: `65ecaea11a602aa1134c692322f5b9941a167322`.
+- Se revisó el diff: `scripts/backup/common.ps1` verifica que la imagen Docker del contenedor exista y usa fallback si no; se añadió prueba de regresión en `tests/unit/test_backup_scripts.py`.
+- Antes del merge, los 7 checks del commit PR `cd54a19` estaban en success. Tras el merge se inició una nueva CI sobre `main`; su estado debe consultarse antes de declarar el commit final validado.
+- **NX-017 completado:** PR #26 revisado, fusionado y verificado.
+- Auditoría de CI estática añadida en [AUDIT_BASELINE_2026-11-24.md](AUDIT_BASELINE_2026-11-24.md). Confirmó como próximos trabajos: CI Windows ausente, harness E2E frontend existente pero no conectado al workflow, Trivy Terraform informativo (`exit-code: 0`) y necesidad de registrar la baseline real y los skips.
+- La revisión fue estática; no se ejecutaron tests localmente ni se modificó aplicación/infraestructura/datos.
+
+### Estado del backlog tras esta actualización
+
+| ID | Estado |
+|---|---|
+| NX-001 | Completado |
+| NX-017 | **Completado** — PR #26 merged |
+| NX-002 | En curso — baseline de CI y tests pendientes de recopilación |
+| NX-003 | Pendiente — CI Windows |
+| NX-004 | Pendiente — conectar E2E frontend al CI |
+| NX-005 | Pendiente — auditoría exhaustiva de rutas/permisos |
+| NX-006–016 | Pendiente según dependencias |
+
+La siguiente tarea de código propuesta es NX-003: añadir un job Windows aislado y reproducible, sin tocar la CI Linux existente hasta que la nueva matriz esté validada.
