@@ -164,8 +164,11 @@ def pack_catalogue() -> dict[str, Any]:
         return {"packs": []}
 
 
+# IDs end up in URLs and HTML attributes: restrict them to a safe character set.
+PROMPT_ID_PATTERN = r"^[A-Za-z0-9_.-]{1,80}$"
+
 class PromptCreate(BaseModel):
-    id: str | None = None
+    id: str | None = Field(default=None, pattern=PROMPT_ID_PATTERN)
     name: str = Field(min_length=2,max_length=120)
     description: str = Field(default="",max_length=1000)
     category: str = Field(min_length=1,max_length=80)
