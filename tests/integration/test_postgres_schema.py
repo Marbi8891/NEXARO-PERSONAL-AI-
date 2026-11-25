@@ -21,8 +21,8 @@ else:
     pgserver = pytest.importorskip("pgserver")
     psycopg = pytest.importorskip("psycopg")
 
-from nexaro_api.bootstrap import migrate
-from nexaro_core.database import Database
+from nexaro_api.bootstrap import migrate  # noqa: E402
+from nexaro_core.database import Database  # noqa: E402
 
 PG_DIR = Path(__file__).resolve().parents[2] / "packages/nexaro_core/database/migrations/postgresql"
 IGNORED = {"schema_migrations", "sqlite_sequence"}
