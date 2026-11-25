@@ -12,6 +12,8 @@ from typing import Any
 
 import pytest
 
+pytestmark = pytest.mark.integration
+
 if os.environ.get("NEXARO_REQUIRE_POSTGRES"):  # CI: no se admite saltarse esta validación
     import pgserver
     import psycopg
@@ -19,8 +21,8 @@ else:
     pgserver = pytest.importorskip("pgserver")
     psycopg = pytest.importorskip("psycopg")
 
-from nexaro_api.bootstrap import migrate
-from nexaro_core.database import Database
+from nexaro_api.bootstrap import migrate  # noqa: E402
+from nexaro_core.database import Database  # noqa: E402
 
 PG_DIR = Path(__file__).resolve().parents[2] / "packages/nexaro_core/database/migrations/postgresql"
 IGNORED = {"schema_migrations", "sqlite_sequence"}

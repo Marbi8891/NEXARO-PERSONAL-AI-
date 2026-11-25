@@ -122,3 +122,23 @@ jobs:
           done
           docker logs api
           exit 1
+
+  windows-quality:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements/*.txt
+      - name: Instalar dependencias de desarrollo
+        run: python -m pip install -r requirements/dev.txt
+      - name: Ruff lint
+        run: ruff check .
+      - name: Ruff format
+        run: ruff format --check .
+      - name: Mypy
+        run: mypy packages apps products
+      - name: Tests portables (sin integración dependiente de servicios)
+        run: pytest -m "not integration" --no-cov
