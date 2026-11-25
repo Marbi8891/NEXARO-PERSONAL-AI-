@@ -12,6 +12,8 @@ from typing import Any
 
 import pytest
 
+pytestmark = pytest.mark.integration
+
 if os.environ.get("NEXARO_REQUIRE_POSTGRES"):  # CI: no se admite saltarse esta validación
     import pgserver
     import psycopg
